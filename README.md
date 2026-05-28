@@ -2,12 +2,6 @@
 
 A CodeMirror 6 extension that brings Kakoune-style modal editing into the browser.
 
-This repo starts from three references:
-
-- [`replit/codemirror-vim`](https://github.com/replit/codemirror-vim)
-- [`71/dance`](https://github.com/71/dance)
-- [`mawww/kakoune`](https://github.com/mawww/kakoune)
-
 ## Installation
 
 Install the package via `npm`, `pnpm`, or `yarn`:
@@ -47,20 +41,6 @@ kakoune({
 })
 ```
 
-## Publishing to npm
-
-To publish this library to npm:
-
-1. Ensure `"private": true` is removed from `package.json`.
-2. Build the library:
-   ```bash
-   pnpm build
-   ```
-3. Publish:
-   ```bash
-   pnpm publish
-   ```
-
 ## Scripts
 
 - `pnpm dev` - run the playground
@@ -79,3 +59,11 @@ The first cut focuses on the core editing loop:
 - a small key sequence processor with pending-prefix support
 
 The keymap will expand from there as the Kakoune behavior is filled in.
+
+## References
+
+This repo starts from three references:
+
+- [`replit/codemirror-vim`](https://github.com/replit/codemirror-vim)
+- [`71/dance`](https://github.com/71/dance)
+- [`mawww/kakoune`](https://github.com/mawww/kakoune)
