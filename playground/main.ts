@@ -17,13 +17,30 @@ const layoutSelect = document.querySelector<HTMLSelectElement>("#layout-select")
 const modePill = document.querySelector<HTMLElement>("#mode-pill");
 const searchPill = document.querySelector<HTMLElement>("#search-pill");
 const registerPill = document.querySelector<HTMLElement>("#register-pill");
+const registerPopover = document.querySelector<HTMLDivElement>("#register-popover");
+const registerContent = document.querySelector<HTMLPreElement>("#register-content");
+const popoverClose = document.querySelector<HTMLButtonElement>("#popover-close");
 const hudElement = document.querySelector<HTMLDivElement>("#which-key-hud");
 const hudTitle = document.querySelector<HTMLElement>("#hud-title");
 const hudPrompt = document.querySelector<HTMLElement>("#hud-prompt");
 const hudItems = document.querySelector<HTMLDivElement>("#hud-items");
 const themeCompartment = new Compartment();
 
-if (!editorElement || !themeSelect || !layoutSelect || !modePill || !searchPill || !registerPill || !hudElement || !hudTitle || !hudPrompt || !hudItems) {
+if (
+  !editorElement ||
+  !themeSelect ||
+  !layoutSelect ||
+  !modePill ||
+  !searchPill ||
+  !registerPill ||
+  !registerPopover ||
+  !registerContent ||
+  !popoverClose ||
+  !hudElement ||
+  !hudTitle ||
+  !hudPrompt ||
+  !hudItems
+) {
   throw new Error("Playground shell is missing required DOM nodes.");
 }
 
@@ -57,7 +74,9 @@ const updateStatus = (view: EditorView): void => {
       : searchQuery.valid && searchQuery.search
         ? `/${searchQuery.search}`
         : "—";
-  registerPill.textContent = state.register ? JSON.stringify(state.register) : '""';
+  const registerStr = state.register ? JSON.stringify(state.register) : '""';
+  registerPill.textContent = registerStr.length > 25 ? registerStr.slice(0, 22) + "..." : registerStr;
+  registerContent.textContent = registerStr;
 };
 
 function getWhichKeyTitle(pending: string[]): string {
@@ -170,6 +189,24 @@ layoutSelect.addEventListener("change", () => {
   const nextLayout = layoutSelect.value;
   hudElement.setAttribute("data-layout", nextLayout);
   window.localStorage.setItem(layoutStorageKey, nextLayout);
+});
+
+registerPill.addEventListener("click", (e) => {
+  e.stopPropagation();
+  registerPopover.classList.toggle("show");
+});
+
+popoverClose.addEventListener("click", (e) => {
+  e.stopPropagation();
+  registerPopover.classList.remove("show");
+});
+
+document.addEventListener("click", () => {
+  registerPopover.classList.remove("show");
+});
+
+registerPopover.addEventListener("click", (e) => {
+  e.stopPropagation();
 });
 
 updateStatus(view);

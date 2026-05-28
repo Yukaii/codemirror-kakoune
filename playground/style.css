@@ -144,9 +144,116 @@ body {
 }
 
 #mode-pill,
-#search-pill,
-#register-pill {
+#search-pill {
   color: var(--text);
+}
+
+.register-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#register-pill {
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+body[data-theme="paper"] #register-pill {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+#register-pill:hover {
+  background: var(--panel-border);
+}
+
+.register-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-height: 240px;
+  background: rgba(21, 25, 34, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px var(--shadow);
+  padding: 12px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body[data-theme="paper"] .register-popover {
+  background: rgba(255, 252, 245, 0.95);
+}
+
+body[data-theme="sepia"] .register-popover {
+  background: rgba(247, 239, 227, 0.95);
+}
+
+.register-popover.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 6px;
+}
+
+.popover-header button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.popover-header button:hover {
+  color: var(--text);
+}
+
+#register-content {
+  margin: 0;
+  font-family: monospace;
+  font-size: 12px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  flex-grow: 1;
+  color: var(--text);
+  max-height: 180px;
 }
 
 #editor {

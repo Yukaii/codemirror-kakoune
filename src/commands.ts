@@ -33,51 +33,107 @@ function moveLineColumn(view: EditorView, range: SelectionRange, delta: number):
   return clamp(nextLine.from + column, nextLine.from, nextLine.to);
 }
 
-function moveWordForward(view: EditorView, range: SelectionRange): number {
-  const doc = view.state.doc.toString();
-  const len = doc.length;
-  let pos = range.head;
-
-  while (pos < len && isWordChar(doc[pos])) {
-    pos += 1;
-  }
-
-  while (pos < len && !isWordChar(doc[pos])) {
-    pos += 1;
-  }
-
-  return pos;
+function getCharClass(char: string | undefined): "word" | "punctuation" | "whitespace" {
+  if (char === undefined) return "whitespace";
+  if (/[\s\n\r]/.test(char)) return "whitespace";
+  if (isWordChar(char)) return "word";
+  return "punctuation";
 }
 
-function moveWordBackward(view: EditorView, range: SelectionRange): number {
-  const doc = view.state.doc.toString();
-  let pos = Math.max(0, range.head - 1);
+function isAtWordEnd(doc: string, pos: number): boolean {
+  if (pos < 0 || pos >= doc.length) return false;
+  const cls = getCharClass(doc[pos]);
+  if (cls === "whitespace") return false;
 
-  while (pos > 0 && !isWordChar(doc[pos])) {
+  const nextCls = pos + 1 < doc.length ? getCharClass(doc[pos + 1]) : "whitespace";
+  return cls !== nextCls;
+}
+
+function isAtWordStart(doc: string, pos: number): boolean {
+  if (pos < 0 || pos >= doc.length) return false;
+  const cls = getCharClass(doc[pos]);
+  if (cls === "whitespace") return false;
+
+  const prevCls = pos > 0 ? getCharClass(doc[pos - 1]) : "whitespace";
+  return cls !== prevCls;
+}
+
+function moveWordForwardRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
+  const doc = view.state.doc.toString();
+  const len = doc.length;
+  const startPos = range.empty && isAtWordEnd(doc, range.head) ? range.head + 1 : range.head;
+  let pos = clamp(startPos, 0, len);
+
+  // Step 1: Skip initial whitespaces
+  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
+    pos += 1;
+  }
+
+  const anchor = pos;
+
+  if (pos < len) {
+    const cls = getCharClass(doc[pos]);
+    // Step 2: Skip characters of the same class (word or punctuation)
+    while (pos < len && getCharClass(doc[pos]) === cls) {
+      pos += 1;
+    }
+  }
+
+  // Step 3: Skip following whitespaces
+  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
+    pos += 1;
+  }
+
+  return { anchor, head: pos };
+}
+
+function moveWordBackwardRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
+  const doc = view.state.doc.toString();
+  let pos = range.head;
+
+  // Step 1: Skip initial whitespaces to the left
+  while (pos > 0 && getCharClass(doc[pos - 1]) === "whitespace") {
     pos -= 1;
   }
 
-  while (pos > 0 && isWordChar(doc[pos - 1])) {
-    pos -= 1;
+  if (pos > 0) {
+    const cls = getCharClass(doc[pos - 1]);
+    // Step 2: Skip characters of the same class to the left
+    while (pos > 0 && getCharClass(doc[pos - 1]) === cls) {
+      pos -= 1;
+    }
   }
 
-  return pos;
+  let anchor = range.head;
+  if (range.empty) {
+    const isWhitespace = getCharClass(doc[range.head]) === "whitespace";
+    const isStartOfMultiChar = isAtWordStart(doc, range.head) && !isAtWordEnd(doc, range.head);
+    anchor = (isWhitespace || isStartOfMultiChar) ? range.head : range.head + 1;
+  }
+
+  return { anchor: clamp(anchor, 0, doc.length), head: pos };
 }
 
-function moveWordEnd(view: EditorView, range: SelectionRange): number {
+function moveWordEndRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
   const doc = view.state.doc.toString();
   const len = doc.length;
-  let pos = range.head;
+  const startPos = range.empty && isAtWordEnd(doc, range.head) ? range.head + 1 : range.head;
+  let pos = clamp(startPos, 0, len);
 
-  while (pos < len && !isWordChar(doc[pos])) {
+  // Step 1: Skip initial whitespaces
+  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
     pos += 1;
   }
 
-  while (pos < len && isWordChar(doc[pos])) {
-    pos += 1;
+  if (pos < len) {
+    const cls = getCharClass(doc[pos]);
+    // Step 2: Skip characters of the same class (word or punctuation)
+    while (pos < len && getCharClass(doc[pos]) === cls) {
+      pos += 1;
+    }
   }
 
-  return pos;
+  return { anchor: range.head, head: pos };
 }
 
 function setMode(view: EditorView, mode: KakouneMode): boolean {
@@ -90,6 +146,19 @@ function moveSelections(view: EditorView, mapper: (range: SelectionRange) => num
   const result = state.changeByRange(range => ({
     range: EditorSelection.cursor(mapper(range))
   }));
+
+  view.dispatch(result);
+  return true;
+}
+
+function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }): boolean {
+  const state = view.state;
+  const result = state.changeByRange(range => {
+    const { anchor, head } = mapper(range);
+    return {
+      range: EditorSelection.range(anchor, head)
+    };
+  });
 
   view.dispatch(result);
   return true;
@@ -945,12 +1014,12 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["l"], run: view => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)), description: "Move right" },
     { keys: ["j"], run: view => moveSelections(view, range => moveLineColumn(view, range, 1)), description: "Move down" },
     { keys: ["k"], run: view => moveSelections(view, range => moveLineColumn(view, range, -1)), description: "Move up" },
-    { keys: ["w"], run: view => moveSelections(view, range => moveWordForward(view, range)), description: "Move word forward" },
-    { keys: ["W"], run: view => extendSelections(view, range => moveWordForward(view, range)), description: "Extend word forward" },
-    { keys: ["b"], run: view => moveSelections(view, range => moveWordBackward(view, range)), description: "Move word backward" },
-    { keys: ["B"], run: view => extendSelections(view, range => moveWordBackward(view, range)), description: "Extend word backward" },
-    { keys: ["e"], run: view => moveSelections(view, range => moveWordEnd(view, range)), description: "Move to word end" },
-    { keys: ["E"], run: view => extendSelections(view, range => moveWordEnd(view, range)), description: "Extend to word end" },
+    { keys: ["w"], run: view => moveWordSelections(view, range => moveWordForwardRange(view, range)), description: "Move word forward" },
+    { keys: ["W"], run: view => extendSelections(view, range => moveWordForwardRange(view, range).head), description: "Extend word forward" },
+    { keys: ["b"], run: view => moveWordSelections(view, range => moveWordBackwardRange(view, range)), description: "Move word backward" },
+    { keys: ["B"], run: view => extendSelections(view, range => moveWordBackwardRange(view, range).head), description: "Extend word backward" },
+    { keys: ["e"], run: view => moveWordSelections(view, range => moveWordEndRange(view, range)), description: "Move to word end" },
+    { keys: ["E"], run: view => extendSelections(view, range => moveWordEndRange(view, range).head), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },

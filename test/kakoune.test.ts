@@ -329,6 +329,87 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.mainIndex).toBe(0);
     expect(view.state.selection.main.head).toBe(0);
   });
+
+  it("creates selection on w, b, e motions", () => {
+    const view = createView("alpha beta gamma");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Press 'w' -> moves over "alpha "
+    expect(processor.handle("select", "w", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(0);
+    expect(view.state.selection.main.head).toBe(6); // 'b' of "beta"
+
+    // Press 'w' again -> moves over "beta "
+    expect(processor.handle("select", "w", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(11); // 'g' of "gamma"
+
+    // Press 'b' -> moves back over "beta "
+    expect(processor.handle("select", "b", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(11);
+    expect(view.state.selection.main.head).toBe(6); // 'b' of "beta"
+
+    // Reset to cursor(0)
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Press 'e' -> moves to end of "alpha"
+    expect(processor.handle("select", "e", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(0);
+    expect(view.state.selection.main.head).toBe(5); // space after "alpha"
+
+    // Press 'e' again -> moves to end of "beta"
+    expect(processor.handle("select", "e", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(5);
+    expect(view.state.selection.main.head).toBe(10); // space after "beta"
+
+    // Test punctuation handling
+    const viewPunct = createView("hello...world");
+    const procPunct = new KakouneKeyProcessor(buildKakouneCommands());
+    viewPunct.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Press 'w' -> should stop at '.'
+    expect(procPunct.handle("select", "w", viewPunct)).toBe(true);
+    expect(viewPunct.state.selection.main.anchor).toBe(0);
+    expect(viewPunct.state.selection.main.head).toBe(5); // start of "..."
+
+    // Press 'w' again -> should stop at 'w'
+    expect(procPunct.handle("select", "w", viewPunct)).toBe(true);
+    expect(viewPunct.state.selection.main.anchor).toBe(5);
+    expect(viewPunct.state.selection.main.head).toBe(8); // start of "world"
+
+    // Test starting on whitespace
+    const viewSpace = createView("hello   world");
+    const procSpace = new KakouneKeyProcessor(buildKakouneCommands());
+    
+    // Start cursor at the first space (pos 5)
+    viewSpace.dispatch({ selection: EditorSelection.cursor(5) });
+    expect(procSpace.handle("select", "w", viewSpace)).toBe(true);
+    expect(viewSpace.state.selection.main.anchor).toBe(8); // skips space
+    expect(viewSpace.state.selection.main.head).toBe(13); // end of "world"
+
+    // Test backward movement from start of word (pos 8)
+    viewSpace.dispatch({ selection: EditorSelection.cursor(8) });
+    expect(procSpace.handle("select", "b", viewSpace)).toBe(true);
+    expect(viewSpace.state.selection.main.anchor).toBe(8);
+    expect(viewSpace.state.selection.main.head).toBe(0); // start of "hello"
+
+    // Test end of word starting on whitespace (pos 5)
+    viewSpace.dispatch({ selection: EditorSelection.cursor(5) });
+    expect(procSpace.handle("select", "e", viewSpace)).toBe(true);
+    expect(viewSpace.state.selection.main.anchor).toBe(5);
+    expect(viewSpace.state.selection.main.head).toBe(13); // end of "world"
+
+    // Test jump from } with w to // over empty lines
+    const viewSlash = createView("}\n\n// Kakoune");
+    const procSlash = new KakouneKeyProcessor(buildKakouneCommands());
+    viewSlash.dispatch({ selection: EditorSelection.cursor(0) }); // cursor on }
+
+    expect(procSlash.handle("select", "w", viewSlash)).toBe(true);
+    expect(viewSlash.state.selection.main.anchor).toBe(3); // start of "//"
+    expect(viewSlash.state.selection.main.head).toBe(6); // end of "// "
+  });
 });
 
 describe("kakoune extension", () => {
