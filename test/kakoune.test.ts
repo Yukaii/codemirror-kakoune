@@ -105,10 +105,25 @@ describe("KakouneKeyProcessor", () => {
     view.dispatch({ selection: EditorSelection.range(firstLine.from, emptyLine.from) });
 
     expect(processor.handle("select", "x", view)).toBe(true);
-    expect(view.state.selection.main.anchor).toBe(emptyLine.from);
-    expect(view.state.selection.main.head).toBe(
-      Math.min(emptyLine.to + 1, view.state.doc.length)
-    );
+    expect(view.state.selection.main.anchor).toBe(firstLine.from);
+    expect(view.state.selection.main.head).toBe(emptyLine.to);
+  });
+
+  it("keeps the original line when x is repeated after extending down with J", () => {
+    const view = createView("}\n\nnext");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    expect(processor.handle("select", "x", view)).toBe(true);
+    const first = view.state.selection.main;
+
+    expect(processor.handle("select", "J", view)).toBe(true);
+    expect(processor.handle("select", "x", view)).toBe(true);
+
+    expect(view.state.selection.main.anchor).toBe(first.anchor);
+    expect(view.state.selection.main.from).toBe(0);
+    expect(view.state.selection.main.to).toBe(view.state.doc.line(2).to);
   });
 
   it("supports line begin and line end motions through gh and gl", () => {
