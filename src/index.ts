@@ -9,7 +9,7 @@ import {
   type KakouneState
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
-import { buildKakouneCommands, createKakouneMotionRuntime } from "./commands";
+import { buildKakouneCommands } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState } from "./state";
 export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect } from "./state";
@@ -17,8 +17,7 @@ export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
 export { buildKakouneCommands, kakouneCommands } from "./commands";
 
 function createKakouneHandler() {
-  const runtime = createKakouneMotionRuntime();
-  const processor = new KakouneKeyProcessor(buildKakouneCommands(runtime));
+  const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
   return EditorView.domEventHandlers({
     keydown(event, view) {

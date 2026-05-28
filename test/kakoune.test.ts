@@ -46,18 +46,25 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(0);
   });
 
-  it("supports find motions and repetition", () => {
+  it("supports select-all and clearing extra selections", () => {
     const view = createView("alpha beta beta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
-    expect(processor.handle("normal", "f", view)).toBe(true);
-    expect(processor.handle("normal", "b", view)).toBe(true);
+    expect(processor.handle("normal", "%", view)).toBe(true);
+    expect(view.state.selection.ranges).toHaveLength(1);
+    expect(view.state.selection.main.from).toBe(0);
+    expect(view.state.selection.main.to).toBe(view.state.doc.length);
 
-    const firstPosition = view.state.selection.main.head;
-    expect(firstPosition).toBeGreaterThan(0);
+    view.dispatch({
+      selection: EditorSelection.create([
+        EditorSelection.cursor(1),
+        EditorSelection.cursor(6)
+      ])
+    });
 
-    expect(processor.handle("normal", ";", view)).toBe(true);
-    expect(view.state.selection.main.head).not.toBe(firstPosition);
+    expect(processor.handle("normal", ",", view)).toBe(true);
+    expect(view.state.selection.ranges).toHaveLength(1);
+    expect(view.state.selection.main.head).toBe(1);
   });
 });
 
