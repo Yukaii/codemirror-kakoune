@@ -1,0 +1,194 @@
+:root {
+  color-scheme: dark;
+  --bg: #101418;
+  --bg-elevated: rgba(14, 18, 24, 0.88);
+  --panel: rgba(24, 29, 36, 0.9);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text: #f2efe8;
+  --muted: #a8b0ba;
+  --accent: #d4a373;
+  --accent-strong: #f4b97f;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(212, 163, 115, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(84, 110, 122, 0.18), transparent 28%),
+    linear-gradient(180deg, #11161d 0%, #090b0e 100%);
+}
+
+.app-shell {
+  width: min(1200px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4.8rem);
+  line-height: 0.95;
+  max-width: 11ch;
+  margin-bottom: 16px;
+}
+
+.lede {
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.status-card,
+.editor-card,
+.help-card {
+  border: 1px solid var(--panel-border);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.status-card {
+  padding: 18px;
+  border-radius: 20px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.status-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+#mode-pill {
+  display: inline-flex;
+  align-items: center;
+  min-width: 96px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(244, 185, 127, 0.14);
+  color: var(--accent-strong);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+#register-pill {
+  display: inline-flex;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.75fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.editor-card {
+  border-radius: 24px;
+  padding: 14px;
+}
+
+#editor {
+  min-height: 68vh;
+  overflow: hidden;
+}
+
+.help-card {
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.help-card h2 {
+  margin-bottom: 12px;
+}
+
+.help-card ul {
+  margin: 0 0 18px;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.45rem;
+  margin: 0 0.08rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.84em;
+}
+
+.cm-editor {
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 68vh;
+  background: #0e1116;
+}
+
+.cm-scroller {
+  font-family:
+    "JetBrains Mono", "SFMono-Regular", ui-monospace, "Cascadia Code", "Source Code Pro",
+    monospace;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+@media (max-width: 960px) {
+  .hero,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    max-width: none;
+  }
+}

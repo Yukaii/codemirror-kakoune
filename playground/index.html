@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeMirror Kakoune Playground</title>
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">CodeMirror 6 Kakoune playground</p>
+          <h1>Selection-first editing, tuned for the browser.</h1>
+          <p class="lede">
+            Try the current Kakoune-style normal and insert mode keymap, inspect the active mode,
+            and validate how selection-driven editing behaves inside CodeMirror.
+          </p>
+        </div>
+        <div class="status-card">
+          <span class="status-label">Mode</span>
+          <strong id="mode-pill">normal</strong>
+          <span class="status-label">Register</span>
+          <code id="register-pill">""</code>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <article class="editor-card">
+          <div id="editor"></div>
+        </article>
+
+        <aside class="help-card">
+          <h2>Try these keys</h2>
+          <ul>
+            <li><kbd>i</kbd> enter insert mode</li>
+            <li><kbd>Esc</kbd> return to normal mode</li>
+            <li><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd> move the cursor</li>
+            <li><kbd>w</kbd> <kbd>b</kbd> <kbd>e</kbd> move by word</li>
+            <li><kbd>x</kbd> select the current line</li>
+            <li><kbd>d</kbd> delete the current selection</li>
+            <li><kbd>y</kbd> yank, <kbd>p</kbd> paste</li>
+            <li><kbd>f</kbd> <kbd>t</kbd> <kbd>F</kbd> <kbd>T</kbd> find a character on the line</li>
+            <li><kbd>;</kbd> repeat the last find, <kbd>,</kbd> repeat in reverse</li>
+          </ul>
+          <p>
+            The key processor is intentionally small right now. It is structured so the Kakoune
+            command set can grow without changing the playground shell.
+          </p>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>
