@@ -1,6 +1,7 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import { undo } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
+import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
   setKakouneModeEffect,
@@ -117,6 +118,130 @@ function moveToFind(view: EditorView, kind: KakouneFindKind, key: string): boole
   return true;
 }
 
+function rotateSelections(view: EditorView, reverse: boolean): boolean {
+  const ranges = view.state.selection.ranges;
+  if (ranges.length <= 1) {
+    return true;
+  }
+
+  const current = view.state.selection.mainIndex;
+  const next = reverse
+    ? (current - 1 + ranges.length) % ranges.length
+    : (current + 1) % ranges.length;
+
+  view.dispatch({
+    selection: EditorSelection.create(ranges, next)
+  });
+  return true;
+}
+
+function reduceSelectionsToCursor(view: EditorView): boolean {
+  const ranges = view.state.selection.ranges.map(range => EditorSelection.cursor(range.head));
+  view.dispatch({
+    selection: EditorSelection.create(ranges, ranges.length - 1)
+  });
+  return true;
+}
+
+function getSelectionText(view: EditorView): string {
+  const { state } = view;
+  const range = state.selection.main;
+
+  if (!range.empty) {
+    return state.sliceDoc(range.from, range.to);
+  }
+
+  const line = state.doc.lineAt(range.head);
+  const relative = range.head - line.from;
+  const text = line.text;
+  let start = relative;
+  let end = relative;
+
+  while (start > 0 && /[\p{L}\p{N}_]/u.test(text[start - 1])) {
+    start -= 1;
+  }
+
+  while (end < text.length && /[\p{L}\p{N}_]/u.test(text[end])) {
+    end += 1;
+  }
+
+  return text.slice(start, end);
+}
+
+function setSearchFromSelection(view: EditorView): boolean {
+  const text = getSelectionText(view);
+  if (!text) {
+    return false;
+  }
+
+  view.dispatch({
+    effects: setSearchQuery.of(
+      new SearchQuery({
+        search: text,
+        literal: true
+      })
+    )
+  });
+  return true;
+}
+
+function getSearchText(view: EditorView): string {
+  const query = getSearchQuery(view.state);
+  if (query.valid && query.search) {
+    return query.search;
+  }
+
+  return getSelectionText(view);
+}
+
+function findNextRange(view: EditorView, text: string): { from: number; to: number } | null {
+  if (!text) {
+    return null;
+  }
+
+  const doc = view.state.doc.toString();
+  const ranges = view.state.selection.ranges;
+  const start = ranges[ranges.length - 1].to;
+  const wrap = doc.indexOf(text, start);
+
+  if (wrap >= 0) {
+    return { from: wrap, to: wrap + text.length };
+  }
+
+  const before = doc.indexOf(text, 0);
+  if (before >= 0) {
+    return { from: before, to: before + text.length };
+  }
+
+  return null;
+}
+
+function selectNextText(view: EditorView): boolean {
+  const text = getSearchText(view);
+  const next = findNextRange(view, text);
+  if (!next) {
+    return false;
+  }
+
+  view.dispatch({
+    selection: EditorSelection.range(next.from, next.to)
+  });
+  return true;
+}
+
+function addNextTextSelection(view: EditorView): boolean {
+  const text = getSearchText(view);
+  const next = findNextRange(view, text);
+  if (!next) {
+    return false;
+  }
+
+  view.dispatch({
+    selection: view.state.selection.addRange(EditorSelection.range(next.from, next.to), false)
+  });
+  return true;
+}
+
 function selectAllBuffer(view: EditorView): boolean {
   view.dispatch({
     selection: EditorSelection.range(0, view.state.doc.length)
@@ -229,11 +354,20 @@ export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string
       { keys: ["x"], run: view => selectLine(view) },
       { keys: ["%"], run: view => selectAllBuffer(view) },
       { keys: [","], run: view => clearSelections(view) },
+      { keys: [";"], run: view => reduceSelectionsToCursor(view) },
+      { keys: [")"], run: view => rotateSelections(view, false) },
+      { keys: ["("], run: view => rotateSelections(view, true) },
       { keys: ["d"], run: view => deleteSelection(view) },
       { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert") },
       { keys: ["y"], run: view => yankSelection(view) },
       { keys: ["p"], run: view => pasteRegister(view) },
       { keys: ["u"], run: view => undo(view) },
+      { keys: ["*"], run: view => setSearchFromSelection(view) },
+      { keys: ["n"], run: view => selectNextText(view) },
+      { keys: ["N"], run: view => addNextTextSelection(view) },
+      { keys: ["/"], run: view => findNext(view) },
+      { keys: ["?"], run: view => findPrevious(view) },
+      { keys: ["s"], run: view => selectMatches(view) },
       { keys: ["f"], run: (view, arg) => {
         if (!arg) return true;
         return moveToFind(view, "f", arg);

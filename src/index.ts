@@ -1,5 +1,6 @@
 import { EditorView } from "@codemirror/view";
-import { type EditorState, type Extension } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
+import { search } from "@codemirror/search";
 import {
   kakouneInitialModeFacet,
   kakouneStateField,
@@ -56,6 +57,8 @@ export function kakoune(options: KakouneOptions = {}): Extension {
   return [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
+    EditorState.allowMultipleSelections.of(true),
+    search(),
     createKakouneHandler()
   ];
 }

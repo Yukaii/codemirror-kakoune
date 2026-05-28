@@ -6,6 +6,7 @@ import {
   kakouneStateField,
   normalizeKeyStroke
 } from "../src";
+import { getSearchQuery } from "@codemirror/search";
 import { KakouneKeyProcessor } from "../src/keys";
 
 function createView(doc: string): EditorView {
@@ -65,6 +66,53 @@ describe("KakouneKeyProcessor", () => {
     expect(processor.handle("normal", ",", view)).toBe(true);
     expect(view.state.selection.ranges).toHaveLength(1);
     expect(view.state.selection.main.head).toBe(1);
+  });
+
+  it("can seed search from the current selection and jump to the next match", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(6, 10) });
+
+    expect(processor.handle("normal", "*", view)).toBe(true);
+    expect(getSearchQuery(view.state).search).toBe("beta");
+
+    expect(processor.handle("normal", "n", view)).toBe(true);
+    expect(view.state.selection.main.from).toBe(17);
+    expect(view.state.selection.main.to).toBe(21);
+  });
+
+  it("adds a new selection for the next match", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(6, 10) });
+    expect(processor.handle("normal", "*", view)).toBe(true);
+    expect(processor.handle("normal", "N", view)).toBe(true);
+
+    expect(view.state.selection.ranges).toHaveLength(2);
+    expect(view.state.selection.ranges[0].from).toBe(6);
+    expect(view.state.selection.ranges[1].from).toBe(17);
+  });
+
+  it("rotates selections forward and backward", () => {
+    const view = createView("alpha beta gamma");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({
+      selection: EditorSelection.create(
+        [EditorSelection.cursor(0), EditorSelection.cursor(6), EditorSelection.cursor(12)],
+        0
+      )
+    });
+
+    expect(processor.handle("normal", ")", view)).toBe(true);
+    expect(view.state.selection.mainIndex).toBe(1);
+    expect(view.state.selection.main.head).toBe(6);
+
+    expect(processor.handle("normal", "(", view)).toBe(true);
+    expect(view.state.selection.mainIndex).toBe(0);
+    expect(view.state.selection.main.head).toBe(0);
   });
 });
 
