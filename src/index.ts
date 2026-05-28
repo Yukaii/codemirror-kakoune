@@ -8,9 +8,12 @@ import {
   kakouneInitialModeFacet,
   kakouneStateField,
   setKakouneModeEffect,
+  kakouneWhichKeyFacet,
   type KakouneMode,
   type KakouneOptions,
-  type KakouneState
+  type KakouneState,
+  type WhichKeyCallback,
+  type WhichKeyItem
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
 import {
@@ -21,8 +24,8 @@ import {
   handleSearchPromptKey
 } from "./commands";
 
-export type { KakouneMode, KakouneOptions, KakouneState } from "./state";
-export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect } from "./state";
+export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem } from "./state";
+export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect, kakouneWhichKeyFacet } from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
 export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
 
@@ -68,6 +71,15 @@ function createKakouneHandler() {
 
       const handled = processor.handle(mode, key, view);
 
+      const whichKeyCallback = view.state.facet(kakouneWhichKeyFacet);
+      if (whichKeyCallback) {
+        whichKeyCallback(
+          processor.getPending(),
+          processor.getPendingItems(mode),
+          processor.isWaitingForChar()
+        );
+      }
+
       if (handled) {
         event.preventDefault();
         event.stopPropagation();
@@ -111,7 +123,7 @@ const kakouneModeAttributes = ViewPlugin.fromClass(
 
 export function kakoune(options: KakouneOptions = {}): Extension {
   const initialMode = options.initialMode ?? "select";
-  return [
+  const extensions: Extension[] = [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
     EditorState.allowMultipleSelections.of(true),
@@ -157,6 +169,12 @@ export function kakoune(options: KakouneOptions = {}): Extension {
     search(),
     createKakouneHandler()
   ];
+
+  if (options.onWhichKey) {
+    extensions.push(kakouneWhichKeyFacet.of(options.onWhichKey));
+  }
+
+  return extensions;
 }
 
 export function getKakouneState(state: EditorState): KakouneState {

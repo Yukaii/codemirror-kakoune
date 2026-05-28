@@ -2,6 +2,17 @@ import { Facet, StateEffect, StateField, type EditorState } from "@codemirror/st
 
 export type KakouneMode = "select" | "insert";
 
+export interface WhichKeyItem {
+  keys: string[];
+  description?: string;
+}
+
+export type WhichKeyCallback = (
+  pending: string[],
+  items: WhichKeyItem[],
+  isWaitingForChar: boolean
+) => void;
+
 export interface KakouneState {
   mode: KakouneMode;
   register: string;
@@ -11,7 +22,14 @@ export interface KakouneState {
 
 export interface KakouneOptions {
   initialMode?: KakouneMode;
+  onWhichKey?: WhichKeyCallback;
 }
+
+export const kakouneWhichKeyFacet = Facet.define<WhichKeyCallback, WhichKeyCallback | null>({
+  combine(values) {
+    return values.length > 0 ? values[values.length - 1] : null;
+  }
+});
 
 export const kakouneInitialModeFacet = Facet.define<KakouneMode, KakouneMode>({
   combine(values) {

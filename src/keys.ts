@@ -1,9 +1,10 @@
 import type { EditorView } from "@codemirror/view";
-import type { KakouneMode } from "./state";
+import type { KakouneMode, WhichKeyItem } from "./state";
 
 export interface KakouneBinding {
   keys: string[];
   run(view: EditorView, arg?: string): boolean;
+  description?: string;
 }
 
 export interface KeyProcessorBindings {
@@ -11,12 +12,54 @@ export interface KeyProcessorBindings {
   insert: KakouneBinding[];
 }
 
+function getBaseKeyFromCode(code: string, shift: boolean): string | null {
+  if (code.startsWith("Key")) {
+    const char = code.slice(3).toLowerCase();
+    return shift ? char.toUpperCase() : char;
+  }
+  if (code.startsWith("Digit")) {
+    const digit = code.slice(5);
+    if (!shift) return digit;
+    const shiftDigits: Record<string, string> = {
+      "1": "!", "2": "@", "3": "#", "4": "$", "5": "%",
+      "6": "^", "7": "&", "8": "*", "9": "(", "0": ")"
+    };
+    return shiftDigits[digit] ?? digit;
+  }
+  switch (code) {
+    case "Semicolon":
+      return shift ? ":" : ";";
+    case "Equal":
+      return shift ? "+" : "=";
+    case "Comma":
+      return shift ? "<" : ",";
+    case "Minus":
+      return shift ? "_" : "-";
+    case "Period":
+      return shift ? ">" : ".";
+    case "Slash":
+      return shift ? "?" : "/";
+    case "Backquote":
+      return shift ? "~" : "`";
+    case "BracketLeft":
+      return shift ? "{" : "[";
+    case "BracketRight":
+      return shift ? "}" : "]";
+    case "Quote":
+      return shift ? "\"" : "'";
+    case "Backslash":
+      return shift ? "|" : "\\";
+    default:
+      return null;
+  }
+}
+
 export function normalizeKeyStroke(event: KeyboardEvent): string | null {
   if (event.isComposing || event.key === "Dead") {
     return null;
   }
 
-  const key = event.key;
+  let key = event.key;
 
   if (event.ctrlKey || event.metaKey || event.altKey) {
     const modifiers = [
@@ -24,6 +67,11 @@ export function normalizeKeyStroke(event: KeyboardEvent): string | null {
       event.altKey ? "A" : null,
       event.metaKey ? "M" : null
     ].filter(Boolean) as string[];
+
+    const mapped = getBaseKeyFromCode(event.code, event.shiftKey);
+    if (mapped !== null) {
+      key = mapped;
+    }
 
     const base = key.length === 1 ? key.toLowerCase() : key;
     return `<${modifiers.join("-")}-${base}>`;
@@ -84,6 +132,32 @@ export class KakouneKeyProcessor {
   reset(): void {
     this.pending = [];
     this.pendingCharBinding = null;
+  }
+
+  getPending(): string[] {
+    return this.pending;
+  }
+
+  isWaitingForChar(): boolean {
+    return this.pendingCharBinding !== null;
+  }
+
+  getPendingItems(mode: KakouneMode): WhichKeyItem[] {
+    if (this.pendingCharBinding) {
+      return [];
+    }
+
+    const bindings = this.bindings[mode];
+    if (this.pending.length === 0) {
+      return [];
+    }
+
+    return bindings
+      .filter(binding => isPrefix(this.pending, binding.keys) && binding.keys.length > this.pending.length)
+      .map(binding => ({
+        keys: binding.keys,
+        description: binding.description
+      }));
   }
 
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {

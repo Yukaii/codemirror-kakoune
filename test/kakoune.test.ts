@@ -476,4 +476,198 @@ describe("kakoune extension", () => {
 
     view.destroy();
   });
+
+  it("flips selection direction on <A-;>", () => {
+    const view = createView("hello world");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(0, 5) });
+    expect(view.state.selection.main.anchor).toBe(0);
+    expect(view.state.selection.main.head).toBe(5);
+
+    expect(processor.handle("select", "<A-;>", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(5);
+    expect(view.state.selection.main.head).toBe(0);
+
+    view.destroy();
+  });
+
+  it("supports jumping to whole surrounding object starts/ends with [ and ]", () => {
+    const view = createView("if (x > 0) { return [1, 2]; }");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(20);
+
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+
+    expect(processor.handle("select", "]", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(26);
+
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(processor.handle("select", "{", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(11);
+
+    view.destroy();
+  });
+
+  it("supports extending selections to surrounding objects with { and }", () => {
+    const view = createView("if (x > 0) { return [1, 2]; }");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+
+    expect(processor.handle("select", "{", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(24);
+    expect(view.state.selection.main.head).toBe(20);
+
+    view.destroy();
+  });
+
+  it("supports inner object boundaries using Alt versions", () => {
+    const view = createView("if (x > 0) { return [1, 2]; }");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+
+    expect(processor.handle("select", "<A-[>", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(21);
+
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+    expect(processor.handle("select", "<A-]>", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(25);
+
+    view.destroy();
+  });
+
+  it("invokes the onWhichKey hook on keydown and lists matching prefix bindings", () => {
+    const mockCallback = jest.fn();
+    const parent = document.createElement("div");
+    document.body.appendChild(parent);
+
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: "hello world",
+        selection: EditorSelection.cursor(0),
+        extensions: [kakoune({ onWhichKey: mockCallback })]
+      }),
+      parent
+    });
+
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "g", bubbles: true }));
+
+    expect(mockCallback).toHaveBeenCalled();
+    const lastCall = mockCallback.mock.calls[mockCallback.mock.calls.length - 1];
+    expect(lastCall[0]).toEqual(["g"]);
+    expect(lastCall[2]).toBe(false);
+    expect(lastCall[1].length).toBeGreaterThan(0);
+    for (const item of lastCall[1]) {
+      expect(item.keys[0]).toBe("g");
+      expect(item.description).toBeDefined();
+    }
+
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "h", bubbles: true }));
+    const finalCall = mockCallback.mock.calls[mockCallback.mock.calls.length - 1];
+    expect(finalCall[0]).toEqual([]);
+    expect(finalCall[1]).toEqual([]);
+    expect(finalCall[2]).toBe(false);
+
+    view.destroy();
+  });
+
+  it("supports quote strings, words, and other boundaries", () => {
+    const view = createView('const text = "hello" + \'world\' + `test`;');
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Cursor inside double quotes: at character 'e' (index 15)
+    view.dispatch({ selection: EditorSelection.cursor(15) });
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(processor.handle("select", "Q", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(13); // opening quote is at index 13
+
+    // Inner double quote
+    view.dispatch({ selection: EditorSelection.cursor(15) });
+    expect(processor.handle("select", "<A-[>", view)).toBe(true);
+    expect(processor.handle("select", "\"", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(14); // character 'h' at 14
+
+    // Word boundaries
+    // Cursor at 't' in const (index 4)
+    view.dispatch({ selection: EditorSelection.cursor(4) });
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(processor.handle("select", "w", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(0); // start of word 'const'
+
+    view.destroy();
+  });
+
+  it("resolves Option/Alt keyboard events to base keys on macOS", () => {
+    const parent = document.createElement("div");
+    document.body.appendChild(parent);
+
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: "hello world",
+        selection: EditorSelection.range(0, 5),
+        extensions: [kakoune()]
+      }),
+      parent
+    });
+
+    const event = new KeyboardEvent("keydown", {
+      key: "…",
+      code: "Semicolon",
+      altKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    view.contentDOM.dispatchEvent(event);
+
+    expect(view.state.selection.main.anchor).toBe(5);
+    expect(view.state.selection.main.head).toBe(0);
+
+    view.destroy();
+  });
+
+  it("supports paragraphs boundaries", () => {
+    const view = createView("para one\n\npara two\n\npara three");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Cursor inside "para two" (index 15)
+    // "para one\n\npara two\n\npara three"
+    // 01234567 8 9 01234567 8 9 0123456789
+    //             para two starts at 10
+    view.dispatch({ selection: EditorSelection.cursor(15) });
+
+    // Select to paragraph start: `[` then `p`
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(processor.handle("select", "p", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(10); // Start of "para two"
+
+    // Press `[` then `p` again: should jump to previous paragraph start (index 0)
+    expect(processor.handle("select", "[", view)).toBe(true);
+    expect(processor.handle("select", "p", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(0); // Start of "para one"
+
+    // Select to paragraph end: `]` then `p`
+    view.dispatch({ selection: EditorSelection.cursor(15) });
+    expect(processor.handle("select", "]", view)).toBe(true);
+    expect(processor.handle("select", "p", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(18); // End of "para two" (after 'o', before '\n')
+
+    // Press `]` then `p` again: should jump to next paragraph end (index 30)
+    expect(processor.handle("select", "]", view)).toBe(true);
+    expect(processor.handle("select", "p", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(30); // End of "para three"
+
+    view.destroy();
+  });
 });
