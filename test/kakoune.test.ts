@@ -325,11 +325,7 @@ describe("kakoune extension", () => {
 
     expect(
       view.contentDOM.dispatchEvent(
-        new InputEvent("beforeinput", {
-          bubbles: true,
-          cancelable: true,
-          inputType: "insertLineBreak"
-        })
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
       )
     ).toBe(false);
     expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();

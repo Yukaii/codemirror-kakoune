@@ -339,7 +339,7 @@ export function handleSearchPromptKey(view: EditorView, key: string): boolean {
   }
 
   if (key === "<Enter>") {
-    return true;
+    return commitSearchPrompt(view);
   }
 
   if (key === "<Backspace>") {
