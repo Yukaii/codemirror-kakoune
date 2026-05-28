@@ -41,7 +41,7 @@ function createKakouneHandler() {
         return true;
       }
 
-      if (mode === "normal") {
+      if (mode !== "insert") {
         event.preventDefault();
         event.stopPropagation();
         return true;

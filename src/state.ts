@@ -1,6 +1,6 @@
 import { Facet, StateEffect, StateField, type EditorState } from "@codemirror/state";
 
-export type KakouneMode = "normal" | "insert";
+export type KakouneMode = "normal" | "insert" | "select";
 
 export interface KakouneState {
   mode: KakouneMode;

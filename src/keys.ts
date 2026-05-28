@@ -8,6 +8,7 @@ export interface KakouneBinding {
 
 export interface KeyProcessorBindings {
   normal: KakouneBinding[];
+  select: KakouneBinding[];
   insert: KakouneBinding[];
 }
 
@@ -79,7 +80,7 @@ export class KakouneKeyProcessor {
   private pending: string[] = [];
   private pendingCharBinding: KakouneBinding | null = null;
 
-  constructor(private readonly bindings: KeyProcessorBindings) {}
+  constructor(private readonly bindings: Record<KakouneMode, KakouneBinding[]>) {}
 
   reset(): void {
     this.pending = [];

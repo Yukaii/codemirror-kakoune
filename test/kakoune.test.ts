@@ -94,7 +94,7 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("normal", "g", view)).toBe(true);
     expect(processor.handle("normal", "j", view)).toBe(true);
-    expect(view.state.selection.main.head).toBe(view.state.doc.length);
+    expect(view.state.selection.main.head).toBe(view.state.doc.line(view.state.doc.lines).from);
   });
 
   it("supports Kakoune's Alt-h and Alt-l aliases for line begin and end", () => {
@@ -110,6 +110,47 @@ describe("KakouneKeyProcessor", () => {
     expect(processor.handle("normal", "<A-l>", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(8);
     expect(view.state.selection.main.head).toBe(10);
+  });
+
+  it("enters select mode with s and uses select-mode G motions for boundaries", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(8) });
+
+    expect(processor.handle("normal", "s", view)).toBe(true);
+    expect(view.state.field(kakouneStateField).mode).toBe("select");
+
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "h", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(0);
+
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "l", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(10);
+
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "k", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(0);
+
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "j", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(view.state.doc.length);
+  });
+
+  it("keeps regex selection on S", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(6, 10) });
+    expect(processor.handle("normal", "*", view)).toBe(true);
+
+    expect(processor.handle("normal", "S", view)).toBe(true);
+    expect(view.state.selection.ranges.length).toBeGreaterThan(1);
   });
 
   it("extends selections with uppercase motion keys", () => {
