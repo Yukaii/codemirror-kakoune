@@ -92,6 +92,14 @@ function moveSelections(view: EditorView, mapper: (range: SelectionRange) => num
   return true;
 }
 
+function extendSelections(view: EditorView, mapper: (range: SelectionRange) => number): boolean {
+  const ranges = view.state.selection.ranges.map(range => EditorSelection.range(range.anchor, mapper(range)));
+  view.dispatch({
+    selection: EditorSelection.create(ranges, view.state.selection.mainIndex)
+  });
+  return true;
+}
+
 function moveToFind(view: EditorView, kind: KakouneFindKind, key: string): boolean {
   const backwards = kind === "F" || kind === "T";
   const inclusive = kind === "f" || kind === "F";
@@ -347,16 +355,25 @@ export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string
       { keys: ["j"], run: view => moveSelections(view, range => moveLineColumn(view, range, 1)) },
       { keys: ["k"], run: view => moveSelections(view, range => moveLineColumn(view, range, -1)) },
       { keys: ["w"], run: view => moveSelections(view, range => moveWordForward(view, range)) },
+      { keys: ["W"], run: view => extendSelections(view, range => moveWordForward(view, range)) },
       { keys: ["b"], run: view => moveSelections(view, range => moveWordBackward(view, range)) },
+      { keys: ["B"], run: view => extendSelections(view, range => moveWordBackward(view, range)) },
       { keys: ["e"], run: view => moveSelections(view, range => moveWordEnd(view, range)) },
-      { keys: ["0"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) },
-      { keys: ["$"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) },
+      { keys: ["E"], run: view => extendSelections(view, range => moveWordEnd(view, range)) },
       { keys: ["x"], run: view => selectLine(view) },
       { keys: ["%"], run: view => selectAllBuffer(view) },
       { keys: [","], run: view => clearSelections(view) },
       { keys: [";"], run: view => reduceSelectionsToCursor(view) },
       { keys: [")"], run: view => rotateSelections(view, false) },
       { keys: ["("], run: view => rotateSelections(view, true) },
+      { keys: ["g", "h"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) },
+      { keys: ["g", "l"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) },
+      { keys: ["<A-h>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from) },
+      { keys: ["<A-l>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
+      { keys: ["H"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from) },
+      { keys: ["J"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)) },
+      { keys: ["K"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)) },
+      { keys: ["L"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
       { keys: ["d"], run: view => deleteSelection(view) },
       { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert") },
       { keys: ["y"], run: view => yankSelection(view) },

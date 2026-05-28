@@ -68,6 +68,50 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(1);
   });
 
+  it("supports line begin and line end motions through gh and gl", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(8) });
+    expect(processor.handle("normal", "g", view)).toBe(true);
+    expect(processor.handle("normal", "h", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(0);
+
+    expect(processor.handle("normal", "g", view)).toBe(true);
+    expect(processor.handle("normal", "l", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(10);
+  });
+
+  it("supports Kakoune's Alt-h and Alt-l aliases for line begin and end", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(8) });
+
+    expect(processor.handle("normal", "<A-h>", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(0);
+
+    expect(processor.handle("normal", "<A-l>", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(10);
+  });
+
+  it("extends selections with uppercase motion keys", () => {
+    const view = createView("alpha beta gamma");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    expect(processor.handle("normal", "W", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(0);
+    expect(view.state.selection.main.head).toBeGreaterThan(0);
+
+    expect(processor.handle("normal", "H", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(0);
+    expect(view.state.selection.main.head).toBe(0);
+  });
+
   it("can seed search from the current selection and jump to the next match", () => {
     const view = createView("alpha beta gamma beta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
