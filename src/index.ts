@@ -1,5 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { EditorState, type Extension } from "@codemirror/state";
+import { Prec } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
 import { search } from "@codemirror/search";
 import {
   kakouneInitialModeFacet,
@@ -10,7 +12,7 @@ import {
   type KakouneState
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
-import { buildKakouneCommands, handleSearchPromptKey } from "./commands";
+import { buildKakouneCommands, commitSearchPrompt, handleSearchPromptKey } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState } from "./state";
 export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect } from "./state";
@@ -79,6 +81,21 @@ export function kakoune(options: KakouneOptions = {}): Extension {
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
     EditorState.allowMultipleSelections.of(true),
+    Prec.highest(
+      keymap.of([
+        {
+          key: "Enter",
+          run(view) {
+            const state = view.state.field(kakouneStateField);
+            if (state.searchPrompt === null) {
+              return false;
+            }
+
+            return commitSearchPrompt(view);
+          }
+        }
+      ])
+    ),
     search(),
     createKakouneHandler()
   ];
