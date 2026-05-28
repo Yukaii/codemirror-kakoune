@@ -339,7 +339,7 @@ export function handleSearchPromptKey(view: EditorView, key: string): boolean {
   }
 
   if (key === "<Enter>") {
-    return true;
+    return commitSearchPrompt(view);
   }
 
   if (key === "<Backspace>") {
@@ -532,7 +532,6 @@ function buildSelectBindings(): Array<{ keys: string[]; run(view: EditorView, ar
     { keys: ["u"], run: view => undo(view) },
     { keys: ["*"], run: view => setSearchFromSelection(view) },
     { keys: ["s"], run: view => setSearchPrompt(view, "") },
-    { keys: ["S"], run: view => selectSearchMatches(view) },
     { keys: ["n"], run: view => jumpToNextSearch(view) },
     { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view) },
     { keys: ["N"], run: view => addNextTextSelection(view) },

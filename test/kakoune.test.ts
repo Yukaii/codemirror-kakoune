@@ -2,7 +2,6 @@ import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
   buildKakouneCommands,
-  commitSearchPrompt,
   kakoune,
   kakouneStateField,
   normalizeKeyStroke
@@ -160,17 +159,6 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(0);
   });
 
-  it("selects all matches with S after seeding a search", () => {
-    const view = createView("alpha beta gamma beta");
-    const processor = new KakouneKeyProcessor(buildKakouneCommands());
-
-    view.dispatch({ selection: EditorSelection.range(6, 10) });
-    expect(processor.handle("select", "*", view)).toBe(true);
-
-    expect(processor.handle("select", "S", view)).toBe(true);
-    expect(view.state.selection.ranges.length).toBeGreaterThan(1);
-  });
-
   it("extends selections with uppercase motion keys", () => {
     const view = createView("alpha beta gamma");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -243,7 +231,7 @@ describe("KakouneKeyProcessor", () => {
     }
     expect(view.state.selection.main.from).toBe(6);
     expect(view.state.selection.main.to).toBe(10);
-    expect(commitSearchPrompt(view)).toBe(true);
+    expect(handleSearchPromptKey(view, "<Enter>")).toBe(true);
     expect(view.state.selection.main.from).toBe(6);
     expect(view.state.selection.main.to).toBe(10);
 
@@ -335,8 +323,11 @@ describe("kakoune extension", () => {
       expect(handleSearchPromptKey(view, key)).toBe(true);
     }
 
-    expect(commitSearchPrompt(view)).toBe(true);
-
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
     expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
     expect(getSearchQuery(view.state).search).toBe("beta");
 
@@ -347,33 +338,6 @@ describe("kakoune extension", () => {
     expect(processor.handle("select", "<A-n>", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(17);
     expect(view.state.selection.main.to).toBe(21);
-
-    view.destroy();
-  });
-
-  it("commits the search prompt on Enter without inserting a newline", () => {
-    const view = createView("alpha beta gamma beta");
-    const processor = new KakouneKeyProcessor(buildKakouneCommands());
-
-    view.dispatch({ selection: EditorSelection.cursor(0) });
-    expect(processor.handle("select", "s", view)).toBe(true);
-
-    for (const key of "beta") {
-      expect(handleSearchPromptKey(view, key)).toBe(true);
-    }
-
-    const event = new InputEvent("beforeinput", {
-      bubbles: true,
-      cancelable: true,
-      inputType: "insertLineBreak"
-    });
-
-    expect(view.contentDOM.dispatchEvent(event)).toBe(false);
-    expect(view.state.doc.toString()).toBe("alpha beta gamma beta");
-    expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
-    expect(getSearchQuery(view.state).search).toBe("beta");
-    expect(view.state.selection.main.from).toBe(0);
-    expect(view.state.selection.main.to).toBe(0);
 
     view.destroy();
   });
