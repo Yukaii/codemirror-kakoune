@@ -150,6 +150,7 @@ body {
 }
 
 #editor {
+  position: relative;
   min-height: calc(100vh - 128px);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
@@ -175,4 +176,113 @@ body {
   font-size: 12px;
   line-height: 1.5;
   letter-spacing: 0.02em;
+}
+
+#which-key-hud {
+  position: absolute;
+  background: var(--panel-strong);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  font-family: inherit;
+  z-index: 9999;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  opacity: 1;
+}
+
+#which-key-hud.hidden {
+  display: none;
+}
+
+/* Vertical layout (bottom-right inside editor) */
+#which-key-hud[data-layout="vertical"] {
+  bottom: 16px;
+  right: 16px;
+  width: 280px;
+  border-radius: 8px;
+}
+
+#which-key-hud[data-layout="vertical"] .hud-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+/* Horizontal layout (bottom-spanning inside editor) */
+#which-key-hud[data-layout="horizontal"] {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0 0 11px 11px;
+  width: 100%;
+}
+
+#which-key-hud[data-layout="horizontal"] .hud-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.hud-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+#hud-pending {
+  color: var(--text);
+  background: var(--panel);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: none;
+}
+
+.hud-prompt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hud-prompt.hidden {
+  display: none;
+}
+
+.hud-item {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+
+.hud-item:hover {
+  background: var(--panel);
+}
+
+.hud-key {
+  color: var(--accent);
+  font-weight: bold;
+  min-width: 40px;
+  text-transform: none;
+}
+
+.hud-desc {
+  color: var(--text);
+  text-transform: none;
 }

@@ -13,18 +13,24 @@ import "./style.css";
 
 const editorElement = document.querySelector<HTMLDivElement>("#editor");
 const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select");
+const layoutSelect = document.querySelector<HTMLSelectElement>("#layout-select");
 const modePill = document.querySelector<HTMLElement>("#mode-pill");
 const searchPill = document.querySelector<HTMLElement>("#search-pill");
 const registerPill = document.querySelector<HTMLElement>("#register-pill");
+const hudElement = document.querySelector<HTMLDivElement>("#which-key-hud");
+const hudTitle = document.querySelector<HTMLElement>("#hud-title");
+const hudPrompt = document.querySelector<HTMLElement>("#hud-prompt");
+const hudItems = document.querySelector<HTMLDivElement>("#hud-items");
 const themeCompartment = new Compartment();
 
-if (!editorElement || !themeSelect || !modePill || !searchPill || !registerPill) {
+if (!editorElement || !themeSelect || !layoutSelect || !modePill || !searchPill || !registerPill || !hudElement || !hudTitle || !hudPrompt || !hudItems) {
   throw new Error("Playground shell is missing required DOM nodes.");
 }
 
 const themeSelectElement = themeSelect;
 
 const themeStorageKey = "codemirror-kakoune.playground.theme";
+const layoutStorageKey = "codemirror-kakoune.playground.layout";
 
 function getInitialTheme(): PlaygroundThemeName {
   const storedTheme = window.localStorage.getItem(themeStorageKey);
@@ -54,6 +60,35 @@ const updateStatus = (view: EditorView): void => {
   registerPill.textContent = state.register ? JSON.stringify(state.register) : '""';
 };
 
+function getWhichKeyTitle(pending: string[]): string {
+  if (pending.length === 0) return "which-key";
+  const first = pending[0];
+  switch (first) {
+    case "g":
+      return "goto";
+    case "G":
+      return "goto (extend to)";
+    case "[":
+      return "select to surrounding object start";
+    case "]":
+      return "select to surrounding object end";
+    case "{":
+      return "extend to surrounding object start";
+    case "}":
+      return "extend to surrounding object end";
+    case "<A-[>":
+      return "select to inner surrounding object start";
+    case "<A-]>":
+      return "select to inner surrounding object end";
+    case "<A-{>":
+      return "extend to inner surrounding object start";
+    case "<A-}>":
+      return "extend to inner surrounding object end";
+    default:
+      return `keys: ${pending.join(" ")}`;
+  }
+}
+
 const initialTheme = getInitialTheme();
 document.body.dataset.theme = initialTheme;
 
@@ -73,7 +108,42 @@ const view = new EditorView({
       basicSetup,
       javascript({ typescript: true, jsx: true }),
       themeCompartment.of(buildPlaygroundEditorTheme(playgroundThemes[initialTheme])),
-      kakoune(),
+      kakoune({
+        onWhichKey: (pending, items, isWaitingForChar) => {
+          if (pending.length === 0 && !isWaitingForChar) {
+            hudElement.classList.add("hidden");
+            return;
+          }
+
+          hudElement.classList.remove("hidden");
+          hudTitle.textContent = getWhichKeyTitle(pending);
+
+          if (isWaitingForChar) {
+            hudPrompt.classList.remove("hidden");
+          } else {
+            hudPrompt.classList.add("hidden");
+          }
+
+          hudItems.innerHTML = "";
+          items.forEach(item => {
+            const el = document.createElement("div");
+            el.className = "hud-item";
+
+            const keyEl = document.createElement("span");
+            keyEl.className = "hud-key";
+            const remainingKeys = item.keys.slice(pending.length);
+            keyEl.textContent = remainingKeys.join(" ");
+
+            const descEl = document.createElement("span");
+            descEl.className = "hud-desc";
+            descEl.textContent = item.description || "";
+
+            el.appendChild(keyEl);
+            el.appendChild(descEl);
+            hudItems.appendChild(el);
+          });
+        }
+      }),
       EditorView.updateListener.of(update => {
         if (update.transactions.length > 0) {
           updateStatus(update.view);
@@ -90,6 +160,16 @@ themeSelectElement.addEventListener("change", () => {
   if (isPlaygroundThemeName(nextTheme)) {
     applyTheme(view, nextTheme);
   }
+});
+
+const initialLayout = window.localStorage.getItem(layoutStorageKey) || "vertical";
+hudElement.setAttribute("data-layout", initialLayout);
+layoutSelect.value = initialLayout;
+
+layoutSelect.addEventListener("change", () => {
+  const nextLayout = layoutSelect.value;
+  hudElement.setAttribute("data-layout", nextLayout);
+  window.localStorage.setItem(layoutStorageKey, nextLayout);
 });
 
 updateStatus(view);

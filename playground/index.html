@@ -26,6 +26,13 @@
               <option value="sepia">Sepia</option>
             </select>
           </label>
+          <label class="control" for="layout-select">
+            <span>which-key</span>
+            <select id="layout-select" name="layout">
+              <option value="vertical">Vertical</option>
+              <option value="horizontal">Horizontal</option>
+            </select>
+          </label>
           <span class="state">
             mode: <strong id="mode-pill">select</strong>
             search: <code id="search-pill">select:</code>
@@ -34,7 +41,15 @@
         </div>
       </header>
 
-      <div id="editor"></div>
+      <div id="editor">
+        <div id="which-key-hud" class="hidden">
+          <div class="hud-header">
+            <span id="hud-title" class="hud-title">which-key</span>
+            <span id="hud-prompt" class="hud-prompt hidden">waiting for char...</span>
+          </div>
+          <div id="hud-items" class="hud-items"></div>
+        </div>
+      </div>
     </main>
   </body>
 </html>
