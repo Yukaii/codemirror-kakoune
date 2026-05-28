@@ -76,7 +76,7 @@ describe("KakouneKeyProcessor", () => {
     view.dispatch({ selection: EditorSelection.range(8, 3) });
 
     expect(processor.handle("select", "x", view)).toBe(true);
-    expect(view.state.selection.main.anchor).toBe(view.state.doc.lineAt(8).to + 1);
+    expect(view.state.selection.main.anchor).toBe(view.state.doc.lineAt(8).to);
     expect(view.state.selection.main.head).toBe(view.state.doc.lineAt(8).from);
   });
 
@@ -88,6 +88,7 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("select", "x", view)).toBe(true);
     const first = view.state.selection.main;
+    expect(first.head).toBe(view.state.doc.lineAt(3).to);
     expect(processor.handle("select", "x", view)).toBe(true);
     const second = view.state.selection.main;
 
