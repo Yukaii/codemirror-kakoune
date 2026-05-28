@@ -9,11 +9,21 @@
   <body>
     <main class="shell">
       <header class="bar">
-        <span>codemirror-kakoune</span>
-        <span class="state">
-          mode: <strong id="mode-pill">normal</strong>
-          register: <code id="register-pill">""</code>
-        </span>
+        <span class="brand">codemirror-kakoune</span>
+        <div class="controls">
+          <label class="control" for="theme-select">
+            <span>theme</span>
+            <select id="theme-select" name="theme">
+              <option value="night">Night</option>
+              <option value="paper">Paper</option>
+              <option value="sepia">Sepia</option>
+            </select>
+          </label>
+          <span class="state">
+            mode: <strong id="mode-pill">normal</strong>
+            register: <code id="register-pill">""</code>
+          </span>
+        </div>
       </header>
 
       <div id="editor"></div>
