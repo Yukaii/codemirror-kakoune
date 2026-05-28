@@ -187,6 +187,12 @@ export function buildPlaygroundEditorTheme(theme: PlaygroundTheme): Extension {
         "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
           backgroundColor: theme.editor.selection
         },
+        "&[data-kakoune-mode='select'] .cm-cursor": {
+          borderLeftColor: "transparent",
+          backgroundColor: theme.editor.accent,
+          opacity: "0.35",
+          width: "0.72em"
+        },
         ".cm-selectionMatch": {
           backgroundColor: theme.editor.match
         },

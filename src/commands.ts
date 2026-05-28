@@ -1,5 +1,5 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
-import { undo } from "@codemirror/commands";
+import { redo, undo } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
@@ -530,6 +530,7 @@ function buildSelectBindings(): Array<{ keys: string[]; run(view: EditorView, ar
     { keys: ["y"], run: view => yankSelection(view) },
     { keys: ["p"], run: view => pasteRegister(view) },
     { keys: ["u"], run: view => undo(view) },
+    { keys: ["U"], run: view => redo(view) },
     { keys: ["*"], run: view => setSearchFromSelection(view) },
     { keys: ["s"], run: view => setSearchPrompt(view, "") },
     { keys: ["n"], run: view => jumpToNextSearch(view) },

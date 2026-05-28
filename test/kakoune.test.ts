@@ -357,4 +357,21 @@ describe("kakoune extension", () => {
 
     view.destroy();
   });
+
+  it("supports redo with U after undo", () => {
+    const view = createView("alpha");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(0, 5) });
+    expect(processor.handle("select", "d", view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("");
+
+    expect(processor.handle("select", "u", view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("alpha");
+
+    expect(processor.handle("select", "U", view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("");
+
+    view.destroy();
+  });
 });

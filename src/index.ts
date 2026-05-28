@@ -1,7 +1,8 @@
 import { EditorView } from "@codemirror/view";
 import { EditorState, type Extension } from "@codemirror/state";
 import { Prec } from "@codemirror/state";
-import { keymap } from "@codemirror/view";
+import { keymap, ViewPlugin } from "@codemirror/view";
+import { history } from "@codemirror/commands";
 import { search } from "@codemirror/search";
 import {
   kakouneInitialModeFacet,
@@ -75,12 +76,38 @@ function createKakouneHandler() {
   });
 }
 
+const kakouneModeAttributes = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      this.updateView(view);
+    }
+
+    update(update: { view: EditorView }): void {
+      this.updateView(update.view);
+    }
+
+    destroy(): void {
+      this.view?.dom.removeAttribute("data-kakoune-mode");
+      this.view = undefined;
+    }
+
+    private view?: EditorView;
+
+    private updateView(view: EditorView): void {
+      this.view = view;
+      view.dom.dataset.kakouneMode = view.state.field(kakouneStateField).mode;
+    }
+  }
+);
+
 export function kakoune(options: KakouneOptions = {}): Extension {
   const initialMode = options.initialMode ?? "select";
   return [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
     EditorState.allowMultipleSelections.of(true),
+    history(),
+    kakouneModeAttributes,
     Prec.highest(
       keymap.of([
         {
