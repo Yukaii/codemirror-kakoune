@@ -1,6 +1,7 @@
 import { basicSetup, EditorView } from "codemirror";
 import { Compartment, EditorState } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
+import { getSearchQuery } from "@codemirror/search";
 import { kakoune, kakouneStateField } from "../src/index";
 import {
   buildPlaygroundEditorTheme,
@@ -13,10 +14,11 @@ import "./style.css";
 const editorElement = document.querySelector<HTMLDivElement>("#editor");
 const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select");
 const modePill = document.querySelector<HTMLElement>("#mode-pill");
+const searchPill = document.querySelector<HTMLElement>("#search-pill");
 const registerPill = document.querySelector<HTMLElement>("#register-pill");
 const themeCompartment = new Compartment();
 
-if (!editorElement || !themeSelect || !modePill || !registerPill) {
+if (!editorElement || !themeSelect || !modePill || !searchPill || !registerPill) {
   throw new Error("Playground shell is missing required DOM nodes.");
 }
 
@@ -41,7 +43,14 @@ function applyTheme(view: EditorView, themeName: PlaygroundThemeName): void {
 
 const updateStatus = (view: EditorView): void => {
   const state = view.state.field(kakouneStateField);
+  const searchQuery = getSearchQuery(view.state);
   modePill.textContent = state.mode;
+  searchPill.textContent =
+    state.searchPrompt !== null
+      ? `S ${state.searchPrompt}`
+      : searchQuery.valid && searchQuery.search
+        ? `/${searchQuery.search}`
+        : "—";
   registerPill.textContent = state.register ? JSON.stringify(state.register) : '""';
 };
 

@@ -1,10 +1,11 @@
 import { Facet, StateEffect, StateField, type EditorState } from "@codemirror/state";
 
-export type KakouneMode = "normal" | "insert" | "select";
+export type KakouneMode = "select" | "insert";
 
 export interface KakouneState {
   mode: KakouneMode;
   register: string;
+  searchPrompt: string | null;
 }
 
 export interface KakouneOptions {
@@ -13,18 +14,20 @@ export interface KakouneOptions {
 
 export const kakouneInitialModeFacet = Facet.define<KakouneMode, KakouneMode>({
   combine(values) {
-    return values.length > 0 ? values[values.length - 1] : "normal";
+    return values.length > 0 ? values[values.length - 1] : "select";
   }
 });
 
 export const setKakouneModeEffect = StateEffect.define<KakouneMode>();
 export const setKakouneRegisterEffect = StateEffect.define<string>();
+export const setKakouneSearchPromptEffect = StateEffect.define<string | null>();
 
 export const kakouneStateField = StateField.define<KakouneState>({
   create(state: EditorState) {
     return {
       mode: state.facet(kakouneInitialModeFacet),
-      register: ""
+      register: "",
+      searchPrompt: null
     };
   },
   update(value, transaction) {
@@ -35,6 +38,8 @@ export const kakouneStateField = StateField.define<KakouneState>({
         next = { ...next, mode: effect.value };
       } else if (effect.is(setKakouneRegisterEffect)) {
         next = { ...next, register: effect.value };
+      } else if (effect.is(setKakouneSearchPromptEffect)) {
+        next = { ...next, searchPrompt: effect.value };
       }
     }
 

@@ -127,6 +127,7 @@ body {
 }
 
 #mode-pill,
+#search-pill,
 #register-pill {
   color: var(--text);
 }

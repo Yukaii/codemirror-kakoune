@@ -10,7 +10,7 @@ import {
   type KakouneState
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
-import { buildKakouneCommands } from "./commands";
+import { buildKakouneCommands, handleSearchPromptKey } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState } from "./state";
 export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect } from "./state";
@@ -27,7 +27,18 @@ function createKakouneHandler() {
         return false;
       }
 
-      const mode = view.state.field(kakouneStateField).mode;
+      const state = view.state.field(kakouneStateField);
+
+      if (state.searchPrompt !== null) {
+        const handledPrompt = handleSearchPromptKey(view, key);
+        if (handledPrompt) {
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+      }
+
+      const mode = state.mode;
 
       if (mode === "insert" && key !== "<Esc>") {
         return false;
@@ -53,7 +64,7 @@ function createKakouneHandler() {
 }
 
 export function kakoune(options: KakouneOptions = {}): Extension {
-  const initialMode = options.initialMode ?? "normal";
+  const initialMode = options.initialMode ?? "select";
   return [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,

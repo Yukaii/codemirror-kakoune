@@ -7,7 +7,6 @@ export interface KakouneBinding {
 }
 
 export interface KeyProcessorBindings {
-  normal: KakouneBinding[];
   select: KakouneBinding[];
   insert: KakouneBinding[];
 }

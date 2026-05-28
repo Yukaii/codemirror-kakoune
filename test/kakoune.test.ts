@@ -23,6 +23,10 @@ function createView(doc: string): EditorView {
   });
 }
 
+function dispatchKey(view: EditorView, key: string): void {
+  view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -42,8 +46,8 @@ describe("KakouneKeyProcessor", () => {
     const view = createView("hello\nworld");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
-    expect(processor.handle("normal", "g", view)).toBe(true);
-    expect(processor.handle("normal", "g", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
     expect(view.state.selection.main.head).toBe(0);
   });
 
@@ -51,7 +55,7 @@ describe("KakouneKeyProcessor", () => {
     const view = createView("alpha beta beta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
-    expect(processor.handle("normal", "%", view)).toBe(true);
+    expect(processor.handle("select", "%", view)).toBe(true);
     expect(view.state.selection.ranges).toHaveLength(1);
     expect(view.state.selection.main.from).toBe(0);
     expect(view.state.selection.main.to).toBe(view.state.doc.length);
@@ -63,7 +67,7 @@ describe("KakouneKeyProcessor", () => {
       ])
     });
 
-    expect(processor.handle("normal", ",", view)).toBe(true);
+    expect(processor.handle("select", ",", view)).toBe(true);
     expect(view.state.selection.ranges).toHaveLength(1);
     expect(view.state.selection.main.head).toBe(1);
   });
@@ -73,12 +77,12 @@ describe("KakouneKeyProcessor", () => {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.cursor(8) });
-    expect(processor.handle("normal", "g", view)).toBe(true);
-    expect(processor.handle("normal", "h", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(processor.handle("select", "h", view)).toBe(true);
     expect(view.state.selection.main.head).toBe(0);
 
-    expect(processor.handle("normal", "g", view)).toBe(true);
-    expect(processor.handle("normal", "l", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(processor.handle("select", "l", view)).toBe(true);
     expect(view.state.selection.main.head).toBe(10);
   });
 
@@ -88,12 +92,12 @@ describe("KakouneKeyProcessor", () => {
 
     view.dispatch({ selection: EditorSelection.cursor(8) });
 
-    expect(processor.handle("normal", "g", view)).toBe(true);
-    expect(processor.handle("normal", "k", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(processor.handle("select", "k", view)).toBe(true);
     expect(view.state.selection.main.head).toBe(0);
 
-    expect(processor.handle("normal", "g", view)).toBe(true);
-    expect(processor.handle("normal", "j", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(processor.handle("select", "j", view)).toBe(true);
     expect(view.state.selection.main.head).toBe(view.state.doc.line(view.state.doc.lines).from);
   });
 
@@ -103,23 +107,20 @@ describe("KakouneKeyProcessor", () => {
 
     view.dispatch({ selection: EditorSelection.cursor(8) });
 
-    expect(processor.handle("normal", "<A-h>", view)).toBe(true);
+    expect(processor.handle("select", "<A-h>", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(8);
     expect(view.state.selection.main.head).toBe(0);
 
-    expect(processor.handle("normal", "<A-l>", view)).toBe(true);
+    expect(processor.handle("select", "<A-l>", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(8);
     expect(view.state.selection.main.head).toBe(10);
   });
 
-  it("enters select mode with s and uses select-mode G motions for boundaries", () => {
+  it("uses select-mode G motions for boundaries", () => {
     const view = createView("alpha beta\ngamma delta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.cursor(8) });
-
-    expect(processor.handle("normal", "s", view)).toBe(true);
-    expect(view.state.field(kakouneStateField).mode).toBe("select");
 
     expect(processor.handle("select", "G", view)).toBe(true);
     expect(processor.handle("select", "h", view)).toBe(true);
@@ -142,14 +143,14 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(view.state.doc.length);
   });
 
-  it("keeps regex selection on S", () => {
+  it("selects all matches after seeding a search", () => {
     const view = createView("alpha beta gamma beta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.range(6, 10) });
-    expect(processor.handle("normal", "*", view)).toBe(true);
+    expect(processor.handle("select", "*", view)).toBe(true);
 
-    expect(processor.handle("normal", "S", view)).toBe(true);
+    expect(processor.handle("select", "s", view)).toBe(true);
     expect(view.state.selection.ranges.length).toBeGreaterThan(1);
   });
 
@@ -159,15 +160,15 @@ describe("KakouneKeyProcessor", () => {
 
     view.dispatch({ selection: EditorSelection.cursor(6) });
 
-    expect(processor.handle("normal", "H", view)).toBe(true);
+    expect(processor.handle("select", "H", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBe(5);
 
-    expect(processor.handle("normal", "L", view)).toBe(true);
+    expect(processor.handle("select", "L", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBe(6);
 
-    expect(processor.handle("normal", "W", view)).toBe(true);
+    expect(processor.handle("select", "W", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBeGreaterThan(6);
   });
@@ -178,11 +179,11 @@ describe("KakouneKeyProcessor", () => {
 
     view.dispatch({ selection: EditorSelection.cursor(6) });
 
-    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(processor.handle("select", "G", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBe(6);
 
-    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(processor.handle("select", "G", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBe(view.state.doc.length);
   });
@@ -193,20 +194,20 @@ describe("KakouneKeyProcessor", () => {
 
     view.dispatch({ selection: EditorSelection.cursor(6) });
 
-    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(processor.handle("select", "G", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBe(6);
 
-    expect(processor.handle("normal", "l", view)).toBe(true);
+    expect(processor.handle("select", "l", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
-    expect(view.state.selection.main.head).toBe(7);
+    expect(view.state.selection.main.head).toBe(view.state.doc.lineAt(6).to);
 
     view.dispatch({ selection: EditorSelection.cursor(6) });
 
-    expect(processor.handle("normal", "G", view)).toBe(true);
-    expect(processor.handle("normal", "k", view)).toBe(true);
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "k", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
-    expect(view.state.selection.main.head).toBe(1);
+    expect(view.state.selection.main.head).toBe(0);
   });
 
   it("can seed search from the current selection and jump to the next match", () => {
@@ -215,10 +216,10 @@ describe("KakouneKeyProcessor", () => {
 
     view.dispatch({ selection: EditorSelection.range(6, 10) });
 
-    expect(processor.handle("normal", "*", view)).toBe(true);
+    expect(processor.handle("select", "*", view)).toBe(true);
     expect(getSearchQuery(view.state).search).toBe("beta");
 
-    expect(processor.handle("normal", "n", view)).toBe(true);
+    expect(processor.handle("select", "n", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(17);
     expect(view.state.selection.main.to).toBe(21);
   });
@@ -228,8 +229,8 @@ describe("KakouneKeyProcessor", () => {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.range(6, 10) });
-    expect(processor.handle("normal", "*", view)).toBe(true);
-    expect(processor.handle("normal", "N", view)).toBe(true);
+    expect(processor.handle("select", "*", view)).toBe(true);
+    expect(processor.handle("select", "N", view)).toBe(true);
 
     expect(view.state.selection.ranges).toHaveLength(2);
     expect(view.state.selection.ranges[0].from).toBe(6);
@@ -247,28 +248,28 @@ describe("KakouneKeyProcessor", () => {
       )
     });
 
-    expect(processor.handle("normal", ")", view)).toBe(true);
+    expect(processor.handle("select", ")", view)).toBe(true);
     expect(view.state.selection.mainIndex).toBe(1);
     expect(view.state.selection.main.head).toBe(6);
 
-    expect(processor.handle("normal", "(", view)).toBe(true);
+    expect(processor.handle("select", "(", view)).toBe(true);
     expect(view.state.selection.mainIndex).toBe(0);
     expect(view.state.selection.main.head).toBe(0);
   });
 });
 
 describe("kakoune extension", () => {
-  it("switches between normal and insert mode", () => {
+  it("switches between select and insert mode", () => {
     const view = createView("hello");
 
-    expect(view.state.field(kakouneStateField).mode).toBe("normal");
+    expect(view.state.field(kakouneStateField).mode).toBe("select");
 
     view.dispatch({ selection: EditorSelection.cursor(0) });
     view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "i", bubbles: true }));
 
     expect(view.state.field(kakouneStateField).mode).toBe("insert");
     view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(view.state.field(kakouneStateField).mode).toBe("normal");
+    expect(view.state.field(kakouneStateField).mode).toBe("select");
 
     view.destroy();
   });
@@ -290,6 +291,36 @@ describe("kakoune extension", () => {
     expect(view.state.doc.toString()).toBe("alpha\n\nbeta\n");
     expect(view.state.field(kakouneStateField).mode).toBe("insert");
     expect(view.state.selection.main.head).toBe(6);
+
+    view.destroy();
+  });
+
+  it("accepts a search prompt on S and keeps n/Alt-n navigation working", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+    dispatchKey(view, "S");
+    expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
+
+    for (const key of "beta") {
+      dispatchKey(view, key);
+    }
+
+    dispatchKey(view, "Enter");
+
+    expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
+    expect(view.state.selection.main.from).toBe(6);
+    expect(view.state.selection.main.to).toBe(10);
+    expect(getSearchQuery(view.state).search).toBe("beta");
+
+    expect(processor.handle("select", "n", view)).toBe(true);
+    expect(view.state.selection.main.from).toBe(17);
+    expect(view.state.selection.main.to).toBe(21);
+
+    expect(processor.handle("select", "<A-n>", view)).toBe(true);
+    expect(view.state.selection.main.from).toBe(6);
+    expect(view.state.selection.main.to).toBe(10);
 
     view.destroy();
   });

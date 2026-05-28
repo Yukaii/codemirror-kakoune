@@ -4,6 +4,7 @@ import type { EditorView } from "@codemirror/view";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
+  setKakouneSearchPromptEffect,
   setKakouneModeEffect,
   setKakouneRegisterEffect,
   type KakouneMode
@@ -199,7 +200,7 @@ function getSearchText(view: EditorView): string {
     return query.search;
   }
 
-  return getSelectionText(view);
+  return "";
 }
 
 function findNextRange(view: EditorView, text: string): { from: number; to: number } | null {
@@ -224,16 +225,113 @@ function findNextRange(view: EditorView, text: string): { from: number; to: numb
   return null;
 }
 
-function selectNextText(view: EditorView): boolean {
-  const text = getSearchText(view);
-  const next = findNextRange(view, text);
-  if (!next) {
+function setSearchPrompt(view: EditorView, prompt: string | null): boolean {
+  view.dispatch({
+    effects: setKakouneSearchPromptEffect.of(prompt)
+  });
+  return true;
+}
+
+function appendSearchPrompt(view: EditorView, value: string): boolean {
+  const prompt = view.state.field(kakouneStateField).searchPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  return setSearchPrompt(view, prompt + value);
+}
+
+function deleteSearchPromptChar(view: EditorView): boolean {
+  const prompt = view.state.field(kakouneStateField).searchPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  return setSearchPrompt(view, prompt.slice(0, -1));
+}
+
+function cancelSearchPrompt(view: EditorView): boolean {
+  return setSearchPrompt(view, null);
+}
+
+function commitSearchPrompt(view: EditorView): boolean {
+  const prompt = view.state.field(kakouneStateField).searchPrompt;
+  if (prompt === null) {
     return false;
   }
 
   view.dispatch({
-    selection: EditorSelection.range(next.from, next.to)
+    effects: [
+      setKakouneSearchPromptEffect.of(null),
+      setSearchQuery.of(
+        new SearchQuery({
+          search: prompt,
+          literal: true
+        })
+      )
+    ]
   });
+
+  if (!prompt) {
+    return true;
+  }
+
+  return findNext(view);
+}
+
+function jumpToNextSearch(view: EditorView): boolean {
+  const query = getSearchQuery(view.state);
+  if (!query.valid || !query.search) {
+    return false;
+  }
+
+  return findNext(view);
+}
+
+function jumpToPreviousSearch(view: EditorView): boolean {
+  const query = getSearchQuery(view.state);
+  if (!query.valid || !query.search) {
+    return false;
+  }
+
+  return findPrevious(view);
+}
+
+function selectSearchMatches(view: EditorView): boolean {
+  const query = getSearchQuery(view.state);
+  if (!query.valid || !query.search) {
+    return false;
+  }
+
+  return selectMatches(view);
+}
+
+export function handleSearchPromptKey(view: EditorView, key: string): boolean {
+  const prompt = view.state.field(kakouneStateField).searchPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  if (key === "<Esc>") {
+    return cancelSearchPrompt(view);
+  }
+
+  if (key === "<Enter>") {
+    return commitSearchPrompt(view);
+  }
+
+  if (key === "<Backspace>") {
+    return deleteSearchPromptChar(view);
+  }
+
+  if (key === "<Space>") {
+    return appendSearchPrompt(view, " ");
+  }
+
+  if (key.length === 1) {
+    return appendSearchPrompt(view, key);
+  }
+
   return true;
 }
 
@@ -360,8 +458,9 @@ function openLine(view: EditorView, direction: "above" | "below"): boolean {
   return true;
 }
 
-function buildCommonBindings(): Array<{ keys: string[]; run(view: EditorView, arg?: string): boolean }> {
+function buildSelectBindings(): Array<{ keys: string[]; run(view: EditorView, arg?: string): boolean }> {
   return [
+    { keys: ["<Esc>"], run: () => true },
     { keys: ["i"], run: view => setMode(view, "insert") },
     { keys: ["o"], run: view => openLine(view, "below") },
     { keys: ["O"], run: view => openLine(view, "above") },
@@ -392,6 +491,15 @@ function buildCommonBindings(): Array<{ keys: string[]; run(view: EditorView, ar
     { keys: ["J"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)) },
     { keys: ["K"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)) },
     { keys: ["L"], run: view => extendSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)) },
+    { keys: ["G", "h"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from) },
+    { keys: ["G", "H"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from) },
+    { keys: ["G", "l"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
+    { keys: ["G", "L"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
+    { keys: ["G", "k"], run: view => extendSelections(view, () => 0) },
+    { keys: ["G", "K"], run: view => extendSelections(view, () => 0) },
+    { keys: ["G", "j"], run: view => extendSelections(view, () => view.state.doc.length) },
+    { keys: ["G", "J"], run: view => extendSelections(view, () => view.state.doc.length) },
+    { keys: ["G", "G"], run: view => extendSelections(view, () => view.state.doc.length) },
     { keys: ["g", "k"], run: view => moveSelections(view, () => 0) },
     { keys: ["g", "j"], run: view => moveSelections(view, () => view.state.doc.line(view.state.doc.lines).from) },
     { keys: ["d"], run: view => deleteSelection(view) },
@@ -400,11 +508,11 @@ function buildCommonBindings(): Array<{ keys: string[]; run(view: EditorView, ar
     { keys: ["p"], run: view => pasteRegister(view) },
     { keys: ["u"], run: view => undo(view) },
     { keys: ["*"], run: view => setSearchFromSelection(view) },
-    { keys: ["n"], run: view => selectNextText(view) },
+    { keys: ["s"], run: view => selectSearchMatches(view) },
+    { keys: ["S"], run: view => setSearchPrompt(view, "") },
+    { keys: ["n"], run: view => jumpToNextSearch(view) },
+    { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view) },
     { keys: ["N"], run: view => addNextTextSelection(view) },
-    { keys: ["/"], run: view => findNext(view) },
-    { keys: ["?"], run: view => findPrevious(view) },
-    { keys: ["S"], run: view => selectMatches(view) },
     { keys: ["f"], run: (view, arg) => {
       if (!arg) return true;
       return moveToFind(view, "f", arg);
@@ -425,41 +533,11 @@ function buildCommonBindings(): Array<{ keys: string[]; run(view: EditorView, ar
   ];
 }
 
-function buildNormalModeBindings(): Array<{ keys: string[]; run(view: EditorView, arg?: string): boolean }> {
-  return [
-    { keys: ["<Esc>"], run: view => (view.state.field(kakouneStateField).mode === "normal" ? true : setMode(view, "normal")) },
-    { keys: ["s"], run: view => setMode(view, "select") },
-    { keys: ["G", "h"], run: view => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)) },
-    { keys: ["G", "j"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)) },
-    { keys: ["G", "k"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)) },
-    { keys: ["G", "l"], run: view => extendSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)) },
-    { keys: ["G", "G"], run: view => extendSelections(view, () => view.state.doc.length) }
-  ];
-}
-
-function buildSelectModeBindings(): Array<{ keys: string[]; run(view: EditorView, arg?: string): boolean }> {
-  return [
-    { keys: ["<Esc>"], run: view => setMode(view, "normal") },
-    { keys: ["G", "h"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from) },
-    { keys: ["G", "H"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from) },
-    { keys: ["G", "l"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
-    { keys: ["G", "L"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
-    { keys: ["G", "k"], run: view => extendSelections(view, () => 0) },
-    { keys: ["G", "K"], run: view => extendSelections(view, () => 0) },
-    { keys: ["G", "j"], run: view => extendSelections(view, () => view.state.doc.length) },
-    { keys: ["G", "J"], run: view => extendSelections(view, () => view.state.doc.length) },
-    { keys: ["G", "G"], run: view => extendSelections(view, () => view.state.doc.length) }
-  ];
-}
-
 export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string[]; run(view: EditorView, arg?: string): boolean }>> {
-  const common = buildCommonBindings();
-
   return {
-    normal: [...buildNormalModeBindings(), ...common],
-    select: [...buildSelectModeBindings(), ...common],
+    select: buildSelectBindings(),
     insert: [
-      { keys: ["<Esc>"], run: view => setMode(view, "normal") }
+      { keys: ["<Esc>"], run: view => setMode(view, "select") }
     ]
   };
 }
