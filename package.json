@@ -1,6 +1,6 @@
 {
   "name": "codemirror-kakoune",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A CodeMirror 6 extension that brings Kakoune-style modal editing to the browser.",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,6 +11,10 @@
     "!dist/playground"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yukaii/codemirror-kakoune.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "pnpm build:lib && pnpm build:playground",
