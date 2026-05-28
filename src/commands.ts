@@ -374,6 +374,11 @@ export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string
       { keys: ["J"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)) },
       { keys: ["K"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)) },
       { keys: ["L"], run: view => extendSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)) },
+      { keys: ["G", "h"], run: view => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)) },
+      { keys: ["G", "j"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)) },
+      { keys: ["G", "k"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)) },
+      { keys: ["G", "l"], run: view => extendSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)) },
+      { keys: ["G", "G"], run: view => extendSelections(view, () => view.state.doc.length) },
       { keys: ["g", "k"], run: view => moveSelections(view, () => 0) },
       { keys: ["g", "j"], run: view => moveSelections(view, () => view.state.doc.length) },
       { keys: ["d"], run: view => deleteSelection(view) },
@@ -403,8 +408,7 @@ export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string
         if (!arg) return true;
         return moveToFind(view, "T", arg);
       } },
-      { keys: ["g", "g"], run: view => moveSelections(view, () => 0) },
-      { keys: ["G"], run: view => extendSelections(view, () => view.state.doc.length) }
+      { keys: ["g", "g"], run: view => moveSelections(view, () => 0) }
     ],
     insert: [
       { keys: ["<Esc>"], run: view => setMode(view, "normal") }

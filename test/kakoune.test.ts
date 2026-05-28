@@ -131,7 +131,7 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBeGreaterThan(6);
   });
 
-  it("extends the current selection to the end of the buffer with G", () => {
+  it("extends the current selection to the end of the buffer with GG", () => {
     const view = createView("alpha beta gamma");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
@@ -139,7 +139,33 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("normal", "G", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(6);
+
+    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
     expect(view.state.selection.main.head).toBe(view.state.doc.length);
+  });
+
+  it("waits for a follow-up motion after G and extends with G-prefixed motions", () => {
+    const view = createView("abcd\nefgh");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(6) });
+
+    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(6);
+
+    expect(processor.handle("normal", "l", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(7);
+
+    view.dispatch({ selection: EditorSelection.cursor(6) });
+
+    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(processor.handle("normal", "k", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(1);
   });
 
   it("can seed search from the current selection and jump to the next match", () => {
