@@ -249,7 +249,7 @@ function appendSearchPrompt(view: EditorView, value: string): boolean {
   return setSearchPrompt(view, prompt + value);
 }
 
-function deleteSearchPromptChar(view: EditorView): boolean {
+export function deleteSearchPromptChar(view: EditorView): boolean {
   const prompt = view.state.field(kakouneStateField).searchPrompt;
   if (prompt === null) {
     return false;
@@ -258,7 +258,7 @@ function deleteSearchPromptChar(view: EditorView): boolean {
   return setSearchPrompt(view, prompt.slice(0, -1));
 }
 
-function cancelSearchPrompt(view: EditorView): boolean {
+export function cancelSearchPrompt(view: EditorView): boolean {
   const snapshot = view.state.field(kakouneStateField).searchSelection;
   const selection = snapshot
     ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
@@ -298,6 +298,8 @@ export function commitSearchPrompt(view: EditorView): boolean {
       )
     ]
   });
+
+  findNext(view);
   return true;
 }
 

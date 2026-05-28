@@ -289,12 +289,12 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.from).toBe(6);
     expect(view.state.selection.main.to).toBe(10);
     expect(handleSearchPromptKey(view, "<Enter>")).toBe(true);
-    expect(view.state.selection.main.from).toBe(6);
-    expect(view.state.selection.main.to).toBe(10);
-
-    expect(processor.handle("select", "n", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(17);
     expect(view.state.selection.main.to).toBe(21);
+
+    expect(processor.handle("select", "n", view)).toBe(true);
+    expect(view.state.selection.main.from).toBe(6);
+    expect(view.state.selection.main.to).toBe(10);
   });
 
   it("adds a new selection for the next match", () => {
@@ -388,14 +388,59 @@ describe("kakoune extension", () => {
     expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
     expect(getSearchQuery(view.state).search).toBe("beta");
     expect(view.state.doc.toString()).toBe("alpha beta gamma beta");
-
-    expect(processor.handle("select", "n", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(6);
     expect(view.state.selection.main.to).toBe(10);
 
-    expect(processor.handle("select", "<A-n>", view)).toBe(true);
+    expect(processor.handle("select", "n", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(17);
     expect(view.state.selection.main.to).toBe(21);
+
+    expect(processor.handle("select", "<A-n>", view)).toBe(true);
+    expect(view.state.selection.main.from).toBe(6);
+    expect(view.state.selection.main.to).toBe(10);
+
+    view.destroy();
+  });
+
+  it("deletes characters in the search prompt on Backspace", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
+
+    for (const key of "beta") {
+      expect(handleSearchPromptKey(view, key)).toBe(true);
+    }
+    expect(view.state.field(kakouneStateField).searchPrompt).toBe("beta");
+
+    const event = new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true });
+    expect(view.contentDOM.dispatchEvent(event)).toBe(false);
+
+    expect(view.state.field(kakouneStateField).searchPrompt).toBe("bet");
+    expect(view.state.doc.toString()).toBe("alpha beta gamma beta");
+
+    view.destroy();
+  });
+
+  it("cancels the search prompt on Escape", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+    expect(processor.handle("select", "s", view)).toBe(true);
+
+    for (const key of "beta") {
+      expect(handleSearchPromptKey(view, key)).toBe(true);
+    }
+    expect(view.state.field(kakouneStateField).searchPrompt).toBe("beta");
+
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    expect(view.contentDOM.dispatchEvent(event)).toBe(false);
+
+    expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
+    expect(view.state.doc.toString()).toBe("alpha beta gamma beta");
 
     view.destroy();
   });

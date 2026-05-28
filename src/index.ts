@@ -13,12 +13,18 @@ import {
   type KakouneState
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
-import { buildKakouneCommands, commitSearchPrompt, handleSearchPromptKey } from "./commands";
+import {
+  buildKakouneCommands,
+  commitSearchPrompt,
+  deleteSearchPromptChar,
+  cancelSearchPrompt,
+  handleSearchPromptKey
+} from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState } from "./state";
 export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect } from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
-export { buildKakouneCommands, kakouneCommands } from "./commands";
+export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
 
 function createKakouneHandler() {
   const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -43,6 +49,9 @@ function createKakouneHandler() {
       const state = view.state.field(kakouneStateField);
 
       if (state.searchPrompt !== null) {
+        if (key === "<Enter>" || key === "<Backspace>" || key === "<Esc>") {
+          return false;
+        }
         const handledPrompt = handleSearchPromptKey(view, key);
         if (handledPrompt) {
           event.preventDefault();
@@ -119,6 +128,28 @@ export function kakoune(options: KakouneOptions = {}): Extension {
             }
 
             return commitSearchPrompt(view);
+          }
+        },
+        {
+          key: "Backspace",
+          run(view) {
+            const state = view.state.field(kakouneStateField);
+            if (state.searchPrompt === null) {
+              return false;
+            }
+
+            return deleteSearchPromptChar(view);
+          }
+        },
+        {
+          key: "Escape",
+          run(view) {
+            const state = view.state.field(kakouneStateField);
+            if (state.searchPrompt === null) {
+              return false;
+            }
+
+            return cancelSearchPrompt(view);
           }
         }
       ])
