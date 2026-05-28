@@ -116,15 +116,19 @@ describe("KakouneKeyProcessor", () => {
     const view = createView("alpha beta gamma");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
-    view.dispatch({ selection: EditorSelection.cursor(0) });
-
-    expect(processor.handle("normal", "W", view)).toBe(true);
-    expect(view.state.selection.main.anchor).toBe(0);
-    expect(view.state.selection.main.head).toBeGreaterThan(0);
+    view.dispatch({ selection: EditorSelection.cursor(6) });
 
     expect(processor.handle("normal", "H", view)).toBe(true);
-    expect(view.state.selection.main.anchor).toBe(0);
-    expect(view.state.selection.main.head).toBe(0);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(5);
+
+    expect(processor.handle("normal", "L", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(6);
+
+    expect(processor.handle("normal", "W", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBeGreaterThan(6);
   });
 
   it("extends the current selection to the end of the buffer with G", () => {
