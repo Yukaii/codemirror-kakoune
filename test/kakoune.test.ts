@@ -80,6 +80,21 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(view.state.doc.lineAt(8).from);
   });
 
+  it("does not keep extending line selection when x is repeated", () => {
+    const view = createView("alpha beta\ngamma delta\nthird line");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(3) });
+
+    expect(processor.handle("select", "x", view)).toBe(true);
+    const first = view.state.selection.main;
+    expect(processor.handle("select", "x", view)).toBe(true);
+    const second = view.state.selection.main;
+
+    expect(second.anchor).toBe(first.anchor);
+    expect(second.head).toBe(first.head);
+  });
+
   it("supports line begin and line end motions through gh and gl", () => {
     const view = createView("alpha beta\ngamma delta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
