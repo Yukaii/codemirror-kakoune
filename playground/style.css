@@ -80,14 +80,25 @@ body {
   text-transform: lowercase;
 }
 
-.brand {
-  color: var(--text);
-  text-decoration: none;
-  transition: opacity 0.2s ease;
+.brand-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.brand:hover {
-  opacity: 0.8;
+.brand {
+  color: var(--text);
+}
+
+.github-link {
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.github-link:hover {
+  color: var(--accent);
 }
 
 .controls {

@@ -8,12 +8,58 @@ This repo starts from three references:
 - [`71/dance`](https://github.com/71/dance)
 - [`mawww/kakoune`](https://github.com/mawww/kakoune)
 
-## Goals
+## Installation
 
-- Kakoune-style normal/insert mode handling for CodeMirror 6
-- A playground/demo for trying the keymap live
-- Unit tests for the key processor and editing commands
-- TypeScript development with `pnpm`, `jest`, and `vite`
+Install the package via `npm`, `pnpm`, or `yarn`:
+
+```bash
+npm install codemirror-kakoune
+```
+
+## Usage
+
+Simply import and add the `kakoune` extension to your CodeMirror 6 configuration:
+
+```typescript
+import { basicSetup, EditorView } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { kakoune } from "codemirror-kakoune";
+
+const view = new EditorView({
+  state: EditorState.create({
+    doc: "Hello, Kakoune!",
+    extensions: [
+      basicSetup,
+      kakoune() // Enables Kakoune modal editing!
+    ]
+  }),
+  parent: document.querySelector("#editor")
+});
+```
+
+### Configuration Options
+
+You can customize the initial mode using the options object:
+
+```typescript
+kakoune({
+  initialMode: "insert" // "select" (default) or "insert"
+})
+```
+
+## Publishing to npm
+
+To publish this library to npm:
+
+1. Ensure `"private": true` is removed from `package.json`.
+2. Build the library:
+   ```bash
+   pnpm build
+   ```
+3. Publish:
+   ```bash
+   pnpm publish
+   ```
 
 ## Scripts
 
