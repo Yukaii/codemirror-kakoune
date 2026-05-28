@@ -169,14 +169,16 @@ export function buildPlaygroundEditorTheme(theme: PlaygroundTheme): Extension {
       {
         "&": {
           backgroundColor: theme.editor.background,
-          color: theme.editor.text
+          color: theme.editor.text,
+          fontFamily: "inherit"
         },
         "&.cm-focused": {
           outline: "none"
         },
         ".cm-scroller": {
           fontSize: "14px",
-          lineHeight: "1.6"
+          lineHeight: "1.6",
+          fontFamily: "inherit"
         },
         ".cm-content": {
           caretColor: theme.editor.accent
