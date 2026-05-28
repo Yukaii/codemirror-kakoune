@@ -374,6 +374,8 @@ export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string
       { keys: ["J"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)) },
       { keys: ["K"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)) },
       { keys: ["L"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to) },
+      { keys: ["g", "k"], run: view => moveSelections(view, () => 0) },
+      { keys: ["g", "j"], run: view => moveSelections(view, () => view.state.doc.length) },
       { keys: ["d"], run: view => deleteSelection(view) },
       { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert") },
       { keys: ["y"], run: view => yankSelection(view) },
@@ -402,7 +404,7 @@ export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string
         return moveToFind(view, "T", arg);
       } },
       { keys: ["g", "g"], run: view => moveSelections(view, () => 0) },
-      { keys: ["G"], run: view => moveSelections(view, () => view.state.doc.length) }
+      { keys: ["G"], run: view => extendSelections(view, () => view.state.doc.length) }
     ],
     insert: [
       { keys: ["<Esc>"], run: view => setMode(view, "normal") }

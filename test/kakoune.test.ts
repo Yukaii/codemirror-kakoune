@@ -82,6 +82,21 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(10);
   });
 
+  it("supports goto top and bottom aliases through gk and gj", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(8) });
+
+    expect(processor.handle("normal", "g", view)).toBe(true);
+    expect(processor.handle("normal", "k", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(0);
+
+    expect(processor.handle("normal", "g", view)).toBe(true);
+    expect(processor.handle("normal", "j", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(view.state.doc.length);
+  });
+
   it("supports Kakoune's Alt-h and Alt-l aliases for line begin and end", () => {
     const view = createView("alpha beta\ngamma delta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -110,6 +125,17 @@ describe("KakouneKeyProcessor", () => {
     expect(processor.handle("normal", "H", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(0);
     expect(view.state.selection.main.head).toBe(0);
+  });
+
+  it("extends the current selection to the end of the buffer with G", () => {
+    const view = createView("alpha beta gamma");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(6) });
+
+    expect(processor.handle("normal", "G", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(view.state.doc.length);
   });
 
   it("can seed search from the current selection and jump to the next match", () => {
