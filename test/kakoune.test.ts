@@ -232,6 +232,27 @@ describe("kakoune extension", () => {
     view.destroy();
   });
 
+  it("opens a new line below with o and above with O", () => {
+    const view = createView("alpha\nbeta");
+
+    view.dispatch({ selection: EditorSelection.cursor(6) });
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "o", bubbles: true }));
+
+    expect(view.state.doc.toString()).toBe("alpha\nbeta\n");
+    expect(view.state.field(kakouneStateField).mode).toBe("insert");
+    expect(view.state.selection.main.head).toBe(view.state.doc.length);
+
+    view.dispatch({ selection: EditorSelection.cursor(6) });
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "O", bubbles: true }));
+
+    expect(view.state.doc.toString()).toBe("alpha\n\nbeta\n");
+    expect(view.state.field(kakouneStateField).mode).toBe("insert");
+    expect(view.state.selection.main.head).toBe(6);
+
+    view.destroy();
+  });
+
   it("yanks, deletes, and pastes the current selection", () => {
     const view = createView("alpha\nbeta");
 

@@ -342,11 +342,31 @@ function pasteRegister(view: EditorView): boolean {
   return true;
 }
 
+function openLine(view: EditorView, direction: "above" | "below"): boolean {
+  const state = view.state;
+  const result = state.changeByRange(range => {
+    const line = state.doc.lineAt(range.head);
+    const insertAt = direction === "below" ? line.to : line.from;
+    const cursor = direction === "below" ? insertAt + 1 : insertAt;
+
+    return {
+      changes: { from: insertAt, insert: "\n" },
+      range: EditorSelection.cursor(cursor)
+    };
+  });
+
+  view.dispatch(result);
+  setMode(view, "insert");
+  return true;
+}
+
 export function buildKakouneCommands(): Record<KakouneMode, Array<{ keys: string[]; run(view: EditorView, arg?: string): boolean }>> {
   return {
     normal: [
       { keys: ["<Esc>"], run: view => (view.state.field(kakouneStateField).mode === "normal" ? true : setMode(view, "normal")) },
       { keys: ["i"], run: view => setMode(view, "insert") },
+      { keys: ["o"], run: view => openLine(view, "below") },
+      { keys: ["O"], run: view => openLine(view, "above") },
       { keys: ["a"], run: view => moveSelections(view, range => clamp(range.to + 1, 0, view.state.doc.length)) && setMode(view, "insert") },
       { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert") },
       { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert") },
