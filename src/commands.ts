@@ -5,6 +5,7 @@ import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, set
 import {
   kakouneStateField,
   setKakouneSearchPromptEffect,
+  setKakouneSearchSelectionEffect,
   setKakouneModeEffect,
   setKakouneRegisterEffect,
   type KakouneMode
@@ -226,8 +227,15 @@ function findNextRange(view: EditorView, text: string): { from: number; to: numb
 }
 
 function setSearchPrompt(view: EditorView, prompt: string | null): boolean {
+  const selectionSnapshot = prompt === null
+    ? null
+    : view.state.selection.ranges.map(range => ({ anchor: range.anchor, head: range.head }));
+
   view.dispatch({
-    effects: setKakouneSearchPromptEffect.of(prompt)
+    effects: [
+      setKakouneSearchPromptEffect.of(prompt),
+      setKakouneSearchSelectionEffect.of(selectionSnapshot)
+    ]
   });
   return true;
 }
@@ -251,7 +259,19 @@ function deleteSearchPromptChar(view: EditorView): boolean {
 }
 
 function cancelSearchPrompt(view: EditorView): boolean {
-  return setSearchPrompt(view, null);
+  const snapshot = view.state.field(kakouneStateField).searchSelection;
+  const selection = snapshot
+    ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
+    : view.state.selection;
+
+  view.dispatch({
+    selection,
+    effects: [
+      setKakouneSearchPromptEffect.of(null),
+      setKakouneSearchSelectionEffect.of(null)
+    ]
+  });
+  return true;
 }
 
 function commitSearchPrompt(view: EditorView): boolean {
@@ -260,9 +280,16 @@ function commitSearchPrompt(view: EditorView): boolean {
     return false;
   }
 
+  const snapshot = view.state.field(kakouneStateField).searchSelection;
+  const selection = snapshot
+    ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
+    : view.state.selection;
+
   view.dispatch({
+    selection,
     effects: [
       setKakouneSearchPromptEffect.of(null),
+      setKakouneSearchSelectionEffect.of(null),
       setSearchQuery.of(
         new SearchQuery({
           search: prompt,
@@ -271,12 +298,7 @@ function commitSearchPrompt(view: EditorView): boolean {
       )
     ]
   });
-
-  if (!prompt) {
-    return true;
-  }
-
-  return findNext(view);
+  return true;
 }
 
 function jumpToNextSearch(view: EditorView): boolean {
@@ -499,7 +521,8 @@ function buildSelectBindings(): Array<{ keys: string[]; run(view: EditorView, ar
     { keys: ["G", "K"], run: view => extendSelections(view, () => 0) },
     { keys: ["G", "j"], run: view => extendSelections(view, () => view.state.doc.length) },
     { keys: ["G", "J"], run: view => extendSelections(view, () => view.state.doc.length) },
-    { keys: ["G", "G"], run: view => extendSelections(view, () => view.state.doc.length) },
+    { keys: ["G", "g"], run: view => extendSelections(view, () => 0) },
+    { keys: ["G", "G"], run: view => extendSelections(view, () => 0) },
     { keys: ["g", "k"], run: view => moveSelections(view, () => 0) },
     { keys: ["g", "j"], run: view => moveSelections(view, () => view.state.doc.line(view.state.doc.lines).from) },
     { keys: ["d"], run: view => deleteSelection(view) },

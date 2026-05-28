@@ -6,6 +6,7 @@ export interface KakouneState {
   mode: KakouneMode;
   register: string;
   searchPrompt: string | null;
+  searchSelection: Array<{ anchor: number; head: number }> | null;
 }
 
 export interface KakouneOptions {
@@ -21,13 +22,17 @@ export const kakouneInitialModeFacet = Facet.define<KakouneMode, KakouneMode>({
 export const setKakouneModeEffect = StateEffect.define<KakouneMode>();
 export const setKakouneRegisterEffect = StateEffect.define<string>();
 export const setKakouneSearchPromptEffect = StateEffect.define<string | null>();
+export const setKakouneSearchSelectionEffect = StateEffect.define<
+  Array<{ anchor: number; head: number }> | null
+>();
 
 export const kakouneStateField = StateField.define<KakouneState>({
   create(state: EditorState) {
     return {
       mode: state.facet(kakouneInitialModeFacet),
       register: "",
-      searchPrompt: null
+      searchPrompt: null,
+      searchSelection: null
     };
   },
   update(value, transaction) {
@@ -40,6 +45,8 @@ export const kakouneStateField = StateField.define<KakouneState>({
         next = { ...next, register: effect.value };
       } else if (effect.is(setKakouneSearchPromptEffect)) {
         next = { ...next, searchPrompt: effect.value };
+      } else if (effect.is(setKakouneSearchSelectionEffect)) {
+        next = { ...next, searchSelection: effect.value };
       }
     }
 

@@ -8,6 +8,7 @@ import {
 } from "../src";
 import { getSearchQuery } from "@codemirror/search";
 import { KakouneKeyProcessor } from "../src/keys";
+import { handleSearchPromptKey } from "../src/commands";
 
 function createView(doc: string): EditorView {
   const parent = document.createElement("div");
@@ -21,10 +22,6 @@ function createView(doc: string): EditorView {
     }),
     parent
   });
-}
-
-function dispatchKey(view: EditorView, key: string): void {
-  view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
 }
 
 afterEach(() => {
@@ -143,6 +140,25 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(view.state.doc.length);
   });
 
+  it("extends to the top with Gg and GG", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(8) });
+
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(0);
+
+    view.dispatch({ selection: EditorSelection.cursor(8) });
+
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(8);
+    expect(view.state.selection.main.head).toBe(0);
+  });
+
   it("selects all matches after seeding a search", () => {
     const view = createView("alpha beta gamma beta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -173,7 +189,7 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBeGreaterThan(6);
   });
 
-  it("extends the current selection to the end of the buffer with GG", () => {
+  it("extends the current selection to the top with GG", () => {
     const view = createView("alpha beta gamma");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
@@ -185,7 +201,7 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("select", "G", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(6);
-    expect(view.state.selection.main.head).toBe(view.state.doc.length);
+    expect(view.state.selection.main.head).toBe(0);
   });
 
   it("waits for a follow-up motion after G and extends with G-prefixed motions", () => {
@@ -218,6 +234,18 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("select", "*", view)).toBe(true);
     expect(getSearchQuery(view.state).search).toBe("beta");
+
+    expect(processor.handle("select", "S", view)).toBe(true);
+    expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
+    for (const key of "beta") {
+      expect(handleSearchPromptKey(view, key)).toBe(true);
+    }
+    expect(view.state.selection.main.from).toBe(6);
+    expect(view.state.selection.main.to).toBe(10);
+    expect(handleSearchPromptKey(view, "<Enter>")).toBe(true);
+    expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
+    expect(view.state.selection.main.from).toBe(6);
+    expect(view.state.selection.main.to).toBe(10);
 
     expect(processor.handle("select", "n", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(17);
@@ -300,27 +328,25 @@ describe("kakoune extension", () => {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.cursor(0) });
-    dispatchKey(view, "S");
+    expect(processor.handle("select", "S", view)).toBe(true);
     expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
 
     for (const key of "beta") {
-      dispatchKey(view, key);
+      expect(handleSearchPromptKey(view, key)).toBe(true);
     }
 
-    dispatchKey(view, "Enter");
+    expect(handleSearchPromptKey(view, "<Enter>")).toBe(true);
 
     expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
-    expect(view.state.selection.main.from).toBe(6);
-    expect(view.state.selection.main.to).toBe(10);
     expect(getSearchQuery(view.state).search).toBe("beta");
 
     expect(processor.handle("select", "n", view)).toBe(true);
-    expect(view.state.selection.main.from).toBe(17);
-    expect(view.state.selection.main.to).toBe(21);
-
-    expect(processor.handle("select", "<A-n>", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(6);
     expect(view.state.selection.main.to).toBe(10);
+
+    expect(processor.handle("select", "<A-n>", view)).toBe(true);
+    expect(view.state.selection.main.from).toBe(17);
+    expect(view.state.selection.main.to).toBe(21);
 
     view.destroy();
   });

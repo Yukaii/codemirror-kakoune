@@ -21,6 +21,16 @@ function createKakouneHandler() {
   const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
   return EditorView.domEventHandlers({
+    beforeinput(event, view) {
+      const state = view.state.field(kakouneStateField);
+      if (state.searchPrompt !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+      }
+
+      return false;
+    },
     keydown(event, view) {
       const key = normalizeKeyStroke(event);
       if (!key) {

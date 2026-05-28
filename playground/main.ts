@@ -47,7 +47,7 @@ const updateStatus = (view: EditorView): void => {
   modePill.textContent = state.mode;
   searchPill.textContent =
     state.searchPrompt !== null
-      ? `S ${state.searchPrompt}`
+      ? `select: ${state.searchPrompt}`
       : searchQuery.valid && searchQuery.search
         ? `/${searchQuery.search}`
         : "—";
