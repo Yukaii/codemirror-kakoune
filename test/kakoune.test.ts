@@ -105,8 +105,10 @@ describe("KakouneKeyProcessor", () => {
     view.dispatch({ selection: EditorSelection.range(firstLine.from, emptyLine.from) });
 
     expect(processor.handle("select", "x", view)).toBe(true);
-    expect(view.state.selection.main.anchor).toBe(firstLine.from);
-    expect(view.state.selection.main.head).toBe(emptyLine.to);
+    expect(view.state.selection.main.anchor).toBe(emptyLine.from);
+    expect(view.state.selection.main.head).toBe(
+      Math.min(emptyLine.to + 1, view.state.doc.length)
+    );
   });
 
   it("supports line begin and line end motions through gh and gl", () => {
