@@ -389,8 +389,12 @@ function selectLine(view: EditorView): boolean {
   const ranges = state.selection.ranges.map(range => {
     const isForward = range.anchor <= range.head;
     const fromLine = state.doc.lineAt(Math.min(range.from, range.to));
-    const toPos = range.empty ? range.head : Math.max(range.from, range.to) - 1;
-    const toLine = state.doc.lineAt(toPos);
+    const toPos = range.empty ? range.head : Math.max(range.from, range.to);
+    const candidateLine = state.doc.lineAt(Math.max(0, Math.min(toPos, state.doc.length)));
+    const toLine =
+      candidateLine.from === toPos && candidateLine.length === 0
+        ? candidateLine
+        : state.doc.lineAt(Math.max(0, toPos - 1));
     const end = toLine.to;
     return isForward
       ? EditorSelection.range(fromLine.from, end)

@@ -96,6 +96,19 @@ describe("KakouneKeyProcessor", () => {
     expect(second.head).toBe(first.head);
   });
 
+  it("keeps an empty line in the x selection range", () => {
+    const view = createView("alpha beta\n\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    const firstLine = view.state.doc.line(1);
+    const emptyLine = view.state.doc.line(2);
+    view.dispatch({ selection: EditorSelection.range(firstLine.from, emptyLine.from) });
+
+    expect(processor.handle("select", "x", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(firstLine.from);
+    expect(view.state.selection.main.head).toBe(emptyLine.to);
+  });
+
   it("supports line begin and line end motions through gh and gl", () => {
     const view = createView("alpha beta\ngamma delta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
