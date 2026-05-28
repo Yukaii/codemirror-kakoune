@@ -10,12 +10,12 @@ import {
   type KakouneState
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
-import { buildKakouneCommands, handleSearchPromptKey } from "./commands";
+import { buildKakouneCommands, commitSearchPrompt, handleSearchPromptKey } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState } from "./state";
 export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect } from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
-export { buildKakouneCommands, kakouneCommands } from "./commands";
+export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
 
 function createKakouneHandler() {
   const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -24,6 +24,10 @@ function createKakouneHandler() {
     beforeinput(event, view) {
       const state = view.state.field(kakouneStateField);
       if (state.searchPrompt !== null) {
+        const inputType = (event as InputEvent).inputType;
+        if (inputType === "insertLineBreak" || inputType === "insertParagraph") {
+          commitSearchPrompt(view);
+        }
         event.preventDefault();
         event.stopPropagation();
         return true;
@@ -40,6 +44,9 @@ function createKakouneHandler() {
       const state = view.state.field(kakouneStateField);
 
       if (state.searchPrompt !== null) {
+        if (key === "<Enter>") {
+          return false;
+        }
         const handledPrompt = handleSearchPromptKey(view, key);
         if (handledPrompt) {
           event.preventDefault();

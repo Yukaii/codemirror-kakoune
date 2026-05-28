@@ -325,11 +325,16 @@ describe("kakoune extension", () => {
 
     expect(
       view.contentDOM.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+        new InputEvent("beforeinput", {
+          bubbles: true,
+          cancelable: true,
+          inputType: "insertLineBreak"
+        })
       )
     ).toBe(false);
     expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
     expect(getSearchQuery(view.state).search).toBe("beta");
+    expect(view.state.doc.toString()).toBe("alpha beta gamma beta");
 
     expect(processor.handle("select", "n", view)).toBe(true);
     expect(view.state.selection.main.from).toBe(6);
