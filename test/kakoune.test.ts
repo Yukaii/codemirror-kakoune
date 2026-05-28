@@ -69,6 +69,17 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(1);
   });
 
+  it("preserves selection direction when selecting a line with x", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(8, 3) });
+
+    expect(processor.handle("select", "x", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(view.state.doc.lineAt(8).to + 1);
+    expect(view.state.selection.main.head).toBe(view.state.doc.lineAt(8).from);
+  });
+
   it("supports line begin and line end motions through gh and gl", () => {
     const view = createView("alpha beta\ngamma delta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());

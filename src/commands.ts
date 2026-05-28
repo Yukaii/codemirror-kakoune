@@ -386,16 +386,19 @@ function clearSelections(view: EditorView): boolean {
 
 function selectLine(view: EditorView): boolean {
   const state = view.state;
-  const result = state.changeByRange(range => {
+  const ranges = state.selection.ranges.map(range => {
+    const isForward = range.anchor <= range.head;
     const fromLine = state.doc.lineAt(Math.min(range.from, range.to));
     const toLine = state.doc.lineAt(Math.max(range.from, range.to));
     const end = toLine.to < state.doc.length ? toLine.to + 1 : toLine.to;
-    return {
-      range: EditorSelection.range(fromLine.from, end)
-    };
+    return isForward
+      ? EditorSelection.range(fromLine.from, end)
+      : EditorSelection.range(end, fromLine.from);
   });
 
-  view.dispatch(result);
+  view.dispatch({
+    selection: EditorSelection.create(ranges, state.selection.mainIndex)
+  });
   return true;
 }
 
