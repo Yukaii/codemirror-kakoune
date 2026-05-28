@@ -274,7 +274,7 @@ function cancelSearchPrompt(view: EditorView): boolean {
   return true;
 }
 
-function commitSearchPrompt(view: EditorView): boolean {
+export function commitSearchPrompt(view: EditorView): boolean {
   const prompt = view.state.field(kakouneStateField).searchPrompt;
   if (prompt === null) {
     return false;
@@ -339,7 +339,7 @@ export function handleSearchPromptKey(view: EditorView, key: string): boolean {
   }
 
   if (key === "<Enter>") {
-    return commitSearchPrompt(view);
+    return true;
   }
 
   if (key === "<Backspace>") {
@@ -531,8 +531,8 @@ function buildSelectBindings(): Array<{ keys: string[]; run(view: EditorView, ar
     { keys: ["p"], run: view => pasteRegister(view) },
     { keys: ["u"], run: view => undo(view) },
     { keys: ["*"], run: view => setSearchFromSelection(view) },
-    { keys: ["s"], run: view => selectSearchMatches(view) },
-    { keys: ["S"], run: view => setSearchPrompt(view, "") },
+    { keys: ["s"], run: view => setSearchPrompt(view, "") },
+    { keys: ["S"], run: view => selectSearchMatches(view) },
     { keys: ["n"], run: view => jumpToNextSearch(view) },
     { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view) },
     { keys: ["N"], run: view => addNextTextSelection(view) },
