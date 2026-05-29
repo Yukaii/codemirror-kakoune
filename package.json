@@ -1,6 +1,6 @@
 {
   "name": "codemirror-kakoune",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "A CodeMirror 6 extension that brings Kakoune-style modal editing to the browser.",
   "type": "module",
   "main": "./dist/index.js",
