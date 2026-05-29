@@ -1,51 +1,80 @@
 import { Facet, StateEffect, type StateEffectType, StateField, type EditorState } from "@codemirror/state";
 
+/** The active editing mode in Kakoune-style modal editing. */
 export type KakouneMode = "select" | "insert";
 
+/** An item describing a pending key sequence for the which-key UI. */
 export interface WhichKeyItem {
+  /** The keys in the sequence. */
   keys: string[];
+  /** Optional human-readable description of what the binding does. */
   description?: string;
 }
 
+/** Callback invoked when the pending key sequence or which-key items change. */
 export type WhichKeyCallback = (
+  /** The currently pending key sequence. */
   pending: string[],
+  /** Available bindings that extend the pending sequence. */
   items: WhichKeyItem[],
+  /** Whether the processor is waiting for a single character argument. */
   isWaitingForChar: boolean
 ) => void;
 
+/** The internal state maintained by the Kakoune extension for each editor. */
 export interface KakouneState {
+  /** Current editing mode. */
   mode: KakouneMode;
+  /** The yank/paste register. */
   register: string;
+  /** Active search prompt text, or `null` if no prompt is open. */
   searchPrompt: string | null;
+  /** Snapshot of selections before opening the search prompt, or `null`. */
   searchSelection: Array<{ anchor: number; head: number }> | null;
 }
 
+/** Options for configuring the {@link kakoune} extension. */
 export interface KakouneOptions {
+  /** Initial mode when the editor is created. Defaults to `"select"`. */
   initialMode?: KakouneMode;
+  /** Callback for displaying pending key sequences and available bindings. */
   onWhichKey?: WhichKeyCallback;
 }
 
+/**
+ * Facet for registering a which-key callback. The callback receives pending
+ * key sequences and available completions so you can build a discovery UI.
+ */
 export const kakouneWhichKeyFacet: Facet<WhichKeyCallback, WhichKeyCallback | null> = Facet.define<WhichKeyCallback, WhichKeyCallback | null>({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : null;
   }
 });
 
+/** Facet that sets the initial Kakoune mode when the editor state is created. */
 export const kakouneInitialModeFacet: Facet<KakouneMode, KakouneMode> = Facet.define<KakouneMode, KakouneMode>({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : "select";
   }
 });
 
+/** State effect that changes the current Kakoune mode. */
 export const setKakouneModeEffect: StateEffectType<KakouneMode> = StateEffect.define<KakouneMode>();
+/** State effect that updates the yank/paste register. */
 export const setKakouneRegisterEffect: StateEffectType<string> = StateEffect.define<string>();
+/** State effect that sets or clears the search prompt text. */
 export const setKakouneSearchPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
+/**
+ * State effect that stores a snapshot of selections before opening the search
+ * prompt, so they can be restored if the search is cancelled.
+ */
 export const setKakouneSearchSelectionEffect: StateEffectType<
   Array<{ anchor: number; head: number }> | null
 > = StateEffect.define<
   Array<{ anchor: number; head: number }> | null
 >();
 
+/** State field that holds the Kakoune editing state for an editor. */
 export const kakouneStateField: StateField<KakouneState> = StateField.define<KakouneState>({
   create(state: EditorState) {
     return {

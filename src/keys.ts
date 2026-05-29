@@ -1,14 +1,27 @@
 import type { EditorView } from "@codemirror/view";
 import type { KakouneMode, WhichKeyItem } from "./state";
 
+/** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
+  /** The key sequence that triggers this binding, e.g. `["g", "g"]` or `["<A-w>"]` . */
   keys: string[];
+  /**
+   * The command to run when the binding matches.
+   * @param view - The current editor view.
+   * @param arg - Optional character argument (for `f`/`t`/`F`/`T` commands).
+   * @param count - Optional numeric repeat count.
+   * @returns `true` if the key was handled.
+   */
   run(view: EditorView, arg?: string, count?: number): boolean;
+  /** Human-readable description shown in which-key UIs. */
   description?: string;
 }
 
+/** All bindings grouped by editing mode. */
 export interface KeyProcessorBindings {
+  /** Bindings active in select/normal mode. */
   select: KakouneBinding[];
+  /** Bindings active in insert mode. */
   insert: KakouneBinding[];
 }
 
@@ -65,6 +78,12 @@ const modifierOnlyKeys = new Set([
   "ScrollLock"
 ]);
 
+/**
+ * Normalizes a DOM `KeyboardEvent` into a Kakoune key string.
+ *
+ * Returns strings like `"a"`, `"<Enter>"`, `"<A-w>"`, or `"<C-Alt-x>"`.
+ * Returns `null` for modifier-only keys or when the event should be ignored.
+ */
 export function normalizeKeyStroke(event: KeyboardEvent): string | null {
   if (event.isComposing) {
     return null;
@@ -164,6 +183,12 @@ function isPrefix(prefix: string[], candidate: string[]): boolean {
   return prefix.every((part, index) => part === candidate[index]);
 }
 
+/**
+ * Processes keyboard events against Kakoune-style key bindings.
+ *
+ * Handles multi-key sequences, numeric counts, and character arguments
+ * (e.g. `f` followed by a character).
+ */
 export class KakouneKeyProcessor {
   private pending: string[] = [];
   private pendingCharBinding: KakouneBinding | null = null;
@@ -171,20 +196,27 @@ export class KakouneKeyProcessor {
 
   constructor(private readonly bindings: Record<KakouneMode, KakouneBinding[]>) {}
 
+  /** Clears the pending sequence, count, and character binding. */
   reset(): void {
     this.pending = [];
     this.pendingCharBinding = null;
     this.count = null;
   }
 
+  /** Returns the currently pending key sequence. */
   getPending(): string[] {
     return this.pending;
   }
 
+  /** Returns `true` if the processor is waiting for a single character argument. */
   isWaitingForChar(): boolean {
     return this.pendingCharBinding !== null;
   }
 
+  /**
+   * Returns which-key items for bindings that extend the current pending
+   * sequence in the given mode.
+   */
   getPendingItems(mode: KakouneMode): WhichKeyItem[] {
     if (this.pendingCharBinding) {
       return [];
@@ -203,6 +235,10 @@ export class KakouneKeyProcessor {
       }));
   }
 
+  /**
+   * Handles a single normalized key in the given mode.
+   * @returns `true` if the key was consumed.
+   */
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
     if (key === "<Esc>") {
       this.reset();

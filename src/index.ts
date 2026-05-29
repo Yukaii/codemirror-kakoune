@@ -126,6 +126,26 @@ const kakouneModeAttributes = ViewPlugin.fromClass(
   }
 );
 
+/**
+ * Creates a CodeMirror extension that enables Kakoune-style modal editing.
+ *
+ * @param options - Configuration options for initial mode and which-key callback.
+ * @returns A CodeMirror {@link Extension} array to include in your editor state.
+ *
+ * @example
+ * ```ts
+ * import { EditorView } from "@codemirror/view";
+ * import { EditorState } from "@codemirror/state";
+ * import { kakoune } from "codemirror-kakoune";
+ *
+ * const view = new EditorView({
+ *   state: EditorState.create({
+ *     doc: "Hello, world!",
+ *     extensions: [kakoune()]
+ *   })
+ * });
+ * ```
+ */
 export function kakoune(options: KakouneOptions = {}): Extension {
   const initialMode = options.initialMode ?? "select";
   const extensions: Extension[] = [
@@ -184,10 +204,12 @@ export function kakoune(options: KakouneOptions = {}): Extension {
   return extensions;
 }
 
+/** Retrieves the current Kakoune state from an editor state. */
 export function getKakouneState(state: EditorState): KakouneState {
   return state.field(kakouneStateField);
 }
 
+/** Checks whether the editor is currently in the given Kakoune mode. */
 export function isKakouneMode(state: EditorState, mode: KakouneMode): boolean {
   return state.field(kakouneStateField).mode === mode;
 }

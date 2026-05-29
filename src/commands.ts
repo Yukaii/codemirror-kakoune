@@ -12,6 +12,11 @@ import {
   type KakouneMode
 } from "./state";
 
+/**
+ * Direction kind for the find-to-character commands.
+ * - `"f"` / `"F"` — inclusive forward / backward
+ * - `"t"` / `"T"` — exclusive forward / backward
+ */
 export type KakouneFindKind = "f" | "t" | "F" | "T";
 
 function clamp(value: number, min: number, max: number): number {
@@ -841,6 +846,7 @@ function appendSearchPrompt(view: EditorView, value: string): boolean {
   return setSearchPrompt(view, prompt + value);
 }
 
+/** Deletes the last character from the active search prompt. */
 export function deleteSearchPromptChar(view: EditorView): boolean {
   const prompt = view.state.field(kakouneStateField).searchPrompt;
   if (prompt === null) {
@@ -850,6 +856,9 @@ export function deleteSearchPromptChar(view: EditorView): boolean {
   return setSearchPrompt(view, prompt.slice(0, -1));
 }
 
+/**
+ * Cancels the active search prompt and restores the original selection.
+ */
 export function cancelSearchPrompt(view: EditorView): boolean {
   const snapshot = view.state.field(kakouneStateField).searchSelection;
   const selection = snapshot
@@ -866,6 +875,10 @@ export function cancelSearchPrompt(view: EditorView): boolean {
   return true;
 }
 
+/**
+ * Commits the search prompt text, sets it as the search query, and jumps to
+ * the next match. Restores the original selection from before the prompt.
+ */
 export function commitSearchPrompt(view: EditorView): boolean {
   const prompt = view.state.field(kakouneStateField).searchPrompt;
   if (prompt === null) {
@@ -922,6 +935,10 @@ function selectSearchMatches(view: EditorView): boolean {
   return selectMatches(view);
 }
 
+/**
+ * Handles a key event while the search prompt is active.
+ * Supports typing characters, backspace, enter, escape, and space.
+ */
 export function handleSearchPromptKey(view: EditorView, key: string): boolean {
   const prompt = view.state.field(kakouneStateField).searchPrompt;
   if (prompt === null) {
@@ -1241,6 +1258,10 @@ function buildBracketBindings(): KakouneBinding[] {
   return bindings;
 }
 
+/**
+ * Builds the default Kakoune key bindings for select and insert modes.
+ * Includes motions, selections, object manipulation, and search commands.
+ */
 export function buildKakouneCommands(): Record<KakouneMode, KakouneBinding[]> {
   return {
     select: [...buildSelectBindings(), ...buildBracketBindings()],
@@ -1250,6 +1271,10 @@ export function buildKakouneCommands(): Record<KakouneMode, KakouneBinding[]> {
   };
 }
 
+/**
+ * Object exposing individual Kakoune command implementations.
+ * Useful for programmatically invoking commands or building custom bindings.
+ */
 export const kakouneCommands = {
   deleteSelection,
   yankSelection,
