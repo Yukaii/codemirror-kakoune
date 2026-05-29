@@ -3,7 +3,7 @@ import type { KakouneMode, WhichKeyItem } from "./state";
 
 export interface KakouneBinding {
   keys: string[];
-  run(view: EditorView, arg?: string): boolean;
+  run(view: EditorView, arg?: string, count?: number): boolean;
   description?: string;
 }
 
@@ -54,8 +54,37 @@ function getBaseKeyFromCode(code: string, shift: boolean): string | null {
   }
 }
 
+const modifierOnlyKeys = new Set([
+  "Shift",
+  "Control",
+  "Alt",
+  "Meta",
+  "OS",
+  "CapsLock",
+  "NumLock",
+  "ScrollLock"
+]);
+
 export function normalizeKeyStroke(event: KeyboardEvent): string | null {
-  if (event.isComposing || event.key === "Dead") {
+  if (event.isComposing) {
+    return null;
+  }
+
+  // Handle dead keys produced by modifier combinations (e.g., Alt+i on macOS produces circumflex dead key)
+  if (event.key === "Dead") {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      const modifiers = [
+        event.ctrlKey ? "C" : null,
+        event.altKey ? "A" : null,
+        event.metaKey ? "M" : null
+      ].filter(Boolean) as string[];
+
+      const mapped = getBaseKeyFromCode(event.code, event.shiftKey);
+      if (mapped !== null) {
+        const base = mapped.length === 1 ? mapped.toLowerCase() : mapped;
+        return `<${modifiers.join("-")}-${base}>`;
+      }
+    }
     return null;
   }
 
@@ -74,7 +103,19 @@ export function normalizeKeyStroke(event: KeyboardEvent): string | null {
     }
 
     const base = key.length === 1 ? key.toLowerCase() : key;
+
+    // Ignore modifier-only chords (e.g., Ctrl+Shift, Alt+Shift) so they don't
+    // interfere with pending prefixes like <A-i> waiting for a follow-up key.
+    if (modifierOnlyKeys.has(base)) {
+      return null;
+    }
+
     return `<${modifiers.join("-")}-${base}>`;
+  }
+
+  // Ignore bare modifier key presses so they don't reset pending prefixes.
+  if (modifierOnlyKeys.has(key)) {
+    return null;
   }
 
   switch (key) {
@@ -126,12 +167,14 @@ function isPrefix(prefix: string[], candidate: string[]): boolean {
 export class KakouneKeyProcessor {
   private pending: string[] = [];
   private pendingCharBinding: KakouneBinding | null = null;
+  private count: number | null = null;
 
   constructor(private readonly bindings: Record<KakouneMode, KakouneBinding[]>) {}
 
   reset(): void {
     this.pending = [];
     this.pendingCharBinding = null;
+    this.count = null;
   }
 
   getPending(): string[] {
@@ -161,6 +204,10 @@ export class KakouneKeyProcessor {
   }
 
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
+    if (key === "<Esc>") {
+      this.reset();
+    }
+
     if (this.pendingCharBinding) {
       const binding = this.pendingCharBinding;
       this.pendingCharBinding = null;
@@ -169,7 +216,16 @@ export class KakouneKeyProcessor {
         return true;
       }
 
-      return binding.run(view, key);
+      const currentCount = this.count;
+      this.count = null;
+      return binding.run(view, key, currentCount ?? undefined);
+    }
+
+    if (mode === "select" && this.pending.length === 0 && /^[0-9]$/.test(key)) {
+      if (key !== "0" || this.count !== null) {
+        this.count = (this.count ?? 0) * 10 + Number.parseInt(key, 10);
+        return true;
+      }
     }
 
     const bindings = this.bindings[mode];
@@ -177,15 +233,17 @@ export class KakouneKeyProcessor {
     const exact = bindings.find(binding => sequenceKey(binding.keys) === sequenceKey(nextSequence));
     const hasLongerPrefix = bindings.some(binding => isPrefix(nextSequence, binding.keys) && binding.keys.length > nextSequence.length);
 
-    if (exact && exact.keys.length === 1 && ["f", "t", "F", "T"].includes(exact.keys[0])) {
-      this.pending = [];
-      this.pendingCharBinding = exact;
-      return true;
-    }
+    if (exact && (this.count !== null || !hasLongerPrefix)) {
+      if (exact.keys.length === 1 && ["f", "t", "F", "T"].includes(exact.keys[0])) {
+        this.pending = [];
+        this.pendingCharBinding = exact;
+        return true;
+      }
 
-    if (exact && !hasLongerPrefix) {
+      const currentCount = this.count;
       this.pending = [];
-      return exact.run(view);
+      this.count = null;
+      return exact.run(view, undefined, currentCount ?? undefined);
     }
 
     if (hasLongerPrefix) {
@@ -199,7 +257,9 @@ export class KakouneKeyProcessor {
       this.pending = [];
 
       if (pendingBinding) {
-        const handled = pendingBinding.run(view);
+        const currentCount = this.count;
+        this.count = null;
+        const handled = pendingBinding.run(view, undefined, currentCount ?? undefined);
         if (handled) {
           return this.handle(mode, key, view);
         }
@@ -208,13 +268,18 @@ export class KakouneKeyProcessor {
 
     const single = bindings.find(binding => binding.keys.length === 1 && binding.keys[0] === key);
     if (single) {
-      if (["f", "t", "F", "T"].includes(single.keys[0])) {
-        this.pendingCharBinding = single;
-        return true;
-      }
+      const hasLongerPrefixForSingle = bindings.some(binding => isPrefix([key], binding.keys) && binding.keys.length > 1);
+      if (this.count !== null || !hasLongerPrefixForSingle) {
+        if (["f", "t", "F", "T"].includes(single.keys[0])) {
+          this.pendingCharBinding = single;
+          return true;
+        }
 
-      this.pending = [];
-      return single.run(view);
+        const currentCount = this.count;
+        this.pending = [];
+        this.count = null;
+        return single.run(view, undefined, currentCount ?? undefined);
+      }
     }
 
     const singleHasPrefix = bindings.some(binding => isPrefix([key], binding.keys) && binding.keys.length > 1);

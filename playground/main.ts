@@ -103,6 +103,10 @@ function getWhichKeyTitle(pending: string[]): string {
       return "extend to inner surrounding object start";
     case "<A-}>":
       return "extend to inner surrounding object end";
+    case "<A-i>":
+      return "select inner surrounding object";
+    case "<A-a>":
+      return "select surrounding object";
     default:
       return `keys: ${pending.join(" ")}`;
   }

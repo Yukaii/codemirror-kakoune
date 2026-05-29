@@ -36,6 +36,24 @@ describe("normalizeKeyStroke", () => {
       "<C-w>"
     );
   });
+
+  it("resolves dead keys with Alt modifier to base key (macOS)", () => {
+    // On macOS, Alt+i produces a circumflex dead key
+    const event = new KeyboardEvent("keydown", {
+      key: "Dead",
+      code: "KeyI",
+      altKey: true
+    });
+    expect(normalizeKeyStroke(event)).toBe("<A-i>");
+  });
+
+  it("returns null for dead keys without modifiers", () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "Dead",
+      code: "KeyE"
+    });
+    expect(normalizeKeyStroke(event)).toBeNull();
+  });
 });
 
 describe("KakouneKeyProcessor", () => {
@@ -748,6 +766,255 @@ describe("kakoune extension", () => {
     expect(processor.handle("select", "]", view)).toBe(true);
     expect(processor.handle("select", "p", view)).toBe(true);
     expect(view.state.selection.main.head).toBe(30); // End of "para three"
+
+    view.destroy();
+  });
+
+  it("selects inner surrounding object with <A-i>", () => {
+    const view = createView("if (x > 0) { return [1, 2]; }");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Cursor at position 24 (inside [1, 2])
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+
+    // <A-i> then [ -> select inner brackets content
+    expect(processor.handle("select", "<A-i>", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    // Inner of [...] should be "1, 2" (positions 21-25)
+    expect(view.state.selection.main.from).toBe(21);
+    expect(view.state.selection.main.to).toBe(25);
+
+    view.destroy();
+  });
+
+  it("selects whole surrounding object with <A-a>", () => {
+    const view = createView("if (x > 0) { return [1, 2]; }");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Cursor at position 24 (inside [1, 2])
+    view.dispatch({ selection: EditorSelection.cursor(24) });
+
+    // <A-a> then [ -> select entire brackets including delimiters
+    expect(processor.handle("select", "<A-a>", view)).toBe(true);
+    expect(processor.handle("select", "[", view)).toBe(true);
+    // Whole [1, 2] includes brackets (positions 20-26)
+    expect(view.state.selection.main.from).toBe(20);
+    expect(view.state.selection.main.to).toBe(26);
+
+    view.destroy();
+  });
+
+  it("selects inner surrounding quotes with <A-i>", () => {
+    const view = createView('const x = "hello world";');
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Cursor inside "hello world" at position 14
+    view.dispatch({ selection: EditorSelection.cursor(14) });
+
+    expect(processor.handle("select", "<A-i>", view)).toBe(true);
+    expect(processor.handle("select", "Q", view)).toBe(true);
+    // Inner of "hello world" -> positions 11-22
+    expect(view.state.selection.main.from).toBe(11);
+    expect(view.state.selection.main.to).toBe(22);
+
+    view.destroy();
+  });
+
+  it("supports count-prefixed h/l movements", () => {
+    const view = createView("hello world");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(5) });
+
+    // Type 3l -> move right 3 characters
+    expect(processor.handle("select", "3", view)).toBe(true);
+    expect(processor.handle("select", "l", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(8);
+
+    // Type 2h -> move left 2 characters
+    expect(processor.handle("select", "2", view)).toBe(true);
+    expect(processor.handle("select", "h", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(6);
+
+    view.destroy();
+  });
+
+  it("supports count-prefixed j/k movements", () => {
+    const view = createView("line one\nline two\nline three\nline four");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Type 2j -> move down 2 lines
+    expect(processor.handle("select", "2", view)).toBe(true);
+    expect(processor.handle("select", "j", view)).toBe(true);
+    const line3 = view.state.doc.line(3);
+    expect(view.state.selection.main.head).toBe(line3.from);
+
+    // Type 1k -> move up 1 line
+    expect(processor.handle("select", "1", view)).toBe(true);
+    expect(processor.handle("select", "k", view)).toBe(true);
+    const line2 = view.state.doc.line(2);
+    expect(view.state.selection.main.head).toBe(line2.from);
+
+    view.destroy();
+  });
+
+  it("supports count-prefixed w movements", () => {
+    const view = createView("alpha beta gamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Type 2w -> move forward 2 words
+    expect(processor.handle("select", "2", view)).toBe(true);
+    expect(processor.handle("select", "w", view)).toBe(true);
+    // After 2w from "alpha", should be at "gamma" (pos 11)
+    expect(view.state.selection.main.head).toBe(11);
+
+    view.destroy();
+  });
+
+  it("supports count+g to jump to a specific line", () => {
+    const view = createView("line one\nline two\nline three\nline four");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Type 3g -> jump to line 3
+    expect(processor.handle("select", "3", view)).toBe(true);
+    expect(processor.handle("select", "g", view)).toBe(true);
+    const line3 = view.state.doc.line(3);
+    expect(view.state.selection.main.head).toBe(line3.from);
+
+    view.destroy();
+  });
+
+  it("supports count+G to extend selection to a specific line", () => {
+    const view = createView("line one\nline two\nline three\nline four");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(5) });
+
+    // Type 3G -> extend to line 3
+    expect(processor.handle("select", "3", view)).toBe(true);
+    expect(processor.handle("select", "G", view)).toBe(true);
+    const line3 = view.state.doc.line(3);
+    expect(view.state.selection.main.anchor).toBe(5);
+    expect(view.state.selection.main.head).toBe(line3.from);
+
+    view.destroy();
+  });
+
+  it("falls through to g prefix menu when no count is active", () => {
+    const view = createView("line one\nline two\nline three");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(15) });
+
+    // Type g without count -> should buffer as prefix
+    expect(processor.handle("select", "g", view)).toBe(true);
+    // Then type h -> should go to line begin
+    expect(processor.handle("select", "h", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(view.state.doc.line(2).from);
+
+    view.destroy();
+  });
+
+  it("supports count-prefixed extend movements (uppercase)", () => {
+    const view = createView("alpha beta gamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(0) });
+
+    // Type 3L -> extend right 3
+    expect(processor.handle("select", "3", view)).toBe(true);
+    expect(processor.handle("select", "L", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(0);
+    expect(view.state.selection.main.head).toBe(3);
+
+    view.destroy();
+  });
+
+  it("swallows Enter and Backspace in select mode", () => {
+    const view = createView("alpha beta");
+
+    view.dispatch({ selection: EditorSelection.cursor(5) });
+    expect(view.state.field(kakouneStateField).mode).toBe("select");
+
+    const initialDoc = view.state.doc.toString();
+    const initialHead = view.state.selection.main.head;
+
+    const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    expect(view.contentDOM.dispatchEvent(enterEvent)).toBe(false);
+    expect(view.state.doc.toString()).toBe(initialDoc);
+    expect(view.state.selection.main.head).toBe(initialHead);
+
+    const backspaceEvent = new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true });
+    expect(view.contentDOM.dispatchEvent(backspaceEvent)).toBe(false);
+    expect(view.state.doc.toString()).toBe(initialDoc);
+    expect(view.state.selection.main.head).toBe(initialHead);
+
+    view.destroy();
+  });
+
+  it("allows Enter in insert mode", () => {
+    const view = createView("alpha beta");
+
+    view.dispatch({ selection: EditorSelection.cursor(5) });
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "i", bubbles: true }));
+    expect(view.state.field(kakouneStateField).mode).toBe("insert");
+
+    const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    expect(view.contentDOM.dispatchEvent(enterEvent)).toBe(true);
+
+    view.destroy();
+  });
+
+  it("ignores bare modifier keys so they don't reset pending prefixes", () => {
+    expect(normalizeKeyStroke(new KeyboardEvent("keydown", { key: "Shift" }))).toBeNull();
+    expect(normalizeKeyStroke(new KeyboardEvent("keydown", { key: "Control" }))).toBeNull();
+    expect(normalizeKeyStroke(new KeyboardEvent("keydown", { key: "Alt" }))).toBeNull();
+    expect(normalizeKeyStroke(new KeyboardEvent("keydown", { key: "Meta" }))).toBeNull();
+    expect(normalizeKeyStroke(new KeyboardEvent("keydown", { key: "CapsLock" }))).toBeNull();
+
+    // Modifier combos with other modifiers should also be ignored
+    expect(
+      normalizeKeyStroke(new KeyboardEvent("keydown", { key: "Shift", altKey: true }))
+    ).toBeNull();
+    expect(
+      normalizeKeyStroke(new KeyboardEvent("keydown", { key: "Shift", ctrlKey: true }))
+    ).toBeNull();
+  });
+
+  it("preserves <A-i> prefix through a Shift key and selects inner quotes", () => {
+    const view = createView('const x = "hello";');
+
+    // Cursor inside "hello" at position 14 (on second 'l')
+    view.dispatch({ selection: EditorSelection.cursor(14) });
+
+    // Press Alt+i
+    view.contentDOM.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "i", altKey: true, bubbles: true })
+    );
+
+    // Press Shift (should NOT reset the pending <A-i> prefix)
+    const shiftEvent = new KeyboardEvent("keydown", {
+      key: "Shift",
+      bubbles: true,
+      cancelable: true
+    });
+    // Shift is not swallowed (it passes through), so dispatchEvent returns true
+    expect(view.contentDOM.dispatchEvent(shiftEvent)).toBe(true);
+
+    // Press " (with shift held) -> should trigger <A-i> " binding
+    view.contentDOM.dispatchEvent(
+      new KeyboardEvent("keydown", { key: '"', shiftKey: true, bubbles: true })
+    );
+
+    // Inner of "hello" -> positions 11-16 (without the quotes)
+    expect(view.state.selection.main.from).toBe(11);
+    expect(view.state.selection.main.to).toBe(16);
 
     view.destroy();
   });

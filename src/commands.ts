@@ -141,31 +141,43 @@ function setMode(view: EditorView, mode: KakouneMode): boolean {
   return true;
 }
 
-function moveSelections(view: EditorView, mapper: (range: SelectionRange) => number): boolean {
-  const state = view.state;
-  const result = state.changeByRange(range => ({
-    range: EditorSelection.cursor(mapper(range))
-  }));
-
-  view.dispatch(result);
-  return true;
-}
-
-function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }): boolean {
+function moveSelections(view: EditorView, mapper: (range: SelectionRange) => number, count: number = 1): boolean {
   const state = view.state;
   const result = state.changeByRange(range => {
-    const { anchor, head } = mapper(range);
-    return {
-      range: EditorSelection.range(anchor, head)
-    };
+    let current = range;
+    for (let i = 0; i < count; i++) {
+      current = EditorSelection.cursor(mapper(current));
+    }
+    return { range: current };
   });
 
   view.dispatch(result);
   return true;
 }
 
-function extendSelections(view: EditorView, mapper: (range: SelectionRange) => number): boolean {
-  const ranges = view.state.selection.ranges.map(range => EditorSelection.range(range.anchor, mapper(range)));
+function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }, count: number = 1): boolean {
+  const state = view.state;
+  const result = state.changeByRange(range => {
+    let current = range;
+    for (let i = 0; i < count; i++) {
+      const { anchor, head } = mapper(current);
+      current = EditorSelection.range(anchor, head);
+    }
+    return { range: current };
+  });
+
+  view.dispatch(result);
+  return true;
+}
+
+function extendSelections(view: EditorView, mapper: (range: SelectionRange) => number, count: number = 1): boolean {
+  const ranges = view.state.selection.ranges.map(range => {
+    let head = range.head;
+    for (let i = 0; i < count; i++) {
+      head = mapper(EditorSelection.range(range.anchor, head));
+    }
+    return EditorSelection.range(range.anchor, head);
+  });
   view.dispatch({
     selection: EditorSelection.create(ranges, view.state.selection.mainIndex)
   });
@@ -668,6 +680,70 @@ function moveToSurroundingObject(
   }
 }
 
+function selectSurroundingObject(
+  view: EditorView,
+  objectKey: string,
+  inner: boolean
+): boolean {
+  const doc = view.state.doc.toString();
+  const state = view.state;
+  const ranges = state.selection.ranges.map(range => {
+    const result = getObjectRange(doc, range.head, objectKey, "start");
+    if (!result) {
+      return range;
+    }
+
+    const isDelimiterType = [
+      "b", "(", ")", "B", "{", "}", "r", "[", "]", "a", "<", ">", "<lt>", "<gt>",
+      "Q", "\"", "<dquote>", "q", "'", "<quote>", "g", "`"
+    ].includes(objectKey);
+
+    let startIdx = result.start;
+    let endIdx = result.end;
+
+    if (inner && isDelimiterType) {
+      startIdx = result.start + 1;
+      endIdx = result.end;
+    } else if (!inner && isDelimiterType) {
+      endIdx = result.end + 1;
+    } else if (!inner) {
+      endIdx = result.end + 1;
+    } else {
+      endIdx = result.end + 1;
+    }
+
+    return EditorSelection.range(startIdx, endIdx);
+  });
+
+  view.dispatch({
+    selection: EditorSelection.create(ranges, state.selection.mainIndex)
+  });
+  return true;
+}
+
+function jumpToLine(view: EditorView, lineNum: number): boolean {
+  const doc = view.state.doc;
+  const targetLine = clamp(lineNum, 1, doc.lines);
+  const pos = doc.line(targetLine).from;
+  view.dispatch({
+    selection: EditorSelection.cursor(pos)
+  });
+  return true;
+}
+
+function extendToLine(view: EditorView, lineNum: number): boolean {
+  const doc = view.state.doc;
+  const targetLine = clamp(lineNum, 1, doc.lines);
+  const pos = doc.line(targetLine).from;
+  const ranges = view.state.selection.ranges.map(range =>
+    EditorSelection.range(range.anchor, pos)
+  );
+  view.dispatch({
+    selection: EditorSelection.create(ranges, view.state.selection.mainIndex)
+  });
+  return true;
+}
+
 
 function getSelectionText(view: EditorView): string {
   const { state } = view;
@@ -1010,16 +1086,16 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["a"], run: view => moveSelections(view, range => clamp(range.to + 1, 0, view.state.doc.length)) && setMode(view, "insert"), description: "Insert mode after selections" },
     { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
     { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },
-    { keys: ["h"], run: view => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)), description: "Move left" },
-    { keys: ["l"], run: view => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)), description: "Move right" },
-    { keys: ["j"], run: view => moveSelections(view, range => moveLineColumn(view, range, 1)), description: "Move down" },
-    { keys: ["k"], run: view => moveSelections(view, range => moveLineColumn(view, range, -1)), description: "Move up" },
-    { keys: ["w"], run: view => moveWordSelections(view, range => moveWordForwardRange(view, range)), description: "Move word forward" },
-    { keys: ["W"], run: view => extendSelections(view, range => moveWordForwardRange(view, range).head), description: "Extend word forward" },
-    { keys: ["b"], run: view => moveWordSelections(view, range => moveWordBackwardRange(view, range)), description: "Move word backward" },
-    { keys: ["B"], run: view => extendSelections(view, range => moveWordBackwardRange(view, range).head), description: "Extend word backward" },
-    { keys: ["e"], run: view => moveWordSelections(view, range => moveWordEndRange(view, range)), description: "Move to word end" },
-    { keys: ["E"], run: view => extendSelections(view, range => moveWordEndRange(view, range).head), description: "Extend to word end" },
+    { keys: ["h"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
+    { keys: ["l"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
+    { keys: ["j"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
+    { keys: ["k"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
+    { keys: ["w"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordForwardRange(view, range), count ?? 1), description: "Move word forward" },
+    { keys: ["W"], run: (view, _arg, count) => extendSelections(view, range => moveWordForwardRange(view, range).head, count ?? 1), description: "Extend word forward" },
+    { keys: ["b"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordBackwardRange(view, range), count ?? 1), description: "Move word backward" },
+    { keys: ["B"], run: (view, _arg, count) => extendSelections(view, range => moveWordBackwardRange(view, range).head, count ?? 1), description: "Extend word backward" },
+    { keys: ["e"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordEndRange(view, range), count ?? 1), description: "Move to word end" },
+    { keys: ["E"], run: (view, _arg, count) => extendSelections(view, range => moveWordEndRange(view, range).head, count ?? 1), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },
@@ -1027,14 +1103,22 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["<A-;>"], run: view => flipSelections(view), description: "Flip selection direction" },
     { keys: [")"], run: view => rotateSelections(view, false), description: "Rotate selections forward" },
     { keys: ["("], run: view => rotateSelections(view, true), description: "Rotate selections backward" },
+    { keys: ["g"], run: (_view, _arg, count) => {
+      if (count !== undefined) return jumpToLine(_view, count);
+      return false;
+    }, description: "Jump to line (with count)" },
+    { keys: ["G"], run: (_view, _arg, count) => {
+      if (count !== undefined) return extendToLine(_view, count);
+      return false;
+    }, description: "Extend to line (with count)" },
     { keys: ["g", "h"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Move to line begin" },
     { keys: ["g", "l"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Move to line end" },
     { keys: ["<A-h>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Extend to line begin" },
     { keys: ["<A-l>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Extend to line end" },
-    { keys: ["H"], run: view => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)), description: "Extend left" },
-    { keys: ["J"], run: view => extendSelections(view, range => moveLineColumn(view, range, 1)), description: "Extend down" },
-    { keys: ["K"], run: view => extendSelections(view, range => moveLineColumn(view, range, -1)), description: "Extend up" },
-    { keys: ["L"], run: view => extendSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)), description: "Extend right" },
+    { keys: ["H"], run: (view, _arg, count) => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Extend left" },
+    { keys: ["J"], run: (view, _arg, count) => extendSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Extend down" },
+    { keys: ["K"], run: (view, _arg, count) => extendSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Extend up" },
+    { keys: ["L"], run: (view, _arg, count) => extendSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Extend right" },
     { keys: ["G", "h"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Extend to line begin" },
     { keys: ["G", "H"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Extend to line begin" },
     { keys: ["G", "l"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Extend to line end" },
@@ -1138,6 +1222,19 @@ function buildBracketBindings(): KakouneBinding[] {
       keys: ["<A-}>", type],
       run: view => moveToSurroundingObject(view, type, true, "end", true),
       description: `Extend to inner surrounding object end (${type})`
+    });
+
+    // <A-i> -> select inner surrounding object (full range)
+    bindings.push({
+      keys: ["<A-i>", type],
+      run: view => selectSurroundingObject(view, type, true),
+      description: `Select inner surrounding object (${type})`
+    });
+    // <A-a> -> select surrounding object (full range)
+    bindings.push({
+      keys: ["<A-a>", type],
+      run: view => selectSurroundingObject(view, type, false),
+      description: `Select surrounding object (${type})`
     });
   });
 

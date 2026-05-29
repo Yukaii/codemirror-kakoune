@@ -35,7 +35,8 @@ function createKakouneHandler() {
   return EditorView.domEventHandlers({
     beforeinput(event, view) {
       const state = view.state.field(kakouneStateField);
-      if (state.searchPrompt !== null) {
+      // Block all direct text input in select mode and during search prompt
+      if (state.mode !== "insert" || state.searchPrompt !== null) {
         event.preventDefault();
         event.stopPropagation();
         return true;
@@ -87,9 +88,13 @@ function createKakouneHandler() {
       }
 
       if (mode !== "insert") {
-        event.preventDefault();
-        event.stopPropagation();
-        return true;
+        // Swallow single printable character keys and special keys like Enter/Backspace
+        // to prevent text insertion or deletion in select mode.
+        if (key.length === 1 || key === "<Enter>" || key === "<Backspace>") {
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
       }
 
       return false;
@@ -136,7 +141,8 @@ export function kakoune(options: KakouneOptions = {}): Extension {
           run(view) {
             const state = view.state.field(kakouneStateField);
             if (state.searchPrompt === null) {
-              return false;
+              // Swallow Enter in select mode so the default keymap doesn't insert a newline
+              return state.mode !== "insert";
             }
 
             return commitSearchPrompt(view);
@@ -147,7 +153,8 @@ export function kakoune(options: KakouneOptions = {}): Extension {
           run(view) {
             const state = view.state.field(kakouneStateField);
             if (state.searchPrompt === null) {
-              return false;
+              // Swallow Backspace in select mode so the default keymap doesn't delete
+              return state.mode !== "insert";
             }
 
             return deleteSearchPromptChar(view);
