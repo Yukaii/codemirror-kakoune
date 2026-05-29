@@ -148,14 +148,16 @@ body {
   color: var(--text);
 }
 
-.register-container {
+.register-container,
+.search-container {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
-#register-pill {
+#register-pill,
+#search-pill {
   border: 1px solid var(--panel-border);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
@@ -171,11 +173,13 @@ body {
   transition: all 0.2s ease;
 }
 
-body[data-theme="paper"] #register-pill {
+body[data-theme="paper"] #register-pill,
+body[data-theme="paper"] #search-pill {
   background: rgba(0, 0, 0, 0.03);
 }
 
-#register-pill:hover {
+#register-pill:hover,
+#search-pill:hover {
   background: var(--panel-border);
 }
 
@@ -244,7 +248,8 @@ body[data-theme="sepia"] .register-popover {
   color: var(--text);
 }
 
-#register-content {
+#register-content,
+#search-content {
   margin: 0;
   font-family: monospace;
   font-size: 12px;

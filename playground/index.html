@@ -35,7 +35,16 @@
           </label>
           <span class="state">
             mode: <strong id="mode-pill">select</strong>
-            search: <code id="search-pill">select:</code>
+            <span class="search-container">
+              search: <code id="search-pill" class="pill-button">select:</code>
+              <div id="search-popover" class="register-popover">
+                <div class="popover-header">
+                  <span>Search Content</span>
+                  <button id="search-popover-close" type="button">×</button>
+                </div>
+                <pre id="search-content"></pre>
+              </div>
+            </span>
             <span class="register-container">
               register: <button id="register-pill" class="pill-button" title="View active register contents">""</button>
               <div id="register-popover" class="register-popover">

@@ -20,6 +20,9 @@ const registerPill = document.querySelector<HTMLElement>("#register-pill");
 const registerPopover = document.querySelector<HTMLDivElement>("#register-popover");
 const registerContent = document.querySelector<HTMLPreElement>("#register-content");
 const popoverClose = document.querySelector<HTMLButtonElement>("#popover-close");
+const searchPopover = document.querySelector<HTMLDivElement>("#search-popover");
+const searchContent = document.querySelector<HTMLPreElement>("#search-content");
+const searchPopoverClose = document.querySelector<HTMLButtonElement>("#search-popover-close");
 const hudElement = document.querySelector<HTMLDivElement>("#which-key-hud");
 const hudTitle = document.querySelector<HTMLElement>("#hud-title");
 const hudPrompt = document.querySelector<HTMLElement>("#hud-prompt");
@@ -36,6 +39,9 @@ if (
   !registerPopover ||
   !registerContent ||
   !popoverClose ||
+  !searchPopover ||
+  !searchContent ||
+  !searchPopoverClose ||
   !hudElement ||
   !hudTitle ||
   !hudPrompt ||
@@ -68,12 +74,14 @@ const updateStatus = (view: EditorView): void => {
   const state = view.state.field(kakouneStateField);
   const searchQuery = getSearchQuery(view.state);
   modePill.textContent = state.mode;
-  searchPill.textContent =
+  const searchStr =
     state.searchPrompt !== null
       ? `select: ${state.searchPrompt}`
       : searchQuery.valid && searchQuery.search
-        ? `/${searchQuery.search}`
+        ? searchQuery.search
         : "—";
+  searchPill.textContent = searchStr.length > 25 ? searchStr.slice(0, 22) + "..." : searchStr;
+  searchContent.textContent = searchStr;
   const registerStr = state.register ? JSON.stringify(state.register) : '""';
   registerPill.textContent = registerStr.length > 25 ? registerStr.slice(0, 22) + "..." : registerStr;
   registerContent.textContent = registerStr;
@@ -198,6 +206,7 @@ layoutSelect.addEventListener("change", () => {
 registerPill.addEventListener("click", (e) => {
   e.stopPropagation();
   registerPopover.classList.toggle("show");
+  searchPopover.classList.remove("show");
 });
 
 popoverClose.addEventListener("click", (e) => {
@@ -205,11 +214,27 @@ popoverClose.addEventListener("click", (e) => {
   registerPopover.classList.remove("show");
 });
 
-document.addEventListener("click", () => {
+searchPill.addEventListener("click", (e) => {
+  e.stopPropagation();
+  searchPopover.classList.toggle("show");
   registerPopover.classList.remove("show");
 });
 
+searchPopoverClose.addEventListener("click", (e) => {
+  e.stopPropagation();
+  searchPopover.classList.remove("show");
+});
+
+document.addEventListener("click", () => {
+  registerPopover.classList.remove("show");
+  searchPopover.classList.remove("show");
+});
+
 registerPopover.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
+searchPopover.addEventListener("click", (e) => {
   e.stopPropagation();
 });
 
