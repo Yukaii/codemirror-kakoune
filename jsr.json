@@ -1,6 +1,6 @@
 {
   "name": "@ykmade/codemirror-kakoune",
-  "version": "0.2.2",
+  "version": "0.2.1",
   "license": "MIT",
   "exports": "./src/index.ts"
 }

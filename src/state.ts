@@ -1,4 +1,4 @@
-import { Facet, StateEffect, StateField, type EditorState } from "@codemirror/state";
+import { Facet, StateEffect, type StateEffectType, StateField, type EditorState } from "@codemirror/state";
 
 export type KakouneMode = "select" | "insert";
 
@@ -25,26 +25,28 @@ export interface KakouneOptions {
   onWhichKey?: WhichKeyCallback;
 }
 
-export const kakouneWhichKeyFacet = Facet.define<WhichKeyCallback, WhichKeyCallback | null>({
+export const kakouneWhichKeyFacet: Facet<WhichKeyCallback, WhichKeyCallback | null> = Facet.define<WhichKeyCallback, WhichKeyCallback | null>({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : null;
   }
 });
 
-export const kakouneInitialModeFacet = Facet.define<KakouneMode, KakouneMode>({
+export const kakouneInitialModeFacet: Facet<KakouneMode, KakouneMode> = Facet.define<KakouneMode, KakouneMode>({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : "select";
   }
 });
 
-export const setKakouneModeEffect = StateEffect.define<KakouneMode>();
-export const setKakouneRegisterEffect = StateEffect.define<string>();
-export const setKakouneSearchPromptEffect = StateEffect.define<string | null>();
-export const setKakouneSearchSelectionEffect = StateEffect.define<
+export const setKakouneModeEffect: StateEffectType<KakouneMode> = StateEffect.define<KakouneMode>();
+export const setKakouneRegisterEffect: StateEffectType<string> = StateEffect.define<string>();
+export const setKakouneSearchPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
+export const setKakouneSearchSelectionEffect: StateEffectType<
+  Array<{ anchor: number; head: number }> | null
+> = StateEffect.define<
   Array<{ anchor: number; head: number }> | null
 >();
 
-export const kakouneStateField = StateField.define<KakouneState>({
+export const kakouneStateField: StateField<KakouneState> = StateField.define<KakouneState>({
   create(state: EditorState) {
     return {
       mode: state.facet(kakouneInitialModeFacet),
