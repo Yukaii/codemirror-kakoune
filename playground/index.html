@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=overlays-content" />
     <title>CodeMirror Kakoune Playground</title>
     <script type="module" src="./main.ts"></script>
   </head>
@@ -82,6 +82,22 @@
       <footer class="footer">
         <span>inspired by <a href="https://kakoune.org" target="_blank" rel="noopener noreferrer">kakoune</a>, built on <a href="https://codemirror.net" target="_blank" rel="noopener noreferrer">codemirror</a></span>
       </footer>
+    </main>
+
+    <nav id="vk" class="vk" aria-label="Virtual keyboard">
+      <div class="vk-row">
+        <button class="vk-key vk-key-esc" data-key="Escape" data-code="Escape" type="button">Esc</button>
+        <button class="vk-key vk-key-ctrl" data-mod="ctrl" type="button">Ctrl</button>
+        <button class="vk-key vk-key-alt" data-mod="alt" type="button">Alt</button>
+        <button class="vk-key" data-key="Backspace" data-code="Backspace" type="button">⌫</button>
+      </div>
+      <div class="vk-row">
+        <button class="vk-key" data-key="s" data-code="KeyS" type="button">s</button>
+        <button class="vk-key" data-key="/" data-code="Slash" type="button">/</button>
+        <button class="vk-key" data-key=" " data-code="Space" type="button">Space</button>
+        <button class="vk-key" data-key="Enter" data-code="Enter" type="button">⏎</button>
+      </div>
+    </nav>
     </main>
   </body>
 </html>

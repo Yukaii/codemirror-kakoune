@@ -27,6 +27,7 @@ const hudElement = document.querySelector<HTMLDivElement>("#which-key-hud");
 const hudTitle = document.querySelector<HTMLElement>("#hud-title");
 const hudPrompt = document.querySelector<HTMLElement>("#hud-prompt");
 const hudItems = document.querySelector<HTMLDivElement>("#hud-items");
+const vk = document.querySelector<HTMLElement>("#vk");
 const themeCompartment = new Compartment();
 
 if (
@@ -45,7 +46,8 @@ if (
   !hudElement ||
   !hudTitle ||
   !hudPrompt ||
-  !hudItems
+  !hudItems ||
+  !vk
 ) {
   throw new Error("Playground shell is missing required DOM nodes.");
 }
@@ -237,3 +239,115 @@ searchPopover.addEventListener("click", (e) => {
 });
 
 updateStatus(view);
+
+// ── Virtual keyboard for mobile ──────────────────────────────────────────────
+
+let pendingCtrl = false;
+let pendingAlt = false;
+const ctrlBtn = vk!.querySelector<HTMLButtonElement>("[data-mod='ctrl']")!;
+const altBtn = vk!.querySelector<HTMLButtonElement>("[data-mod='alt']")!;
+
+function updateModUI(): void {
+  ctrlBtn.classList.toggle("active", pendingCtrl);
+  altBtn.classList.toggle("active", pendingAlt);
+}
+
+vk!.addEventListener("pointerdown", (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".vk-key");
+  if (!btn) return;
+  e.preventDefault();
+
+  btn.classList.add("pressed");
+
+  const mod = btn.dataset.mod;
+  if (mod === "ctrl") {
+    pendingCtrl = !pendingCtrl;
+    pendingAlt = false;
+    updateModUI();
+    return;
+  }
+  if (mod === "alt") {
+    pendingAlt = !pendingAlt;
+    pendingCtrl = false;
+    updateModUI();
+    return;
+  }
+
+  const key = btn.dataset.key!;
+  const code = btn.dataset.code!;
+  const ctrl = pendingCtrl;
+  const alt = pendingAlt;
+  pendingCtrl = false;
+  pendingAlt = false;
+  updateModUI();
+
+  view.contentDOM.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key,
+      code,
+      ctrlKey: ctrl,
+      altKey: alt,
+      shiftKey: false,
+      bubbles: true,
+      cancelable: true
+    })
+  );
+});
+
+// Remove press state on pointer up / cancel
+const clearPressed = () => vk!.querySelectorAll(".vk-key.pressed").forEach(el => el.classList.remove("pressed"));
+document.addEventListener("pointerup", clearPressed);
+document.addEventListener("pointercancel", clearPressed);
+
+// Intercept real keyboard events to apply pending modifiers
+let isSynthetic = false;
+view.contentDOM.addEventListener(
+  "keydown",
+  (event: Event) => {
+    const kbEvent = event as KeyboardEvent;
+    if (isSynthetic) {
+      isSynthetic = false;
+      return;
+    }
+    if ((pendingCtrl || pendingAlt) && kbEvent.key.length === 1 && !kbEvent.ctrlKey && !kbEvent.altKey) {
+      kbEvent.preventDefault();
+      kbEvent.stopImmediatePropagation();
+      const ctrl = pendingCtrl;
+      const alt = pendingAlt;
+      pendingCtrl = false;
+      pendingAlt = false;
+      updateModUI();
+      isSynthetic = true;
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: kbEvent.key,
+          code: kbEvent.code,
+          ctrlKey: ctrl,
+          altKey: alt,
+          shiftKey: kbEvent.shiftKey,
+          bubbles: true,
+          cancelable: true
+        })
+      );
+      return;
+    }
+    if (pendingCtrl || pendingAlt) {
+      pendingCtrl = false;
+      pendingAlt = false;
+      updateModUI();
+    }
+  },
+  { capture: true }
+);
+
+// Keep vk above iOS virtual keyboard
+if (window.visualViewport) {
+  const repositionVk = () => {
+    const vv = window.visualViewport!;
+    const bottomSpace = window.innerHeight - (vv.offsetTop + vv.height);
+    vk!.style.bottom = `${Math.max(0, bottomSpace)}px`;
+  };
+  window.visualViewport.addEventListener("resize", repositionVk);
+  window.visualViewport.addEventListener("scroll", repositionVk);
+  repositionVk();
+}

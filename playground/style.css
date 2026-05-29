@@ -69,6 +69,7 @@ body {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
 }
 
 .bar {
@@ -432,4 +433,114 @@ body[data-theme="sepia"] .register-popover {
 .footer a:hover {
   color: var(--accent);
   text-decoration-color: var(--accent);
+}
+
+.vk {
+  display: none;
+}
+
+.vk-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.vk-key {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  padding: 6px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background 0.05s, box-shadow 0.05s;
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.vk-key:active,
+.vk-key.pressed {
+  background: var(--panel-strong);
+  transform: scale(0.95);
+}
+
+.vk-key-esc {
+  color: var(--accent);
+}
+
+.vk-key-ctrl.active,
+.vk-key-alt.active {
+  background: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 12px;
+  }
+
+  .shell {
+    height: calc(100dvh - 24px);
+  }
+
+  .brand {
+    font-size: 11px;
+  }
+
+  .controls {
+    gap: 4px;
+  }
+
+  .control {
+    display: none;
+  }
+
+  .state,
+  .footer {
+    display: none;
+  }
+
+  .vk-key {
+    font-size: 11px;
+    padding: 5px 4px;
+  }
+
+  .shell {
+    padding-bottom: 70px;
+  }
+
+  .vk {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 12px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--panel-border);
+  }
+
+  #which-key-hud[data-layout="vertical"] {
+    bottom: auto;
+    top: 8px;
+    right: 8px;
+    width: 220px;
+  }
+
+  #which-key-hud[data-layout="horizontal"] {
+    bottom: auto;
+    top: 0;
+  }
 }
