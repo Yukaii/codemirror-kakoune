@@ -80,10 +80,8 @@ const updateStatus = (view: EditorView): void => {
       : searchQuery.valid && searchQuery.search
         ? searchQuery.search
         : "—";
-  searchPill.textContent = searchStr.length > 25 ? searchStr.slice(0, 22) + "..." : searchStr;
   searchContent.textContent = searchStr;
   const registerStr = state.register ? JSON.stringify(state.register) : '""';
-  registerPill.textContent = registerStr.length > 25 ? registerStr.slice(0, 22) + "..." : registerStr;
   registerContent.textContent = registerStr;
 };
 
