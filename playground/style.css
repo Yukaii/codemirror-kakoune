@@ -90,14 +90,16 @@ body {
   color: var(--text);
 }
 
-.github-link {
+.github-link,
+.package-link {
   color: var(--muted);
   display: inline-flex;
   align-items: center;
   transition: color 0.2s ease;
 }
 
-.github-link:hover {
+.github-link:hover,
+.package-link:hover {
   color: var(--accent);
 }
 
