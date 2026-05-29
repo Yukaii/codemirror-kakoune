@@ -3,6 +3,9 @@ import { Facet, StateEffect, type StateEffectType, StateField, type EditorState 
 /** The active editing mode in Kakoune-style modal editing. */
 export type KakouneMode = "select" | "insert";
 
+/** Whether the current selection is character-wise or line-wise. */
+export type KakouneSelectionType = "char" | "line";
+
 /** An item describing a pending key sequence for the which-key UI. */
 export interface WhichKeyItem {
   /** The keys in the sequence. */
@@ -73,6 +76,31 @@ export const setKakouneSearchSelectionEffect: StateEffectType<
 > = StateEffect.define<
   Array<{ anchor: number; head: number }> | null
 >();
+
+/** State effect that sets the selection type (char-wise or line-wise). */
+export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
+
+/**
+ * State field that tracks whether the current selection is character-wise or
+ * line-wise. Automatically resets to `"char"` when the selection changes to a
+ * non-full-line selection, and preserves `"line"` as long as the selection
+ * spans full lines.
+ */
+export const kakouneSelectionTypeField: StateField<KakouneSelectionType> = StateField.define<KakouneSelectionType>({
+  create() { return "char"; },
+  update(value, tr) {
+    let next = value;
+    for (const e of tr.effects) if (e.is(setKakouneSelectionTypeEffect)) next = e.value;
+    if (tr.selection && !tr.effects.some(e => e.is(setKakouneSelectionTypeEffect))) {
+      const main = tr.selection.ranges[tr.selection.mainIndex];
+      const fromLine = tr.newDoc.lineAt(main.from);
+      const toLine = tr.newDoc.lineAt(main.to);
+      const isFullLine = main.from === fromLine.from && main.to === toLine.to;
+      if (!isFullLine) next = "char";
+    }
+    return next;
+  }
+});
 
 /** State field that holds the Kakoune editing state for an editor. */
 export const kakouneStateField: StateField<KakouneState> = StateField.define<KakouneState>({

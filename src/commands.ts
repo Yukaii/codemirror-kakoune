@@ -1,14 +1,16 @@
-import { EditorSelection, type SelectionRange } from "@codemirror/state";
+import { EditorSelection, type SelectionRange, type Text } from "@codemirror/state";
 import { redo, undo } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
+  kakouneSelectionTypeField,
   setKakouneSearchPromptEffect,
   setKakouneSearchSelectionEffect,
   setKakouneModeEffect,
   setKakouneRegisterEffect,
+  setKakouneSelectionTypeEffect,
   type KakouneMode
 } from "./state";
 
@@ -1008,28 +1010,31 @@ function selectLine(view: EditorView): boolean {
   });
 
   view.dispatch({
-    selection: EditorSelection.create(ranges, state.selection.mainIndex)
+    selection: EditorSelection.create(ranges, state.selection.mainIndex),
+    effects: setKakouneSelectionTypeEffect.of("line")
   });
   return true;
 }
 
 function deleteSelection(view: EditorView): boolean {
   const state = view.state;
+  const isLine = state.field(kakouneSelectionTypeField) === "line";
   const deleted: string[] = [];
 
   const result = state.changeByRange(range => {
     const from = Math.min(range.from, range.to);
     const to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
+    const adjustedTo = isLine && to < state.doc.length ? to + 1 : to;
 
-    if (to <= from) {
+    if (adjustedTo <= from) {
       return {
         range: EditorSelection.cursor(from)
       };
     }
 
-    deleted.push(state.doc.sliceString(from, to));
+    deleted.push(state.doc.sliceString(from, adjustedTo));
     return {
-      changes: { from, to, insert: "" },
+      changes: { from, to: adjustedTo, insert: "" },
       range: EditorSelection.cursor(from)
     };
   });
@@ -1044,11 +1049,13 @@ function deleteSelection(view: EditorView): boolean {
 
 function yankSelection(view: EditorView): boolean {
   const state = view.state;
+  const isLine = state.field(kakouneSelectionTypeField) === "line";
   const selected = state.selection.ranges
     .map(range => {
       const from = Math.min(range.from, range.to);
       const to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
-      return state.doc.sliceString(from, to);
+      const adjustedTo = isLine && to < state.doc.length ? to + 1 : to;
+      return state.doc.sliceString(from, adjustedTo);
     })
     .join("\n");
 

@@ -1,7 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { EditorState, type Extension } from "@codemirror/state";
 import { Prec } from "@codemirror/state";
-import { keymap, ViewPlugin } from "@codemirror/view";
+import { keymap, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { history } from "@codemirror/commands";
 import { search } from "@codemirror/search";
 import {
@@ -9,6 +9,8 @@ import {
   kakouneStateField,
   setKakouneModeEffect,
   kakouneWhichKeyFacet,
+  kakouneSelectionTypeField,
+  setKakouneSelectionTypeEffect,
   type KakouneMode,
   type KakouneOptions,
   type KakouneState,
@@ -25,7 +27,7 @@ import {
 } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem } from "./state";
-export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect, kakouneWhichKeyFacet } from "./state";
+export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect, kakouneWhichKeyFacet, kakouneSelectionTypeField, setKakouneSelectionTypeEffect } from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
 export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
 
@@ -126,6 +128,32 @@ const kakouneModeAttributes = ViewPlugin.fromClass(
   }
 );
 
+const kakouneLineCursor = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      this.updateCursor(view);
+    }
+
+    update(update: ViewUpdate): void {
+      if (update.selectionSet || update.docChanged) {
+        this.updateCursor(update.view);
+      }
+    }
+
+    destroy(): void {
+      this.view?.dom.classList.remove("cm-line-selection");
+    }
+
+    private view?: EditorView;
+
+    private updateCursor(view: EditorView): void {
+      this.view = view;
+      const isLine = view.state.field(kakouneSelectionTypeField) === "line";
+      view.dom.classList.toggle("cm-line-selection", isLine);
+    }
+  }
+);
+
 /**
  * Creates a CodeMirror extension that enables Kakoune-style modal editing.
  *
@@ -151,9 +179,11 @@ export function kakoune(options: KakouneOptions = {}): Extension {
   const extensions: Extension[] = [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
+    kakouneSelectionTypeField,
     EditorState.allowMultipleSelections.of(true),
     history(),
     kakouneModeAttributes,
+    kakouneLineCursor,
     Prec.highest(
       keymap.of([
         {
