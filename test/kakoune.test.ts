@@ -54,6 +54,25 @@ describe("normalizeKeyStroke", () => {
     });
     expect(normalizeKeyStroke(event)).toBeNull();
   });
+
+  it("maps Ctrl+[ to Escape (Vim/Kakoune convention)", () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "[",
+      code: "BracketLeft",
+      ctrlKey: true
+    });
+    expect(normalizeKeyStroke(event)).toBe("<Esc>");
+  });
+
+  it("does not map Ctrl+Shift+[ to Escape", () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "{",
+      code: "BracketLeft",
+      ctrlKey: true,
+      shiftKey: true
+    });
+    expect(normalizeKeyStroke(event)).toBe("<C-{>");
+  });
 });
 
 describe("KakouneKeyProcessor", () => {

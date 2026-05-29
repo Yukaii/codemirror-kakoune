@@ -109,6 +109,11 @@ export function normalizeKeyStroke(event: KeyboardEvent): string | null {
 
   let key = event.key;
 
+  // Ctrl+[ maps to Escape (Vim/Kakoune convention)
+  if (event.code === "BracketLeft" && event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
+    return "<Esc>";
+  }
+
   if (event.ctrlKey || event.metaKey || event.altKey) {
     const modifiers = [
       event.ctrlKey ? "C" : null,
