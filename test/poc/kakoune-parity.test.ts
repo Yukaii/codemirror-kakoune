@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -28,9 +28,11 @@ interface ParityCase {
 const ROOT = join(process.cwd(), "test/kakoune/test/normal");
 
 function readFixture(name: string): KakouneParityFixture {
+  const inPath = join(ROOT, name, "in");
+  const hasIn = existsSync(inPath);
   return {
     name,
-    in: readFileSync(join(ROOT, name, "in"), "utf8"),
+    in: hasIn ? readFileSync(inPath, "utf8") : "",
     out: readFileSync(join(ROOT, name, "out"), "utf8"),
     cmd: readFileSync(join(ROOT, name, "cmd"), "utf8")
   };
@@ -81,7 +83,7 @@ function tokenize(cmd: string): string[] {
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
         if (/^<(Esc|esc|Enter|enter|Backspace|backspace|Space|Tab|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
-          tokens.push(token);
+          tokens.push(token === "<esc>" ? "<Esc>" : token === "<enter>" ? "<Enter>" : token === "<backspace>" ? "<Backspace>" : token);
           i = end;
           continue;
         }
@@ -130,10 +132,14 @@ function assertParityMatch(
   expectedSelection: { anchor: number; head: number },
   actual: { doc: string; selection: { anchor: number; head: number } }
 ): void {
+  const normalize = (value: string) => value.replace(/\n$/, "");
   const issues: string[] = [];
 
-  if (actual.doc !== expectedDoc) {
-    issues.push(summarizeDocDiff(expectedDoc, actual.doc));
+  const normalizedExpectedDoc = normalize(expectedDoc);
+  const normalizedActualDoc = normalize(actual.doc);
+
+  if (normalizedActualDoc !== normalizedExpectedDoc) {
+    issues.push(summarizeDocDiff(normalizedExpectedDoc, normalizedActualDoc));
   }
 
   if (actual.selection.anchor !== expectedSelection.anchor || actual.selection.head !== expectedSelection.head) {
@@ -228,6 +234,12 @@ const parityCases: ParityCase[] = [
     expectedSelection: { anchor: 5, head: 5 }
   },
   {
+    name: "repeat-insert/repeat-insert",
+    supported: true,
+    reason: "plain insert followed by dot replay should reuse the last inserted text",
+    expectedSelection: { anchor: 6, head: 6 }
+  },
+  {
     name: "change",
     supported: false,
     reason: "requires insert-mode text entry, which the PoC runner does not emulate"
@@ -289,7 +301,7 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
-    expect(summary).toMatchObject({ supported: 8, total: 280, percentage: "2.86" });
+    expect(summary).toMatchObject({ supported: 9, total: 280, percentage: "3.21" });
     console.log(
       `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );

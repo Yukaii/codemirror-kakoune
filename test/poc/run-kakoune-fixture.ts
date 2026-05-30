@@ -32,7 +32,7 @@ export function tokenizeKakouneCmd(cmd: string): string[] {
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
         if (/^<(Esc|esc|Enter|enter|Backspace|backspace|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
-          tokens.push(token);
+          tokens.push(token === "<esc>" ? "<Esc>" : token === "<enter>" ? "<Enter>" : token === "<backspace>" ? "<Backspace>" : token);
           i = end;
           continue;
         }
