@@ -17,6 +17,35 @@ export interface KakouneFixtureResult {
   tokens: string[];
 }
 
+function parseSelectionMarkers(text: string): { text: string; selection: Array<{ anchor: number; head: number }> } {
+  let output = "";
+  const selection: Array<{ anchor: number; head: number }> = [];
+
+  for (let i = 0; i < text.length; i += 1) {
+    if (text.startsWith("%(", i)) {
+      const end = text.indexOf(")", i + 2);
+      if (end === -1) {
+        throw new Error(`Unterminated selection marker in fixture input: ${text}`);
+      }
+
+      const markerText = text.slice(i + 2, end);
+      const anchor = output.length;
+      output += markerText;
+      const head = output.length;
+      selection.push({ anchor, head });
+      i = end;
+      continue;
+    }
+
+    output += text[i];
+  }
+
+  return {
+    text: output,
+    selection: selection.length > 0 ? selection : [{ anchor: 0, head: 0 }]
+  };
+}
+
 export function tokenizeKakouneCmd(cmd: string): string[] {
   const tokens: string[] = [];
 
@@ -31,8 +60,15 @@ export function tokenizeKakouneCmd(cmd: string): string[] {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|esc|Enter|enter|Backspace|backspace|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
-          tokens.push(token === "<esc>" ? "<Esc>" : token === "<enter>" ? "<Enter>" : token === "<backspace>" ? "<Backspace>" : token);
+        if (/^<(Esc|esc|Enter|enter|ret|Backspace|backspace|Space|Tab|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/.test(token)) {
+          tokens.push(
+            token === "<esc>" ? "<Esc>" :
+            token === "<enter>" || token === "<ret>" ? "<Enter>" :
+            token === "<backspace>" ? "<Backspace>" :
+            token.startsWith("<a-") ? `<A-${token.slice(3, -1)}>` :
+            token.startsWith("<c-") ? `<C-${token.slice(3, -1)}>` :
+            token
+          );
           i = end;
           continue;
         }
@@ -51,10 +87,11 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
 
   try {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
+    const parsed = parseSelectionMarkers(input.in ?? "");
     const view = new EditorView({
       state: EditorState.create({
-        doc: input.in ?? "",
-        selection: EditorSelection.cursor(0),
+        doc: parsed.text,
+        selection: EditorSelection.create(parsed.selection.map(range => EditorSelection.range(range.anchor, range.head)), 0),
         extensions: [kakoune()]
       }),
       parent
