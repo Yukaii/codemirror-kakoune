@@ -1,4 +1,4 @@
-name: Kakoune Fixture PoC
+name: Test
 
 on:
   push:
@@ -29,5 +29,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Kakoune fixture PoC tests
-        run: pnpm test -- --runInBand test/poc/kakoune-fixtures.test.ts test/poc/run-kakoune-fixture.test.ts test/poc/kakoune-parity.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test -- --runInBand
