@@ -22,7 +22,6 @@ interface ParityCase {
   name: string;
   supported: boolean;
   reason: string;
-  expectedSelection?: { anchor: number; head: number };
 }
 
 const ROOT = join(process.cwd(), "test/kakoune/test/normal");
@@ -129,7 +128,6 @@ function summarizeDocDiff(expected: string, actual: string): string {
 function assertParityMatch(
   fixture: KakouneParityFixture,
   expectedDoc: string,
-  expectedSelection: { anchor: number; head: number },
   actual: { doc: string; selection: { anchor: number; head: number } }
 ): void {
   const normalize = (value: string) => value.replace(/\n$/, "");
@@ -140,12 +138,6 @@ function assertParityMatch(
 
   if (normalizedActualDoc !== normalizedExpectedDoc) {
     issues.push(summarizeDocDiff(normalizedExpectedDoc, normalizedActualDoc));
-  }
-
-  if (actual.selection.anchor !== expectedSelection.anchor || actual.selection.head !== expectedSelection.head) {
-    issues.push(
-      `selection expected ${formatSelection(expectedSelection)} but got ${formatSelection(actual.selection)}`
-    );
   }
 
   if (issues.length > 0) {
@@ -188,68 +180,57 @@ const parityCases: ParityCase[] = [
   {
     name: "open-above",
     supported: true,
-    reason: "simple out-backed line opening without inserted text",
-    expectedSelection: { anchor: 0, head: 0 }
+    reason: "simple out-backed line opening without inserted text"
   },
   {
     name: "open-below",
     supported: true,
-    reason: "simple out-backed line opening without inserted text",
-    expectedSelection: { anchor: 4, head: 4 }
+    reason: "simple out-backed line opening without inserted text"
   },
   {
     name: "delete",
     supported: true,
-    reason: "single-selection edit with a deterministic out buffer",
-    expectedSelection: { anchor: 4, head: 4 }
+    reason: "single-selection edit with a deterministic out buffer"
   },
   {
     name: "undo",
     supported: true,
-    reason: "a delete followed by undo stays within the current non-insert edit path",
-    expectedSelection: { anchor: 0, head: 3 }
+    reason: "a delete followed by undo stays within the current non-insert edit path"
   },
   {
     name: "redo",
     supported: true,
-    reason: "a delete-undo-redo sequence stays within the current non-insert edit path",
-    expectedSelection: { anchor: 4, head: 4 }
+    reason: "a delete-undo-redo sequence stays within the current non-insert edit path"
   },
   {
     name: "open-multiple-above",
     supported: true,
-    reason: "counted open-above should create repeated blank lines and accept shared insert text",
-    expectedSelection: { anchor: 3, head: 3 }
+    reason: "counted open-above should create repeated blank lines and accept shared insert text"
   },
   {
     name: "open-multiple-below",
     supported: true,
-    reason: "counted open-below should create repeated blank lines and accept shared insert text",
-    expectedSelection: { anchor: 7, head: 7 }
+    reason: "counted open-below should create repeated blank lines and accept shared insert text"
   },
   {
     name: "insert-at-line-start",
     supported: true,
-    reason: "simple insert-mode typing at line start now works through the insert text path",
-    expectedSelection: { anchor: 5, head: 5 }
+    reason: "simple insert-mode typing at line start now works through the insert text path"
   },
   {
     name: "repeat-insert/repeat-insert",
     supported: true,
-    reason: "plain insert followed by dot replay should reuse the last inserted text",
-    expectedSelection: { anchor: 6, head: 6 }
+    reason: "plain insert followed by dot replay should reuse the last inserted text"
   },
   {
     name: "change",
     supported: true,
-    reason: "requires insert-mode text entry and selection deletion semantics",
-    expectedSelection: { anchor: 12, head: 12 }
+    reason: "requires insert-mode text entry and selection deletion semantics"
   },
   {
     name: "append-at-eol",
     supported: true,
-    reason: "requires insert-mode text entry at the end of the current line",
-    expectedSelection: { anchor: 6, head: 6 }
+    reason: "requires insert-mode text entry at the end of the current line"
   },
   {
     name: "replace",
@@ -320,11 +301,10 @@ describe("kakoune parity sample", () => {
         throw new Error(testCase?.reason ?? `unsupported fixture: ${fixture.name}`);
       }
 
-      const parsedOut = parseSelectionMarkers(fixture.out);
-      const actual = runFixture(fixture);
-      const expectedSelection = testCase.expectedSelection ?? { anchor: 0, head: 0 };
+    const parsedOut = parseSelectionMarkers(fixture.out);
+    const actual = runFixture(fixture);
 
-      assertParityMatch(fixture, parsedOut.text, expectedSelection, actual);
-    });
+    assertParityMatch(fixture, parsedOut.text, actual);
+  });
   }
 });

@@ -10,7 +10,7 @@ This repo now has a small proof of concept for running real Kakoune regression f
 - allows `KAKOUNE_ROOT` to override that path for local experiments
 - tokenizes simple Kakoune command strings
 - runs them through the existing `kakoune()` extension and `KakouneKeyProcessor`
-- compares final document text and primary selection state
+- compares final document text only
 
 ## What It Does Not Do Yet
 
@@ -33,4 +33,4 @@ The Kakoune source is added as a sparse submodule at `test/kakoune` so the fixtu
 
 - expand fixture coverage gradually
 - add richer mismatch reporting
-- decide whether to emulate JSON UI traces or keep comparing final state only
+- decide whether to emulate JSON UI traces or keep comparing final text only
