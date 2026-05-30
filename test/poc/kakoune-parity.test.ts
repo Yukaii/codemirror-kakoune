@@ -195,6 +195,18 @@ const parityCases: ParityCase[] = [
     expectedSelection: { anchor: 4, head: 4 }
   },
   {
+    name: "undo",
+    supported: true,
+    reason: "a delete followed by undo stays within the current non-insert edit path",
+    expectedSelection: { anchor: 0, head: 3 }
+  },
+  {
+    name: "redo",
+    supported: true,
+    reason: "a delete-undo-redo sequence stays within the current non-insert edit path",
+    expectedSelection: { anchor: 4, head: 4 }
+  },
+  {
     name: "change",
     supported: false,
     reason: "requires insert-mode text entry, which the PoC runner does not emulate"
@@ -256,7 +268,7 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
-    expect(summary).toMatchObject({ supported: 3, total: 280, percentage: "1.07" });
+    expect(summary).toMatchObject({ supported: 5, total: 280, percentage: "1.79" });
     console.log(
       `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );
