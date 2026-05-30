@@ -68,4 +68,34 @@ describe("kakoune parity probe helpers", () => {
 
     expect(result.doc).toBe("b");
   });
+
+  it("inserts the yank register in insert mode", () => {
+    const result = runKakouneFixture({ in: "%(foo)", cmd: "ya<c-r>\"" });
+
+    expect(result.doc).toBe("foofoo");
+  });
+
+  it("pastes after the cursor after a delete", () => {
+    const result = runKakouneFixture({ in: "-foo%(bar)-", cmd: "dp" });
+
+    expect(result.doc).toBe("-foo-bar");
+  });
+
+  it("jumps forward through the jump list", () => {
+    const result = runKakouneFixture({ in: "%(foo)\nbar\nqux", cmd: "gj\n/bar<ret>\n/qux<ret>\n<c-o><c-o><c-o>\n<c-i><c-i><c-i>\naend<esc>" });
+
+    expect(result.doc).toBe("foo\nbar\nquxend");
+  });
+
+  it("restores a dirty middle jump entry", () => {
+    const result = runKakouneFixture({ in: "%(foo)\nbar\nqux", cmd: "gj\n/bar<ret>\n/qux<ret>\n<c-o>\nh\n<c-o>\naend<esc>" });
+
+    expect(result.doc).toBe("foo\nbarend\nqux");
+  });
+
+  it("duplicates selections before insert mode", () => {
+    const result = runKakouneFixture({ in: "%(f) %(b) %(t)", cmd: "++ao<esc>" });
+
+    expect(result.doc).toBe("fooo booo tooo");
+  });
 });

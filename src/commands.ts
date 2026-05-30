@@ -1,16 +1,19 @@
 import { EditorSelection, type SelectionRange, type Text } from "@codemirror/state";
-import { redo, undo } from "@codemirror/commands";
+import { redo, undo, isolateHistory } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
   kakouneSelectionTypeField,
+  setKakouneJumpStateEffect,
   setKakouneSearchPromptEffect,
   setKakouneSearchSelectionEffect,
   setKakouneModeEffect,
   setKakouneRegisterEffect,
   setKakouneSelectionTypeEffect,
+  type KakouneJumpEntry,
+  type KakouneJumpState,
   type KakouneMode
 } from "./state";
 
@@ -20,6 +23,91 @@ import {
  * - `"t"` / `"T"` — exclusive forward / backward
  */
 export type KakouneFindKind = "f" | "t" | "F" | "T";
+
+function snapshotJumpEntry(selection: EditorView["state"]["selection"]): KakouneJumpEntry {
+  return {
+    ranges: selection.ranges.map(range => ({ anchor: range.anchor, head: range.head })),
+    mainIndex: selection.mainIndex
+  };
+}
+
+function restoreJumpEntry(entry: KakouneJumpEntry): EditorSelection {
+  return EditorSelection.create(
+    entry.ranges.map(range => EditorSelection.range(range.anchor, range.head)),
+    entry.mainIndex
+  );
+}
+
+function sameJumpEntry(a: KakouneJumpEntry, b: KakouneJumpEntry): boolean {
+  if (a.mainIndex !== b.mainIndex || a.ranges.length !== b.ranges.length) {
+    return false;
+  }
+
+  return a.ranges.every((range, index) => {
+    const other = b.ranges[index];
+    return range.anchor === other.anchor && range.head === other.head;
+  });
+}
+
+function pushJumpState(jumpState: KakouneJumpState, snapshot: KakouneJumpEntry): KakouneJumpState {
+  let entries = jumpState.entries.slice(0, Math.min(jumpState.entries.length, jumpState.currentIndex + 1));
+  entries = entries.filter(entry => !sameJumpEntry(entry, snapshot));
+  entries.push(snapshot);
+  return { entries, currentIndex: entries.length };
+}
+
+function setJumpStateEffect(view: EditorView, jumpState: KakouneJumpState): void {
+  view.dispatch({ effects: setKakouneJumpStateEffect.of(jumpState) });
+}
+
+function pushCurrentJump(view: EditorView): KakouneJumpState {
+  const state = view.state.field(kakouneStateField).jumpState;
+  return pushJumpState(state, snapshotJumpEntry(view.state.selection));
+}
+
+function jumpBackward(view: EditorView, count: number = 1): boolean {
+  const state = view.state.field(kakouneStateField).jumpState;
+  const current = snapshotJumpEntry(view.state.selection);
+  let jumpState = state;
+  let shouldPushCurrent = false;
+
+  if (
+    jumpState.currentIndex === jumpState.entries.length ||
+    !jumpState.entries[jumpState.currentIndex] ||
+    !sameJumpEntry(jumpState.entries[jumpState.currentIndex], current)
+  ) {
+    jumpState = pushJumpState(jumpState, current);
+    shouldPushCurrent = true;
+  }
+
+  const steps = count + (shouldPushCurrent ? 1 : 0);
+  const targetIndex = jumpState.currentIndex - steps;
+  if (targetIndex < 0) {
+    return false;
+  }
+
+  const target = jumpState.entries[targetIndex];
+  view.dispatch({
+    selection: restoreJumpEntry(target),
+    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
+  });
+  return true;
+}
+
+function jumpForward(view: EditorView, count: number = 1): boolean {
+  const jumpState = view.state.field(kakouneStateField).jumpState;
+  const targetIndex = jumpState.currentIndex + count;
+
+  if (targetIndex >= jumpState.entries.length) {
+    return false;
+  }
+
+  view.dispatch({
+    selection: restoreJumpEntry(jumpState.entries[targetIndex]),
+    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
+  });
+  return true;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -156,6 +244,20 @@ function moveSelections(view: EditorView, mapper: (range: SelectionRange) => num
       current = EditorSelection.cursor(mapper(current));
     }
     return { range: current };
+  });
+
+  view.dispatch(result);
+  return true;
+}
+
+function moveAnchoredSelections(view: EditorView, mapper: (range: SelectionRange) => number, count: number = 1): boolean {
+  const state = view.state;
+  const result = state.changeByRange(range => {
+    let head = range.head;
+    for (let i = 0; i < count; i++) {
+      head = mapper(EditorSelection.range(range.anchor, head));
+    }
+    return { range: EditorSelection.range(range.anchor, head) };
   });
 
   view.dispatch(result);
@@ -732,8 +834,10 @@ function jumpToLine(view: EditorView, lineNum: number): boolean {
   const doc = view.state.doc;
   const targetLine = clamp(lineNum, 1, doc.lines);
   const pos = doc.line(targetLine).from;
+  const jumpState = pushCurrentJump(view);
   view.dispatch({
-    selection: EditorSelection.cursor(pos)
+    selection: EditorSelection.cursor(pos),
+    effects: setKakouneJumpStateEffect.of(jumpState)
   });
   return true;
 }
@@ -887,26 +991,33 @@ export function commitSearchPrompt(view: EditorView): boolean {
     return false;
   }
 
-  const snapshot = view.state.field(kakouneStateField).searchSelection;
-  const selection = snapshot
-    ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
-    : view.state.selection;
+  const query = new SearchQuery({
+    search: prompt,
+    literal: true
+  });
+  const from = view.state.selection.main.to;
+  const search = query.getCursor(view.state, from, view.state.doc.length);
+  const first = search.next();
+  let next = first.done ? null : first.value;
+  if (!next) {
+    const wrapSearch = query.getCursor(view.state, 0, from);
+    const wrapped = wrapSearch.next();
+    next = wrapped.done ? null : wrapped.value;
+  }
+  const nextSelection = next ? EditorSelection.single(next.from, next.to) : view.state.selection;
+  const jumpState = pushCurrentJump(view);
 
   view.dispatch({
-    selection,
+    selection: nextSelection,
+    annotations: isolateHistory.of("full"),
     effects: [
+      setKakouneJumpStateEffect.of(jumpState),
       setKakouneSearchPromptEffect.of(null),
       setKakouneSearchSelectionEffect.of(null),
-      setSearchQuery.of(
-        new SearchQuery({
-          search: prompt,
-          literal: true
-        })
-      )
-    ]
+      setSearchQuery.of(query)
+    ],
+    userEvent: "select.search"
   });
-
-  findNext(view);
   return true;
 }
 
@@ -1072,7 +1183,7 @@ function pasteRegister(view: EditorView): boolean {
   }
 
   const result = state.changeByRange(range => {
-    const insertAt = range.empty ? range.head : range.to;
+    const insertAt = range.empty ? Math.min(state.doc.length, range.head + 1) : range.to;
     return {
       changes: { from: insertAt, insert: register },
       range: EditorSelection.cursor(insertAt + register.length)
@@ -1103,13 +1214,13 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["i"], run: view => setMode(view, "insert"), description: "Insert mode before selections" },
     { keys: ["o"], run: (view, _arg, count) => openLine(view, "below", count ?? 1), description: "Insert new line below and enter insert mode" },
     { keys: ["O"], run: (view, _arg, count) => openLine(view, "above", count ?? 1), description: "Insert new line above and enter insert mode" },
-    { keys: ["a"], run: view => moveSelections(view, range => clamp(range.to + 1, 0, view.state.doc.length)) && setMode(view, "insert"), description: "Insert mode after selections" },
+    { keys: ["a"], run: view => moveSelections(view, range => range.empty ? clamp(range.to + 1, 0, view.state.doc.length) : range.to) && setMode(view, "insert"), description: "Insert mode after selections" },
     { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
     { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },
-    { keys: ["h"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
-    { keys: ["l"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
-    { keys: ["j"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
-    { keys: ["k"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
+    { keys: ["h"], run: (view, _arg, count) => moveAnchoredSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
+    { keys: ["l"], run: (view, _arg, count) => moveAnchoredSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
+    { keys: ["j"], run: (view, _arg, count) => moveAnchoredSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
+    { keys: ["k"], run: (view, _arg, count) => moveAnchoredSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
     { keys: ["w"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordForwardRange(view, range), count ?? 1), description: "Move word forward" },
     { keys: ["W"], run: (view, _arg, count) => extendSelections(view, range => moveWordForwardRange(view, range).head, count ?? 1), description: "Extend word forward" },
     { keys: ["b"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordBackwardRange(view, range), count ?? 1), description: "Move word backward" },
@@ -1149,16 +1260,19 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["G", "J"], run: view => extendSelections(view, () => view.state.doc.length), description: "Extend to document end" },
     { keys: ["G", "g"], run: view => extendSelections(view, () => 0), description: "Extend to document start" },
     { keys: ["G", "G"], run: view => extendSelections(view, () => 0), description: "Extend to document start" },
-    { keys: ["g", "k"], run: view => moveSelections(view, () => 0), description: "Move to document start" },
-    { keys: ["g", "j"], run: view => moveSelections(view, () => view.state.doc.line(view.state.doc.lines).from), description: "Move to document end" },
+    { keys: ["g", "k"], run: view => jumpToLine(view, 1), description: "Jump to document start" },
+    { keys: ["g", "j"], run: view => jumpToLine(view, view.state.doc.lines), description: "Jump to document end" },
     { keys: ["d"], run: view => deleteSelection(view), description: "Delete selection" },
     { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert"), description: "Change selection" },
     { keys: ["y"], run: view => yankSelection(view), description: "Yank selection" },
     { keys: ["p"], run: view => pasteRegister(view), description: "Paste register" },
     { keys: ["u"], run: view => undo(view), description: "Undo" },
     { keys: ["U"], run: view => redo(view), description: "Redo" },
+    { keys: ["<C-o>"], run: (view, _arg, count) => jumpBackward(view, count ?? 1), description: "Jump back in history" },
+    { keys: ["<C-i>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
     { keys: ["*"], run: view => setSearchFromSelection(view), description: "Search selection" },
     { keys: ["s"], run: view => setSearchPrompt(view, ""), description: "Select matches" },
+    { keys: ["/"], run: view => setSearchPrompt(view, ""), description: "Search forward" },
     { keys: ["n"], run: view => jumpToNextSearch(view), description: "Jump to next search match" },
     { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view), description: "Jump to previous search match" },
     { keys: ["N"], run: view => addNextTextSelection(view), description: "Add selection for next match" },
@@ -1178,7 +1292,7 @@ function buildSelectBindings(): KakouneBinding[] {
       if (!arg) return true;
       return moveToFind(view, "T", arg);
     }, description: "Select backward until character" },
-    { keys: ["g", "g"], run: view => moveSelections(view, () => 0), description: "Move to document start" }
+    { keys: ["g", "g"], run: view => jumpToLine(view, 1), description: "Jump to document start" }
   ];
 }
 

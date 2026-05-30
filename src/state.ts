@@ -14,6 +14,24 @@ export interface WhichKeyItem {
   description?: string;
 }
 
+/** A selection snapshot stored in the Kakoune jump list. */
+export interface KakouneJumpSelection {
+  anchor: number;
+  head: number;
+}
+
+/** A full selection snapshot stored in the Kakoune jump list. */
+export interface KakouneJumpEntry {
+  ranges: KakouneJumpSelection[];
+  mainIndex: number;
+}
+
+/** The internal jump list state maintained by the Kakoune extension. */
+export interface KakouneJumpState {
+  entries: KakouneJumpEntry[];
+  currentIndex: number;
+}
+
 /** Callback invoked when the pending key sequence or which-key items change. */
 export type WhichKeyCallback = (
   /** The currently pending key sequence. */
@@ -34,6 +52,8 @@ export interface KakouneState {
   searchPrompt: string | null;
   /** Snapshot of selections before opening the search prompt, or `null`. */
   searchSelection: Array<{ anchor: number; head: number }> | null;
+  /** Kakoune jump list state. */
+  jumpState: KakouneJumpState;
 }
 
 /** Options for configuring the {@link kakoune} extension. */
@@ -77,6 +97,9 @@ export const setKakouneSearchSelectionEffect: StateEffectType<
   Array<{ anchor: number; head: number }> | null
 >();
 
+/** State effect that updates the Kakoune jump list state. */
+export const setKakouneJumpStateEffect: StateEffectType<KakouneJumpState> = StateEffect.define<KakouneJumpState>();
+
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
 
@@ -109,7 +132,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       mode: state.facet(kakouneInitialModeFacet),
       register: "",
       searchPrompt: null,
-      searchSelection: null
+      searchSelection: null,
+      jumpState: { entries: [], currentIndex: 0 }
     };
   },
   update(value, transaction) {
@@ -124,6 +148,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, searchPrompt: effect.value };
       } else if (effect.is(setKakouneSearchSelectionEffect)) {
         next = { ...next, searchSelection: effect.value };
+      } else if (effect.is(setKakouneJumpStateEffect)) {
+        next = { ...next, jumpState: effect.value };
       }
     }
 

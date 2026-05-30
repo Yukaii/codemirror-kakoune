@@ -14,19 +14,19 @@
 - undo
 - redo
 - replace
-
-## Still Red
+- paste-after
 - jump/backward
 - jump/backward-count
 - jump/forward
 - jump/forward-count
 - jump/backward-dirty-middle
+- yank
+
+## Still Red
 - jump/forward-invalid-count
 - jump/backward-invalid-count
 - duplicate-selections
 - paste-before-multiple-selections
-- yank
-- paste-after
 - paste-before
 - paste-all-after
 - paste-all-before

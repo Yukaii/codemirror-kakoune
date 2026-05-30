@@ -1,6 +1,6 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { KakouneMode, WhichKeyItem } from "./state";
+import { kakouneStateField, type KakouneMode, type WhichKeyItem } from "./state";
 
 /** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
@@ -287,6 +287,56 @@ export class KakouneKeyProcessor {
       return true;
     }
 
+    if (mode === "select" && key === "+") {
+      const ranges = view.state.selection.ranges.map(range => EditorSelection.range(range.from, range.to));
+      view.dispatch({
+        selection: EditorSelection.create([...ranges, ...ranges], view.state.selection.mainIndex)
+      });
+      return true;
+    }
+
+    if (mode === "insert" && key === "<C-r>") {
+      this.pendingCharBinding = {
+        keys: ["<C-r>"],
+        run: (currentView, arg) => {
+          if (!arg) {
+            return false;
+          }
+
+          const register = currentView.state.field(kakouneStateField).register;
+          if (!register) {
+            return true;
+          }
+
+          const insertion = arg === '"' ? register : "";
+          if (!insertion) {
+            return true;
+          }
+
+          const result = currentView.state.changeByRange(range => ({
+            changes: { from: range.head, insert: insertion },
+            range: EditorSelection.cursor(range.head + insertion.length)
+          }));
+          currentView.dispatch(result);
+          return true;
+        }
+      };
+      return true;
+    }
+
+    if (this.pendingCharBinding) {
+      const binding = this.pendingCharBinding;
+      this.pendingCharBinding = null;
+
+      if (key === "<Esc>") {
+        return true;
+      }
+
+      const currentCount = this.count;
+      this.count = null;
+      return binding.run(view, key, currentCount ?? undefined);
+    }
+
     if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
       if (!this.replayingInsert && this.lastMode !== "insert") {
         this.lastInsert = [];
@@ -302,19 +352,6 @@ export class KakouneKeyProcessor {
       }
       this.lastMode = mode;
       return true;
-    }
-
-    if (this.pendingCharBinding) {
-      const binding = this.pendingCharBinding;
-      this.pendingCharBinding = null;
-
-      if (key === "<Esc>") {
-        return true;
-      }
-
-      const currentCount = this.count;
-      this.count = null;
-      return binding.run(view, key, currentCount ?? undefined);
     }
 
     if (mode === "select" && this.pending.length === 0 && /^[0-9]$/.test(key)) {
