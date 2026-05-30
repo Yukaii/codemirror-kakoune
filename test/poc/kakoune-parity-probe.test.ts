@@ -104,4 +104,31 @@ describe("kakoune parity probe helpers", () => {
 
     expect(result.selectionRanges).toEqual([{ anchor: 5, head: 5 }]);
   });
+
+  it("pastes before a selection", () => {
+    const result = runKakouneFixture({ in: "-foo-%(bar)", cmd: "dhP" });
+
+    expect(result.doc).toBe("-foobar-");
+  });
+
+  it("pastes before multiple selections", () => {
+    const result = runKakouneFixture({ in: "foobar", cmd: "xSo<ret>dP" });
+
+    expect(result.doc).toBe("foobar\n");
+  });
+
+  it("reports split-selection state for the multi-selection paste path", () => {
+    const result = runKakouneFixture({ in: "foobar", cmd: "xSo<ret>" });
+
+    expect(result.selectionRanges).toEqual([
+      { anchor: 0, head: 1 },
+      { anchor: 3, head: 6 }
+    ]);
+  });
+
+  it("reports the doc after delete in the multi-selection paste path", () => {
+    const result = runKakouneFixture({ in: "foobar", cmd: "xSo<ret>d" });
+
+    expect(result.doc).toBe("oo");
+  });
 });

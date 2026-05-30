@@ -22,12 +22,12 @@
 - jump/backward-dirty-middle
 - yank
 - duplicate-selections
+- paste-before
 
 ## Still Red
 - jump/forward-invalid-count
 - jump/backward-invalid-count
 - paste-before-multiple-selections
-- paste-before
 - paste-all-after
 - paste-all-before
 - paste-all-replace
