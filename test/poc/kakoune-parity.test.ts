@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -222,9 +222,29 @@ const parityCases: ParityCase[] = [
 
 const parityCasesByName = new Map(parityCases.map(entry => [entry.name, entry]));
 
+function countCorpusOutFixtures(rootDir: string): number {
+  let total = 0;
+
+  for (const entry of readdirSync(rootDir)) {
+    const fullPath = join(rootDir, entry);
+    const stats = statSync(fullPath);
+
+    if (stats.isDirectory()) {
+      total += countCorpusOutFixtures(fullPath);
+      continue;
+    }
+
+    if (entry === "out") {
+      total += 1;
+    }
+  }
+
+  return total;
+}
+
 function getParityCoverageSummary(): { supported: number; total: number; percentage: string } {
   const supported = parityCases.filter(entry => entry.supported).length;
-  const total = parityCases.filter(entry => entry.name !== "open-above").length;
+  const total = countCorpusOutFixtures(join(process.cwd(), "test/kakoune/test"));
   return {
     supported,
     total,
@@ -235,8 +255,9 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
+    expect(summary).toMatchObject({ supported: 2, total: 280, percentage: "0.71" });
     console.log(
-      `Kakoune fixture parity coverage: ${summary.supported}/${summary.total} (${summary.percentage}%)`
+      `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );
   });
 
