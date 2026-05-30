@@ -23,11 +23,11 @@
 - yank
 - duplicate-selections
 - paste-before
+- paste-before-multiple-selections
 
 ## Still Red
 - jump/forward-invalid-count
 - jump/backward-invalid-count
-- paste-before-multiple-selections
 - paste-all-after
 - paste-all-before
 - paste-all-replace
