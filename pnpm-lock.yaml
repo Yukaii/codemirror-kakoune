@@ -21,12 +21,18 @@ importers:
         specifier: ^6.43.0
         version: 6.43.0
     devDependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.2
+        version: 6.20.2
       '@codemirror/lang-javascript':
         specifier: ^6.2.5
         version: 6.2.5
       '@codemirror/language':
         specifier: ^6.12.3
         version: 6.12.3
+      '@codemirror/lint':
+        specifier: ^6.9.6
+        version: 6.9.6
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3

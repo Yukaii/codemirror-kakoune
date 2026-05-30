@@ -114,6 +114,7 @@ body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .control {
@@ -140,6 +141,73 @@ body {
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.config-toggle {
+  cursor: pointer;
+  border: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.config-toggle svg {
+  flex-shrink: 0;
+}
+
+.config-modal {
+  width: 260px;
+  max-height: 380px;
+  right: auto;
+  left: 0;
+}
+
+.config-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.config-row span {
+  color: var(--text);
+}
+
+.config-row select {
+  appearance: none;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
   outline: none;
   cursor: pointer;
 }
@@ -501,7 +569,8 @@ body[data-theme="sepia"] .register-popover {
     gap: 4px;
   }
 
-  .control {
+  .control,
+  .config-toggle {
     display: none;
   }
 
