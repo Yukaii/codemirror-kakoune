@@ -1083,20 +1083,16 @@ function pasteRegister(view: EditorView): boolean {
   return true;
 }
 
-function openLine(view: EditorView, direction: "above" | "below"): boolean {
+function openLine(view: EditorView, direction: "above" | "below", count: number = 1): boolean {
   const state = view.state;
-  const result = state.changeByRange(range => {
-    const line = state.doc.lineAt(range.head);
-    const insertAt = direction === "below" ? line.to : line.from;
-    const cursor = direction === "below" ? insertAt + 1 : insertAt;
+  const line = state.doc.lineAt(state.selection.main.head);
+  const insertAt = direction === "below" ? line.to : line.from;
+  const cursorPositions = Array.from({ length: count }, (_, index) => insertAt + (direction === "below" ? index + 1 : index));
 
-    return {
-      changes: { from: insertAt, insert: "\n" },
-      range: EditorSelection.cursor(cursor)
-    };
+  view.dispatch({
+    changes: { from: insertAt, insert: "\n".repeat(count) },
+    selection: EditorSelection.create(cursorPositions.map(position => EditorSelection.cursor(position)), 0)
   });
-
-  view.dispatch(result);
   setMode(view, "insert");
   return true;
 }
@@ -1105,8 +1101,8 @@ function buildSelectBindings(): KakouneBinding[] {
   return [
     { keys: ["<Esc>"], run: () => true, description: "Do nothing / Cancel prefix" },
     { keys: ["i"], run: view => setMode(view, "insert"), description: "Insert mode before selections" },
-    { keys: ["o"], run: view => openLine(view, "below"), description: "Insert new line below and enter insert mode" },
-    { keys: ["O"], run: view => openLine(view, "above"), description: "Insert new line above and enter insert mode" },
+    { keys: ["o"], run: (view, _arg, count) => openLine(view, "below", count ?? 1), description: "Insert new line below and enter insert mode" },
+    { keys: ["O"], run: (view, _arg, count) => openLine(view, "above", count ?? 1), description: "Insert new line above and enter insert mode" },
     { keys: ["a"], run: view => moveSelections(view, range => clamp(range.to + 1, 0, view.state.doc.length)) && setMode(view, "insert"), description: "Insert mode after selections" },
     { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
     { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },

@@ -73,11 +73,14 @@ function tokenize(cmd: string): string[] {
 
   for (let i = 0; i < cmd.length; i += 1) {
     const ch = cmd[i];
+    if (ch === "\n" || ch === "\r") {
+      continue;
+    }
     if (ch === "<") {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|Enter|Backspace|Space|Tab|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
+        if (/^<(Esc|esc|Enter|enter|Backspace|backspace|Space|Tab|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
           tokens.push(token);
           i = end;
           continue;
@@ -207,6 +210,24 @@ const parityCases: ParityCase[] = [
     expectedSelection: { anchor: 4, head: 4 }
   },
   {
+    name: "open-multiple-above",
+    supported: true,
+    reason: "counted open-above should create repeated blank lines and accept shared insert text",
+    expectedSelection: { anchor: 3, head: 3 }
+  },
+  {
+    name: "open-multiple-below",
+    supported: true,
+    reason: "counted open-below should create repeated blank lines and accept shared insert text",
+    expectedSelection: { anchor: 7, head: 7 }
+  },
+  {
+    name: "insert-at-line-start",
+    supported: true,
+    reason: "simple insert-mode typing at line start now works through the insert text path",
+    expectedSelection: { anchor: 5, head: 5 }
+  },
+  {
     name: "change",
     supported: false,
     reason: "requires insert-mode text entry, which the PoC runner does not emulate"
@@ -268,7 +289,7 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
-    expect(summary).toMatchObject({ supported: 5, total: 280, percentage: "1.79" });
+    expect(summary).toMatchObject({ supported: 8, total: 280, percentage: "2.86" });
     console.log(
       `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );

@@ -23,11 +23,15 @@ export function tokenizeKakouneCmd(cmd: string): string[] {
   for (let i = 0; i < cmd.length; i += 1) {
     const ch = cmd[i];
 
+    if (ch === "\n" || ch === "\r") {
+      continue;
+    }
+
     if (ch === "<") {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|Enter|Backspace|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
+        if (/^<(Esc|esc|Enter|enter|Backspace|backspace|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
           tokens.push(token);
           i = end;
           continue;

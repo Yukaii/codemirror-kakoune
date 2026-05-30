@@ -1,3 +1,4 @@
+import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneMode, WhichKeyItem } from "./state";
 
@@ -247,6 +248,15 @@ export class KakouneKeyProcessor {
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
     if (key === "<Esc>") {
       this.reset();
+    }
+
+    if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
+      const result = view.state.changeByRange(range => ({
+        changes: { from: range.head, insert: key },
+        range: EditorSelection.cursor(range.head + 1)
+      }));
+      view.dispatch(result);
+      return true;
     }
 
     if (this.pendingCharBinding) {
