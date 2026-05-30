@@ -12,10 +12,10 @@
 - repeat-insert/repeat-insert
 - insert
 - undo
+- redo
 
 ## Still Red
 - replace
-- redo
 - jump/backward
 - jump/backward-count
 - jump/forward
