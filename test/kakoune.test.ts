@@ -73,6 +73,15 @@ describe("normalizeKeyStroke", () => {
     });
     expect(normalizeKeyStroke(event)).toBe("<C-{>");
   });
+
+  it("maps Ctrl+I to the Kakoune jump-forward key", () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "Tab",
+      code: "Tab",
+      ctrlKey: true
+    });
+    expect(normalizeKeyStroke(event)).toBe("<C-Tab>");
+  });
 });
 
 describe("KakouneKeyProcessor", () => {

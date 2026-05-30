@@ -81,7 +81,7 @@ function createKakouneHandler() {
 
       const mode = state.mode;
 
-      if (mode === "insert" && key !== "<Esc>") {
+      if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
         return false;
       }
 

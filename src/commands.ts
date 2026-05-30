@@ -1498,6 +1498,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["U"], run: view => redo(view), description: "Redo" },
     { keys: ["<C-o>"], run: (view, _arg, count) => jumpBackward(view, count ?? 1), description: "Jump back in history" },
     { keys: ["<C-i>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
+    { keys: ["<C-Tab>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
     { keys: ["*"], run: view => setSearchFromSelection(view), description: "Search selection" },
     { keys: ["s"], run: view => setSearchPrompt(view, ""), description: "Select matches" },
     { keys: ["/"], run: view => setSearchPrompt(view, ""), description: "Search forward" },

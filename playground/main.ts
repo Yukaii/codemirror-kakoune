@@ -537,7 +537,7 @@ view.contentDOM.addEventListener(
       isSynthetic = true;
       view.contentDOM.dispatchEvent(
         new KeyboardEvent("keydown", {
-          key: kbEvent.key === "Tab" && ctrl && !alt ? "i" : kbEvent.key,
+          key: kbEvent.key,
           code: kbEvent.code,
           ctrlKey: ctrl,
           altKey: alt,
@@ -549,9 +549,28 @@ view.contentDOM.addEventListener(
       return;
     }
     if (pendingCtrl || pendingAlt) {
+      const ctrl = pendingCtrl;
+      const alt = pendingAlt;
       pendingCtrl = false;
       pendingAlt = false;
       updateModUI();
+      if (kbEvent.key === "Tab" && ctrl && !alt) {
+        kbEvent.preventDefault();
+        kbEvent.stopImmediatePropagation();
+        isSynthetic = true;
+        view.contentDOM.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "i",
+            code: kbEvent.code,
+            ctrlKey: true,
+            altKey: false,
+            shiftKey: kbEvent.shiftKey,
+            bubbles: true,
+            cancelable: true
+          })
+        );
+        return;
+      }
     }
   },
   { capture: true }
