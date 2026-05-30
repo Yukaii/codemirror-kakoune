@@ -178,8 +178,9 @@ function runFixture(fixture: KakouneParityFixture): { doc: string; selection: { 
 const parityCases: ParityCase[] = [
   {
     name: "open-above",
-    supported: false,
-    reason: "current PoC runner does not match Kakoune's line-above semantics yet"
+    supported: true,
+    reason: "simple out-backed line opening without inserted text",
+    expectedSelection: { anchor: 0, head: 0 }
   },
   {
     name: "open-below",
@@ -255,7 +256,7 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
-    expect(summary).toMatchObject({ supported: 2, total: 280, percentage: "0.71" });
+    expect(summary).toMatchObject({ supported: 3, total: 280, percentage: "1.07" });
     console.log(
       `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );
