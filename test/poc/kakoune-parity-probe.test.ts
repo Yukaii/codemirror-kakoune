@@ -62,4 +62,10 @@ describe("kakoune parity probe helpers", () => {
     expect(result.doc).toBe("foo");
     expect(result.selectionRanges).toEqual([{ anchor: 0, head: 3 }]);
   });
+
+  it("supports replace-char against the fixture runner", () => {
+    const result = runKakouneFixture({ in: "a", cmd: "rb" });
+
+    expect(result.doc).toBe("b");
+  });
 });

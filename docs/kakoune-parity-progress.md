@@ -13,9 +13,9 @@
 - insert
 - undo
 - redo
+- replace
 
 ## Still Red
-- replace
 - jump/backward
 - jump/backward-count
 - jump/forward

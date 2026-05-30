@@ -263,6 +263,30 @@ export class KakouneKeyProcessor {
       return true;
     }
 
+    if (mode === "select" && key === "r") {
+      this.pendingCharBinding = {
+        keys: ["r"],
+        run: (currentView, arg) => {
+          if (!arg) {
+            return false;
+          }
+
+          currentView.dispatch({
+            changes: currentView.state.changeByRange(range => {
+              const from = Math.min(range.from, range.to);
+              const to = range.empty ? Math.min(currentView.state.doc.length, from + 1) : Math.max(range.from, range.to);
+              return {
+                changes: { from, to, insert: arg },
+                range: EditorSelection.cursor(from + arg.length)
+              };
+            }).changes
+          });
+          return true;
+        }
+      };
+      return true;
+    }
+
     if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
       if (!this.replayingInsert && this.lastMode !== "insert") {
         this.lastInsert = [];
