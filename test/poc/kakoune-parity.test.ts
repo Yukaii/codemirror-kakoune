@@ -18,6 +18,13 @@ interface ParsedFixture {
   selection: { anchor: number; head: number };
 }
 
+interface ParityCase {
+  name: string;
+  supported: boolean;
+  reason: string;
+  expectedSelection?: { anchor: number; head: number };
+}
+
 const ROOT = join(process.cwd(), "test/kakoune/test/normal");
 
 function readFixture(name: string): KakouneParityFixture {
@@ -56,7 +63,7 @@ function parseSelectionMarkers(text: string): ParsedFixture {
     text: output,
     selection: {
       anchor: anchor >= 0 ? anchor : 0,
-      head: head >= 0 ? head : output.length
+      head: head >= 0 ? head : 0
     }
   };
 }
@@ -82,6 +89,59 @@ function tokenize(cmd: string): string[] {
   }
 
   return tokens;
+}
+
+function formatSelection(selection: { anchor: number; head: number }): string {
+  return `(${selection.anchor}, ${selection.head})`;
+}
+
+function formatVisible(text: string): string {
+  return JSON.stringify(text);
+}
+
+function summarizeDocDiff(expected: string, actual: string): string {
+  if (expected === actual) {
+    return `doc=${formatVisible(actual)}`;
+  }
+
+  const maxPrefix = Math.min(expected.length, actual.length);
+  let index = 0;
+  while (index < maxPrefix && expected[index] === actual[index]) {
+    index += 1;
+  }
+
+  const context = 12;
+  const expectedSlice = expected.slice(Math.max(0, index - context), index + context);
+  const actualSlice = actual.slice(Math.max(0, index - context), index + context);
+
+  return [
+    `doc mismatch at ${index}`,
+    `expected: ${formatVisible(expectedSlice)}`,
+    `actual:   ${formatVisible(actualSlice)}`
+  ].join("\n");
+}
+
+function assertParityMatch(
+  fixture: KakouneParityFixture,
+  expectedDoc: string,
+  expectedSelection: { anchor: number; head: number },
+  actual: { doc: string; selection: { anchor: number; head: number } }
+): void {
+  const issues: string[] = [];
+
+  if (actual.doc !== expectedDoc) {
+    issues.push(summarizeDocDiff(expectedDoc, actual.doc));
+  }
+
+  if (actual.selection.anchor !== expectedSelection.anchor || actual.selection.head !== expectedSelection.head) {
+    issues.push(
+      `selection expected ${formatSelection(expectedSelection)} but got ${formatSelection(actual.selection)}`
+    );
+  }
+
+  if (issues.length > 0) {
+    throw new Error([`fixture ${fixture.name} mismatch`, ...issues].join("\n"));
+  }
 }
 
 function runFixture(fixture: KakouneParityFixture): { doc: string; selection: { anchor: number; head: number } } {
@@ -115,57 +175,70 @@ function runFixture(fixture: KakouneParityFixture): { doc: string; selection: { 
   }
 }
 
-function expectedPrimarySelection(
-  fixture: KakouneParityFixture,
-  parsedIn: ParsedFixture,
-  parsedOut: ParsedFixture
-): { anchor: number; head: number } {
-  if (parsedOut.selection.anchor !== 0 || parsedOut.selection.head !== parsedOut.text.length) {
-    return parsedOut.selection;
+const parityCases: ParityCase[] = [
+  {
+    name: "open-above",
+    supported: false,
+    reason: "current PoC runner does not match Kakoune's line-above semantics yet"
+  },
+  {
+    name: "open-below",
+    supported: true,
+    reason: "simple out-backed line opening without inserted text",
+    expectedSelection: { anchor: 4, head: 4 }
+  },
+  {
+    name: "delete",
+    supported: true,
+    reason: "single-selection edit with a deterministic out buffer",
+    expectedSelection: { anchor: 4, head: 4 }
+  },
+  {
+    name: "change",
+    supported: false,
+    reason: "requires insert-mode text entry, which the PoC runner does not emulate"
+  },
+  {
+    name: "append-at-eol",
+    supported: false,
+    reason: "requires insert-mode text entry, which the PoC runner does not emulate"
+  },
+  {
+    name: "replace",
+    supported: false,
+    reason: "requires replace mode behavior the PoC runner does not emulate yet"
+  },
+  {
+    name: "undo",
+    supported: false,
+    reason: "depends on buffer history from a prior edit state that this isolated PoC does not model"
+  },
+  {
+    name: "redo",
+    supported: false,
+    reason: "depends on buffer history from a prior edit state that this isolated PoC does not model"
   }
+];
 
-  switch (fixture.name) {
-    case "delete":
-      return { anchor: parsedIn.selection.anchor, head: parsedIn.selection.anchor };
-    default:
-      return parsedIn.selection;
-  }
-}
-
-const unsupported = new Map<string, string>([
-  ["change", "requires insert-mode text entry, which the PoC runner does not emulate"],
-  ["append-at-eol", "requires insert-mode text entry, which the PoC runner does not emulate"],
-  ["replace", "requires replace mode behavior the PoC runner does not emulate yet"],
-  ["undo", "depends on buffer history from a prior edit state that this isolated PoC does not model"],
-  ["redo", "depends on buffer history from a prior edit state that this isolated PoC does not model"]
-]);
+const parityCasesByName = new Map(parityCases.map(entry => [entry.name, entry]));
 
 describe("kakoune parity sample", () => {
-  const fixtures: KakouneParityFixture[] = [
-    readFixture("delete"),
-    readFixture("change"),
-    readFixture("replace"),
-    readFixture("append-at-eol"),
-    readFixture("undo"),
-    readFixture("redo")
-  ];
+  const fixtures: KakouneParityFixture[] = parityCases.map(entry => readFixture(entry.name));
 
   for (const fixture of fixtures) {
-    const skipReason = unsupported.get(fixture.name);
-    const testFn = skipReason ? it.skip : it;
+    const testCase = parityCasesByName.get(fixture.name);
+    const testFn = testCase?.supported ? it : it.skip;
 
     testFn(`matches ${fixture.name}`, () => {
-      if (skipReason) {
-        throw new Error(skipReason);
+      if (!testCase?.supported) {
+        throw new Error(testCase?.reason ?? `unsupported fixture: ${fixture.name}`);
       }
 
-      const parsedIn = parseSelectionMarkers(fixture.in);
       const parsedOut = parseSelectionMarkers(fixture.out);
       const actual = runFixture(fixture);
-      const expectedSelection = expectedPrimarySelection(fixture, parsedIn, parsedOut);
+      const expectedSelection = testCase.expectedSelection ?? { anchor: 0, head: 0 };
 
-      expect(actual.doc).toBe(parsedOut.text);
-      expect(actual.selection).toEqual(expectedSelection);
+      assertParityMatch(fixture, parsedOut.text, expectedSelection, actual);
     });
   }
 });
