@@ -458,6 +458,33 @@ if (!ctrlBtn || !altBtn) {
   throw new Error("Virtual keyboard modifier buttons not found.");
 }
 
+document.addEventListener(
+  "keydown",
+  (event) => {
+    const kbEvent = event as KeyboardEvent;
+    if (!view.hasFocus) {
+      return;
+    }
+
+    if (kbEvent.ctrlKey && !kbEvent.altKey && !kbEvent.metaKey && (kbEvent.key === "o" || kbEvent.key === "i" || kbEvent.key === "Tab")) {
+      kbEvent.preventDefault();
+      kbEvent.stopImmediatePropagation();
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: kbEvent.key,
+          code: kbEvent.code,
+          ctrlKey: true,
+          altKey: false,
+          shiftKey: kbEvent.shiftKey,
+          bubbles: true,
+          cancelable: true
+        })
+      );
+    }
+  },
+  { capture: true }
+);
+
 function updateModUI(): void {
   if (!ctrlBtn || !altBtn) return;
   ctrlBtn.classList.toggle("active", pendingCtrl);
