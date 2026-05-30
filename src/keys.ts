@@ -1,6 +1,6 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { kakouneStateField, setKakouneSelectionRepeatCountEffect, type KakouneMode, type WhichKeyItem } from "./state";
+import { kakouneStateField, setKakouneReplaceInsertAnchorsEffect, setKakouneSelectionRepeatCountEffect, type KakouneMode, type WhichKeyItem } from "./state";
 
 /** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
@@ -307,17 +307,18 @@ export class KakouneKeyProcessor {
             return true;
           }
 
-          const insertion = arg === '"' ? register : "";
-          if (!insertion) {
+          if (arg !== '"') {
             return true;
           }
 
-          const result = currentView.state.changeByRange(range => ({
-            changes: { from: range.head, insert: insertion },
-            range: EditorSelection.cursor(range.head + insertion.length)
-          }));
-          currentView.dispatch(result);
-          return true;
+          const kakoune = currentView.state.field(kakouneStateField);
+          const insertions = kakoune.registerSelections ?? [register];
+          if (insertions.length === 0) {
+            return true;
+          }
+
+          const anchors = kakoune.replaceInsertAnchors ?? currentView.state.selection.ranges.map(range => range.head);
+          return applySequentialInserts(currentView, anchors, insertions, true);
         }
       };
       return true;
@@ -341,14 +342,10 @@ export class KakouneKeyProcessor {
         this.lastInsert = [];
       }
 
-      const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
-      const insertText = key.repeat(Math.max(1, repeatCount));
-
-      const result = view.state.changeByRange(range => ({
-        changes: { from: range.head, insert: insertText },
-        range: EditorSelection.cursor(range.head + insertText.length)
-      }));
-      view.dispatch(result);
+      const kakoune = view.state.field(kakouneStateField);
+      const anchors = kakoune.replaceInsertAnchors ?? view.state.selection.ranges.map(range => range.head);
+      const insertions = anchors.map(() => key.repeat(Math.max(1, kakoune.selectionRepeatCount)));
+      applySequentialInserts(view, anchors, insertions, true);
       if (!this.replayingInsert) {
         this.lastInsert.push(key);
       }
@@ -427,4 +424,30 @@ export class KakouneKeyProcessor {
     this.lastMode = mode;
     return false;
   }
+}
+
+function applySequentialInserts(view: EditorView, positions: number[], inserts: string[], preserveReplaceAnchors: boolean): boolean {
+  if (positions.length === 0 || inserts.length === 0) {
+    return false;
+  }
+
+  const changes: Array<{ from: number; insert: string }> = [];
+  const nextPositions: number[] = [];
+  let delta = 0;
+
+  for (let i = 0; i < positions.length; i += 1) {
+    const insert = inserts[Math.min(i, inserts.length - 1)];
+    const from = positions[i];
+    changes.push({ from, insert });
+    nextPositions.push(from + delta + insert.length);
+    delta += insert.length;
+  }
+
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(nextPositions.map(position => EditorSelection.cursor(position)), 0),
+    effects: preserveReplaceAnchors ? [setKakouneReplaceInsertAnchorsEffect.of(nextPositions)] : []
+  });
+
+  return true;
 }

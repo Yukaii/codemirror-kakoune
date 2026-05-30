@@ -15,6 +15,7 @@ import {
   setKakouneRegisterLinewiseEffect,
   setKakouneRegisterEffect,
   setKakouneRegisterSelectionsEffect,
+  setKakouneReplaceInsertAnchorsEffect,
   setKakouneSelectionLinewiseEffect,
   setKakouneSelectionTypeEffect,
   type KakouneJumpEntry,
@@ -284,8 +285,13 @@ function moveWordEndRange(view: EditorView, range: SelectionRange): { anchor: nu
   return { anchor: range.head, head: pos };
 }
 
-function setMode(view: EditorView, mode: KakouneMode): boolean {
-  view.dispatch({ effects: setKakouneModeEffect.of(mode) });
+function setMode(view: EditorView, mode: KakouneMode, preserveReplaceAnchors: boolean = false): boolean {
+  view.dispatch({
+    effects: [
+      setKakouneModeEffect.of(mode),
+      ...(preserveReplaceAnchors ? [] : [setKakouneReplaceInsertAnchorsEffect.of(null)])
+    ]
+  });
   return true;
 }
 
@@ -311,6 +317,32 @@ function collectSelectionTexts(state: EditorView["state"], isLine: boolean): str
     const text = state.doc.sliceString(from, adjustedTo);
     return isLine && !text.endsWith("\n") ? `${text}\n` : text;
   });
+}
+
+function applySequentialInserts(view: EditorView, positions: number[], inserts: string[], preserveReplaceAnchors: boolean): boolean {
+  if (positions.length === 0 || inserts.length === 0) {
+    return false;
+  }
+
+  const changes: Array<{ from: number; insert: string }> = [];
+  const nextPositions: number[] = [];
+  let offset = 0;
+
+  for (let i = 0; i < positions.length; i += 1) {
+    const insert = inserts[Math.min(i, inserts.length - 1)];
+    const from = positions[i] + offset;
+    changes.push({ from, insert });
+    nextPositions.push(from + insert.length);
+    offset += insert.length;
+  }
+
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(nextPositions.map(position => EditorSelection.cursor(position)), 0),
+    effects: preserveReplaceAnchors ? [setKakouneReplaceInsertAnchorsEffect.of(nextPositions)] : []
+  });
+
+  return true;
 }
 
 function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }, count: number = 1): boolean {
@@ -1255,6 +1287,7 @@ function deleteSelection(view: EditorView): boolean {
   const isLine = state.field(kakouneSelectionTypeField) === "line";
   const sourceLinewise = state.field(kakouneStateField).selectionLinewise;
   const deleted = collectSelectionTexts(state, isLine);
+  const selectionStarts = state.selection.ranges.map(range => Math.min(range.from, range.to));
 
   const result = state.changeByRange(range => {
     const from = Math.min(range.from, range.to);
@@ -1278,9 +1311,10 @@ function deleteSelection(view: EditorView): boolean {
       setKakouneRegisterEffect.of(deleted.join("\n")),
       setKakouneRegisterSelectionsEffect.of(deleted.length > 1 ? deleted : null),
       setKakouneRegisterLinewiseEffect.of(sourceLinewise),
-      setKakouneSelectionLinewiseEffect.of(false)
+      setKakouneSelectionLinewiseEffect.of(false),
+      setKakouneReplaceInsertAnchorsEffect.of(selectionStarts.map(pos => result.changes.mapPos(pos, 1)))
     ],
-    selection: EditorSelection.create(result.selection.ranges.map(range => EditorSelection.cursor(range.head)), result.selection.mainIndex)
+    selection: result.selection
   });
 
   return true;
@@ -1453,7 +1487,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["g", "k"], run: view => jumpToLine(view, 1), description: "Jump to document start" },
     { keys: ["g", "j"], run: view => jumpToLine(view, view.state.doc.lines), description: "Jump to document end" },
     { keys: ["d"], run: view => deleteSelection(view), description: "Delete selection" },
-    { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert"), description: "Change selection" },
+    { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert", true), description: "Change selection" },
     { keys: ["y"], run: view => yankSelection(view), description: "Yank selection" },
     { keys: ["p"], run: view => pasteRegister(view, "after"), description: "Paste register after" },
     { keys: ["P"], run: view => pasteRegister(view, "before"), description: "Paste register before" },

@@ -56,6 +56,8 @@ export interface KakouneState {
   registerLinewise: boolean;
   /** Number of times each selection should be duplicated for insertion. */
   selectionRepeatCount: number;
+  /** Pending insert anchors created by replace mode after `c`. */
+  replaceInsertAnchors: number[] | null;
   /** Active search prompt text, or `null` if no prompt is open. */
   searchPrompt: string | null;
   /** Snapshot of selections before opening the search prompt, or `null`. */
@@ -128,6 +130,8 @@ export const setKakouneJumpStateEffect: StateEffectType<KakouneJumpState> = Stat
 
 /** State effect that updates the Kakoune selection repeat count. */
 export const setKakouneSelectionRepeatCountEffect: StateEffectType<number> = StateEffect.define<number>();
+/** State effect that stores replace-mode insert anchors after `c`. */
+export const setKakouneReplaceInsertAnchorsEffect: StateEffectType<number[] | null> = StateEffect.define<number[] | null>();
 
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
@@ -164,6 +168,7 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       selectionLinewise: false,
       registerLinewise: false,
       selectionRepeatCount: 1,
+      replaceInsertAnchors: null,
       searchPrompt: null,
       searchSelection: null,
       splitPrompt: null,
@@ -197,6 +202,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, jumpState: effect.value };
       } else if (effect.is(setKakouneSelectionRepeatCountEffect)) {
         next = { ...next, selectionRepeatCount: effect.value };
+      } else if (effect.is(setKakouneReplaceInsertAnchorsEffect)) {
+        next = { ...next, replaceInsertAnchors: effect.value };
       }
     }
 

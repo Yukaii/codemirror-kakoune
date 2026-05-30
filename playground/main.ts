@@ -537,7 +537,7 @@ view.contentDOM.addEventListener(
       isSynthetic = true;
       view.contentDOM.dispatchEvent(
         new KeyboardEvent("keydown", {
-          key: kbEvent.key,
+          key: kbEvent.key === "Tab" && ctrl && !alt ? "i" : kbEvent.key,
           code: kbEvent.code,
           ctrlKey: ctrl,
           altKey: alt,

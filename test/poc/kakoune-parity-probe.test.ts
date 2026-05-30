@@ -149,4 +149,11 @@ describe("kakoune parity probe helpers", () => {
 
     expect(result.doc).toBe("-foobarbaz-foobarbaz-foobarbaz-");
   });
+
+  it("replaces insert mode selections", () => {
+    const result = runKakouneFixture({ in: "%(word1)%(word2)%(word3)%(word4)", cmd: "cthis was <c-r>\" <esc>" });
+
+    expect(result.doc).toBe("this was word1 this was word2 this was word3 this was word4 ");
+  });
+
 });
