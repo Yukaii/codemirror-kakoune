@@ -250,20 +250,6 @@ function moveSelections(view: EditorView, mapper: (range: SelectionRange) => num
   return true;
 }
 
-function moveAnchoredSelections(view: EditorView, mapper: (range: SelectionRange) => number, count: number = 1): boolean {
-  const state = view.state;
-  const result = state.changeByRange(range => {
-    let head = range.head;
-    for (let i = 0; i < count; i++) {
-      head = mapper(EditorSelection.range(range.anchor, head));
-    }
-    return { range: EditorSelection.range(range.anchor, head) };
-  });
-
-  view.dispatch(result);
-  return true;
-}
-
 function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }, count: number = 1): boolean {
   const state = view.state;
   const result = state.changeByRange(range => {
@@ -1217,10 +1203,10 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["a"], run: view => moveSelections(view, range => range.empty ? clamp(range.to + 1, 0, view.state.doc.length) : range.to) && setMode(view, "insert"), description: "Insert mode after selections" },
     { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
     { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },
-    { keys: ["h"], run: (view, _arg, count) => moveAnchoredSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
-    { keys: ["l"], run: (view, _arg, count) => moveAnchoredSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
-    { keys: ["j"], run: (view, _arg, count) => moveAnchoredSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
-    { keys: ["k"], run: (view, _arg, count) => moveAnchoredSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
+    { keys: ["h"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
+    { keys: ["l"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
+    { keys: ["j"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
+    { keys: ["k"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
     { keys: ["w"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordForwardRange(view, range), count ?? 1), description: "Move word forward" },
     { keys: ["W"], run: (view, _arg, count) => extendSelections(view, range => moveWordForwardRange(view, range).head, count ?? 1), description: "Extend word forward" },
     { keys: ["b"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordBackwardRange(view, range), count ?? 1), description: "Move word backward" },

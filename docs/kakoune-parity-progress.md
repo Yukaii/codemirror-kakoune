@@ -21,11 +21,11 @@
 - jump/forward-count
 - jump/backward-dirty-middle
 - yank
+- duplicate-selections
 
 ## Still Red
 - jump/forward-invalid-count
 - jump/backward-invalid-count
-- duplicate-selections
 - paste-before-multiple-selections
 - paste-before
 - paste-all-after

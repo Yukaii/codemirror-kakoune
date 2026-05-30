@@ -48,6 +48,8 @@ export interface KakouneState {
   mode: KakouneMode;
   /** The yank/paste register. */
   register: string;
+  /** Number of times each selection should be duplicated for insertion. */
+  selectionRepeatCount: number;
   /** Active search prompt text, or `null` if no prompt is open. */
   searchPrompt: string | null;
   /** Snapshot of selections before opening the search prompt, or `null`. */
@@ -100,6 +102,9 @@ export const setKakouneSearchSelectionEffect: StateEffectType<
 /** State effect that updates the Kakoune jump list state. */
 export const setKakouneJumpStateEffect: StateEffectType<KakouneJumpState> = StateEffect.define<KakouneJumpState>();
 
+/** State effect that updates the Kakoune selection repeat count. */
+export const setKakouneSelectionRepeatCountEffect: StateEffectType<number> = StateEffect.define<number>();
+
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
 
@@ -131,6 +136,7 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
     return {
       mode: state.facet(kakouneInitialModeFacet),
       register: "",
+      selectionRepeatCount: 1,
       searchPrompt: null,
       searchSelection: null,
       jumpState: { entries: [], currentIndex: 0 }
@@ -150,6 +156,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, searchSelection: effect.value };
       } else if (effect.is(setKakouneJumpStateEffect)) {
         next = { ...next, jumpState: effect.value };
+      } else if (effect.is(setKakouneSelectionRepeatCountEffect)) {
+        next = { ...next, selectionRepeatCount: effect.value };
       }
     }
 

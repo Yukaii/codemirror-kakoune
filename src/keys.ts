@@ -1,6 +1,6 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { kakouneStateField, type KakouneMode, type WhichKeyItem } from "./state";
+import { kakouneStateField, setKakouneSelectionRepeatCountEffect, type KakouneMode, type WhichKeyItem } from "./state";
 
 /** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
@@ -251,6 +251,7 @@ export class KakouneKeyProcessor {
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
     if (key === "<Esc>") {
       this.reset();
+      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(1) });
     }
 
     if (mode === "select" && key === "." && this.lastInsert.length > 0) {
@@ -288,10 +289,8 @@ export class KakouneKeyProcessor {
     }
 
     if (mode === "select" && key === "+") {
-      const ranges = view.state.selection.ranges.map(range => EditorSelection.range(range.from, range.to));
-      view.dispatch({
-        selection: EditorSelection.create([...ranges, ...ranges], view.state.selection.mainIndex)
-      });
+      const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
+      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(repeatCount + 1) });
       return true;
     }
 
@@ -342,9 +341,12 @@ export class KakouneKeyProcessor {
         this.lastInsert = [];
       }
 
+      const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
+      const insertText = key.repeat(Math.max(1, repeatCount));
+
       const result = view.state.changeByRange(range => ({
-        changes: { from: range.head, insert: key },
-        range: EditorSelection.cursor(range.head + 1)
+        changes: { from: range.head, insert: insertText },
+        range: EditorSelection.cursor(range.head + insertText.length)
       }));
       view.dispatch(result);
       if (!this.replayingInsert) {

@@ -98,4 +98,10 @@ describe("kakoune parity probe helpers", () => {
 
     expect(result.doc).toBe("fooo booo tooo");
   });
+
+  it("moves j without extending the selection", () => {
+    const result = runKakouneFixture({ in: "foo\n%()\nbar", cmd: "j" });
+
+    expect(result.selectionRanges).toEqual([{ anchor: 5, head: 5 }]);
+  });
 });
