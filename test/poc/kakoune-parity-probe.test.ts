@@ -131,4 +131,22 @@ describe("kakoune parity probe helpers", () => {
 
     expect(result.doc).toBe("oo");
   });
+
+  it("pastes all after multiple selections", () => {
+    const result = runKakouneFixture({ in: "-%(foo)-%(bar)-%(baz)-", cmd: "y<a-p>" });
+
+    expect(result.doc).toBe("-foofoobarbaz-barfoobarbaz-bazfoobarbaz-");
+  });
+
+  it("pastes all before multiple selections", () => {
+    const result = runKakouneFixture({ in: "-%(foo)-%(bar)-%(baz)-", cmd: "y<a-P>" });
+
+    expect(result.doc).toBe("-foobarbazfoo-foobarbazbar-foobarbazbaz-");
+  });
+
+  it("replaces multiple selections with all pasted content", () => {
+    const result = runKakouneFixture({ in: "-%(foo)-%(bar)-%(baz)-", cmd: "y<a-R>" });
+
+    expect(result.doc).toBe("-foobarbaz-foobarbaz-foobarbaz-");
+  });
 });

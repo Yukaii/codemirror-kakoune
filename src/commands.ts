@@ -1347,6 +1347,42 @@ function pasteRegister(view: EditorView, mode: "before" | "after" = "after"): bo
   return true;
 }
 
+function pasteAllRegister(view: EditorView, mode: "before" | "after" | "replace"): boolean {
+  const state = view.state;
+  const kakoune = state.field(kakouneStateField);
+  const registerValues = kakoune.registerSelections ?? (kakoune.register ? [kakoune.register] : []);
+  const all = registerValues.filter(value => value.length > 0).join("");
+
+  if (!all) {
+    return false;
+  }
+
+  const items = state.selection.ranges.map(range => {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const insertAt = mode === "before"
+      ? from
+      : mode === "after"
+        ? (range.empty ? Math.min(state.doc.length, range.head + 1) : to)
+        : from;
+    const replaceTo = mode === "replace"
+      ? (range.empty ? Math.min(state.doc.length, from + 1) : to)
+      : insertAt;
+
+    return { from: insertAt, to: replaceTo, insert: all };
+  });
+
+  view.dispatch({
+    changes: items
+      .slice()
+      .sort((a, b) => b.from - a.from)
+      .map(item => mode === "replace"
+        ? { from: item.from, to: item.to, insert: item.insert }
+        : { from: item.from, insert: item.insert })
+  });
+  return true;
+}
+
 function openLine(view: EditorView, direction: "above" | "below", count: number = 1): boolean {
   const state = view.state;
   const line = state.doc.lineAt(state.selection.main.head);
@@ -1421,6 +1457,9 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["y"], run: view => yankSelection(view), description: "Yank selection" },
     { keys: ["p"], run: view => pasteRegister(view, "after"), description: "Paste register after" },
     { keys: ["P"], run: view => pasteRegister(view, "before"), description: "Paste register before" },
+    { keys: ["<A-p>"], run: view => pasteAllRegister(view, "after"), description: "Paste all after" },
+    { keys: ["<A-P>"], run: view => pasteAllRegister(view, "before"), description: "Paste all before" },
+    { keys: ["<A-R>"], run: view => pasteAllRegister(view, "replace"), description: "Paste all replace" },
     { keys: ["u"], run: view => undo(view), description: "Undo" },
     { keys: ["U"], run: view => redo(view), description: "Redo" },
     { keys: ["<C-o>"], run: (view, _arg, count) => jumpBackward(view, count ?? 1), description: "Jump back in history" },
