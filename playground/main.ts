@@ -462,7 +462,7 @@ document.addEventListener(
   "keydown",
   (event) => {
     const kbEvent = event as KeyboardEvent;
-    if (!view.hasFocus) {
+    if (isSynthetic || !view.hasFocus) {
       return;
     }
 
