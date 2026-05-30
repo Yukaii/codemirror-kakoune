@@ -25,11 +25,11 @@
 - paste-before
 - paste-before-multiple-selections
 - paste-all-after
+- paste-all-before
 
 ## Still Red
 - jump/forward-invalid-count
 - jump/backward-invalid-count
-- paste-all-before
 - paste-all-replace
 - insert-replace
 - repeat-insert/repeat-insert-mapped
