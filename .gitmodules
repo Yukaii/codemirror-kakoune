@@ -1,0 +1,3 @@
+[submodule "kakoune"]
+	path = test/kakoune
+	url = https://github.com/mawww/kakoune

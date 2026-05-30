@@ -1,3 +1,4 @@
+import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneMode, WhichKeyItem } from "./state";
 
@@ -198,6 +199,9 @@ export class KakouneKeyProcessor {
   private pending: string[] = [];
   private pendingCharBinding: KakouneBinding | null = null;
   private count: number | null = null;
+  private lastInsert: string[] = [];
+  private replayingInsert = false;
+  private lastMode: KakouneMode | null = null;
 
   constructor(private readonly bindings: Record<KakouneMode, KakouneBinding[]>) {}
 
@@ -247,6 +251,33 @@ export class KakouneKeyProcessor {
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
     if (key === "<Esc>") {
       this.reset();
+    }
+
+    if (mode === "select" && key === "." && this.lastInsert.length > 0) {
+      this.replayingInsert = true;
+      for (const insertKey of this.lastInsert) {
+        this.handle("insert", insertKey, view);
+      }
+      this.replayingInsert = false;
+      this.lastMode = mode;
+      return true;
+    }
+
+    if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
+      if (!this.replayingInsert && this.lastMode !== "insert") {
+        this.lastInsert = [];
+      }
+
+      const result = view.state.changeByRange(range => ({
+        changes: { from: range.head, insert: key },
+        range: EditorSelection.cursor(range.head + 1)
+      }));
+      view.dispatch(result);
+      if (!this.replayingInsert) {
+        this.lastInsert.push(key);
+      }
+      this.lastMode = mode;
+      return true;
     }
 
     if (this.pendingCharBinding) {
@@ -330,6 +361,7 @@ export class KakouneKeyProcessor {
     }
 
     this.pending = [];
+    this.lastMode = mode;
     return false;
   }
 }
