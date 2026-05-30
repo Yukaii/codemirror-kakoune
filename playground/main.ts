@@ -1,7 +1,11 @@
-import { basicSetup, EditorView } from "codemirror";
+import { EditorView, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightActiveLine, keymap } from "@codemirror/view";
 import { Compartment, EditorState } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
-import { getSearchQuery } from "@codemirror/search";
+import { getSearchQuery, highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { history, defaultKeymap, historyKeymap } from "@codemirror/commands";
+import { foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldKeymap } from "@codemirror/language";
+import { closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
+import { lintKeymap } from "@codemirror/lint";
 import { kakoune, kakouneStateField } from "../src/index";
 import {
   buildPlaygroundEditorTheme,
@@ -12,8 +16,14 @@ import {
 import "./style.css";
 
 const editorElement = document.querySelector<HTMLDivElement>("#editor");
+const configToggle = document.querySelector<HTMLButtonElement>("#config-toggle");
+const configModal = document.querySelector<HTMLDivElement>("#config-modal");
+const configModalClose = document.querySelector<HTMLButtonElement>("#config-modal-close");
 const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select");
 const layoutSelect = document.querySelector<HTMLSelectElement>("#layout-select");
+const lineNumbersSelect = document.querySelector<HTMLSelectElement>("#line-numbers-select");
+const fontFamilySelect = document.querySelector<HTMLSelectElement>("#font-family-select");
+const fontSizeSelect = document.querySelector<HTMLSelectElement>("#font-size-select");
 const modePill = document.querySelector<HTMLElement>("#mode-pill");
 const searchPill = document.querySelector<HTMLElement>("#search-pill");
 const registerPill = document.querySelector<HTMLElement>("#register-pill");
@@ -29,11 +39,20 @@ const hudPrompt = document.querySelector<HTMLElement>("#hud-prompt");
 const hudItems = document.querySelector<HTMLDivElement>("#hud-items");
 const vk = document.querySelector<HTMLElement>("#vk");
 const themeCompartment = new Compartment();
+const lineNumberCompartment = new Compartment();
+const lineNumberUpdateCompartment = new Compartment();
+const fontCompartment = new Compartment();
 
 if (
   !editorElement ||
+  !configToggle ||
+  !configModal ||
+  !configModalClose ||
   !themeSelect ||
   !layoutSelect ||
+  !lineNumbersSelect ||
+  !fontFamilySelect ||
+  !fontSizeSelect ||
   !modePill ||
   !searchPill ||
   !registerPill ||
@@ -53,9 +72,15 @@ if (
 }
 
 const themeSelectElement = themeSelect;
+const lineNumbersSelectElement = lineNumbersSelect;
+const fontFamilySelectElement = fontFamilySelect;
+const fontSizeSelectElement = fontSizeSelect;
 
 const themeStorageKey = "codemirror-kakoune.playground.theme";
 const layoutStorageKey = "codemirror-kakoune.playground.layout";
+const lineNumbersStorageKey = "codemirror-kakoune.playground.lineNumbers";
+const fontFamilyStorageKey = "codemirror-kakoune.playground.fontFamily";
+const fontSizeStorageKey = "codemirror-kakoune.playground.fontSize";
 
 function getInitialTheme(): PlaygroundThemeName {
   const storedTheme = window.localStorage.getItem(themeStorageKey);
@@ -69,6 +94,87 @@ function applyTheme(view: EditorView, themeName: PlaygroundThemeName): void {
   window.localStorage.setItem(themeStorageKey, themeName);
   view.dispatch({
     effects: themeCompartment.reconfigure(buildPlaygroundEditorTheme(theme))
+  });
+}
+
+function relativeLineNumberFormat(lineNo: number, state: EditorState): string {
+  const currentLine = state.doc.lineAt(state.selection.main.head).number;
+  if (lineNo === currentLine) return String(lineNo);
+  return String(Math.abs(lineNo - currentLine));
+}
+
+function buildLineNumberExtension(mode: "absolute" | "relative") {
+  if (mode === "relative") {
+    return lineNumbers({ formatNumber: relativeLineNumberFormat });
+  }
+  return lineNumbers();
+}
+
+function buildLineNumberUpdateExtension(mode: "absolute" | "relative") {
+  if (mode === "relative") {
+    return EditorView.updateListener.of((update) => {
+      if (update.selectionSet) {
+        update.view.dispatch({
+          effects: lineNumberCompartment.reconfigure(
+            lineNumbers({ formatNumber: relativeLineNumberFormat })
+          )
+        });
+      }
+    });
+  }
+  return [];
+}
+
+function applyLineNumberMode(view: EditorView, mode: "absolute" | "relative") {
+  lineNumbersSelectElement.value = mode;
+  window.localStorage.setItem(lineNumbersStorageKey, mode);
+  view.dispatch({
+    effects: [
+      lineNumberCompartment.reconfigure(buildLineNumberExtension(mode)),
+      lineNumberUpdateCompartment.reconfigure(buildLineNumberUpdateExtension(mode))
+    ]
+  });
+}
+
+type FontFamily = "mono" | "sans" | "serif";
+type FontSize = "small" | "medium" | "large";
+
+const fontFamilies: Record<FontFamily, string> = {
+  mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+  sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  serif: 'Georgia, Cambria, "Times New Roman", Times, serif'
+};
+
+const fontSizes: Record<FontSize, string> = {
+  small: "12px",
+  medium: "14px",
+  large: "16px"
+};
+
+function isFontFamily(value: string | null): value is FontFamily {
+  return value === "mono" || value === "sans" || value === "serif";
+}
+
+function isFontSize(value: string | null): value is FontSize {
+  return value === "small" || value === "medium" || value === "large";
+}
+
+function buildFontExtension(family: FontFamily, size: FontSize) {
+  return EditorView.theme({
+    ".cm-scroller": {
+      fontSize: fontSizes[size],
+      fontFamily: fontFamilies[family]
+    }
+  });
+}
+
+function applyFontSettings(view: EditorView, family: FontFamily, size: FontSize) {
+  fontFamilySelectElement.value = family;
+  fontSizeSelectElement.value = size;
+  window.localStorage.setItem(fontFamilyStorageKey, family);
+  window.localStorage.setItem(fontSizeStorageKey, size);
+  view.dispatch({
+    effects: fontCompartment.reconfigure(buildFontExtension(family, size))
   });
 }
 
@@ -123,6 +229,17 @@ function getWhichKeyTitle(pending: string[]): string {
 const initialTheme = getInitialTheme();
 document.body.dataset.theme = initialTheme;
 
+const initialLineNumberMode: "absolute" | "relative" =
+  window.localStorage.getItem(lineNumbersStorageKey) === "relative" ? "relative" : "absolute";
+
+const initialFontFamily: FontFamily = isFontFamily(window.localStorage.getItem(fontFamilyStorageKey))
+  ? window.localStorage.getItem(fontFamilyStorageKey) as FontFamily
+  : "mono";
+
+const initialFontSize: FontSize = isFontSize(window.localStorage.getItem(fontSizeStorageKey))
+  ? window.localStorage.getItem(fontSizeStorageKey) as FontSize
+  : "medium";
+
 const view = new EditorView({
   state: EditorState.create({
     doc: [
@@ -136,9 +253,36 @@ const view = new EditorView({
       "renderGreeting(\"CodeMirror\");"
     ].join("\n"),
     extensions: [
-      basicSetup,
+      highlightActiveLineGutter(),
+      highlightSpecialChars(),
+      history(),
+      foldGutter(),
+      drawSelection(),
+      dropCursor(),
+      EditorState.allowMultipleSelections.of(true),
+      indentOnInput(),
+      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      bracketMatching(),
+      closeBrackets(),
+      autocompletion(),
+      rectangularSelection(),
+      crosshairCursor(),
+      highlightActiveLine(),
+      highlightSelectionMatches(),
+      keymap.of([
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
+        ...completionKeymap,
+        ...lintKeymap
+      ]),
       javascript({ typescript: true, jsx: true }),
       themeCompartment.of(buildPlaygroundEditorTheme(playgroundThemes[initialTheme])),
+      lineNumberCompartment.of(buildLineNumberExtension(initialLineNumberMode)),
+      lineNumberUpdateCompartment.of(buildLineNumberUpdateExtension(initialLineNumberMode)),
+      fontCompartment.of(buildFontExtension(initialFontFamily, initialFontSize)),
       kakoune({
         onWhichKey: (pending, items, isWaitingForChar) => {
           if (pending.length === 0 && !isWaitingForChar) {
@@ -156,7 +300,7 @@ const view = new EditorView({
           }
 
           hudItems.innerHTML = "";
-          items.forEach(item => {
+          for (const item of items) {
             const el = document.createElement("div");
             el.className = "hud-item";
 
@@ -172,7 +316,7 @@ const view = new EditorView({
             el.appendChild(keyEl);
             el.appendChild(descEl);
             hudItems.appendChild(el);
-          });
+          }
         }
       }),
       EditorView.updateListener.of(update => {
@@ -185,6 +329,31 @@ const view = new EditorView({
   parent: editorElement
 });
 
+// ── Settings modal ──────────────────────────────────────────────────────────
+
+function toggleConfigModal(show: boolean): void {
+  if (!configModal) return;
+  configModal.classList.toggle("show", show);
+}
+
+configToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleConfigModal(!configModal.classList.contains("show"));
+  registerPopover.classList.remove("show");
+  searchPopover.classList.remove("show");
+});
+
+configModalClose.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleConfigModal(false);
+});
+
+configModal.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
+// ── Theme ───────────────────────────────────────────────────────────────────
+
 themeSelectElement.value = initialTheme;
 themeSelectElement.addEventListener("change", () => {
   const nextTheme = themeSelectElement.value;
@@ -192,6 +361,39 @@ themeSelectElement.addEventListener("change", () => {
     applyTheme(view, nextTheme);
   }
 });
+
+// ── Line numbers ────────────────────────────────────────────────────────────
+
+lineNumbersSelectElement.value = initialLineNumberMode;
+lineNumbersSelectElement.addEventListener("change", () => {
+  const nextMode = lineNumbersSelectElement.value;
+  if (nextMode === "absolute" || nextMode === "relative") {
+    applyLineNumberMode(view, nextMode);
+  }
+});
+
+// ── Font family / size ──────────────────────────────────────────────────────
+
+fontFamilySelectElement.value = initialFontFamily;
+fontSizeSelectElement.value = initialFontSize;
+
+fontFamilySelectElement.addEventListener("change", () => {
+  const family = fontFamilySelectElement.value;
+  const size = fontSizeSelectElement.value;
+  if (isFontFamily(family) && isFontSize(size)) {
+    applyFontSettings(view, family, size);
+  }
+});
+
+fontSizeSelectElement.addEventListener("change", () => {
+  const family = fontFamilySelectElement.value;
+  const size = fontSizeSelectElement.value;
+  if (isFontFamily(family) && isFontSize(size)) {
+    applyFontSettings(view, family, size);
+  }
+});
+
+// ── Which-key layout ──────────────────────────────────────────────────────────
 
 const initialLayout = window.localStorage.getItem(layoutStorageKey) || "vertical";
 hudElement.setAttribute("data-layout", initialLayout);
@@ -203,10 +405,13 @@ layoutSelect.addEventListener("change", () => {
   window.localStorage.setItem(layoutStorageKey, nextLayout);
 });
 
+// ── Register / Search popovers ───────────────────────────────────────────────
+
 registerPill.addEventListener("click", (e) => {
   e.stopPropagation();
   registerPopover.classList.toggle("show");
   searchPopover.classList.remove("show");
+  toggleConfigModal(false);
 });
 
 popoverClose.addEventListener("click", (e) => {
@@ -218,6 +423,7 @@ searchPill.addEventListener("click", (e) => {
   e.stopPropagation();
   searchPopover.classList.toggle("show");
   registerPopover.classList.remove("show");
+  toggleConfigModal(false);
 });
 
 searchPopoverClose.addEventListener("click", (e) => {
@@ -228,6 +434,7 @@ searchPopoverClose.addEventListener("click", (e) => {
 document.addEventListener("click", () => {
   registerPopover.classList.remove("show");
   searchPopover.classList.remove("show");
+  toggleConfigModal(false);
 });
 
 registerPopover.addEventListener("click", (e) => {
@@ -244,15 +451,20 @@ updateStatus(view);
 
 let pendingCtrl = false;
 let pendingAlt = false;
-const ctrlBtn = vk!.querySelector<HTMLButtonElement>("[data-mod='ctrl']")!;
-const altBtn = vk!.querySelector<HTMLButtonElement>("[data-mod='alt']")!;
+const ctrlBtn = vk.querySelector<HTMLButtonElement>("[data-mod='ctrl']");
+const altBtn = vk.querySelector<HTMLButtonElement>("[data-mod='alt']");
+
+if (!ctrlBtn || !altBtn) {
+  throw new Error("Virtual keyboard modifier buttons not found.");
+}
 
 function updateModUI(): void {
+  if (!ctrlBtn || !altBtn) return;
   ctrlBtn.classList.toggle("active", pendingCtrl);
   altBtn.classList.toggle("active", pendingAlt);
 }
 
-vk!.addEventListener("pointerdown", (e) => {
+vk.addEventListener("pointerdown", (e) => {
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".vk-key");
   if (!btn) return;
   e.preventDefault();
@@ -273,8 +485,8 @@ vk!.addEventListener("pointerdown", (e) => {
     return;
   }
 
-  const key = btn.dataset.key!;
-  const code = btn.dataset.code!;
+  const key = btn.dataset.key ?? "";
+  const code = btn.dataset.code ?? "";
   const ctrl = pendingCtrl;
   const alt = pendingAlt;
   pendingCtrl = false;
@@ -295,7 +507,12 @@ vk!.addEventListener("pointerdown", (e) => {
 });
 
 // Remove press state on pointer up / cancel
-const clearPressed = () => vk!.querySelectorAll(".vk-key.pressed").forEach(el => el.classList.remove("pressed"));
+function clearPressed() {
+  if (!vk) return;
+  for (const el of vk.querySelectorAll(".vk-key.pressed")) {
+    el.classList.remove("pressed");
+  }
+}
 document.addEventListener("pointerup", clearPressed);
 document.addEventListener("pointercancel", clearPressed);
 
@@ -341,13 +558,13 @@ view.contentDOM.addEventListener(
 );
 
 // Keep vk above iOS virtual keyboard
-if (window.visualViewport) {
+const visualViewport = window.visualViewport;
+if (visualViewport) {
   const repositionVk = () => {
-    const vv = window.visualViewport!;
-    const bottomSpace = window.innerHeight - (vv.offsetTop + vv.height);
-    vk!.style.bottom = `${Math.max(0, bottomSpace)}px`;
+    const bottomSpace = window.innerHeight - (visualViewport.offsetTop + visualViewport.height);
+    if (vk) vk.style.bottom = `${Math.max(0, bottomSpace)}px`;
   };
-  window.visualViewport.addEventListener("resize", repositionVk);
-  window.visualViewport.addEventListener("scroll", repositionVk);
+  visualViewport.addEventListener("resize", repositionVk);
+  visualViewport.addEventListener("scroll", repositionVk);
   repositionVk();
 }

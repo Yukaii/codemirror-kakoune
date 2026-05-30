@@ -23,7 +23,8 @@ import {
   commitSearchPrompt,
   deleteSearchPromptChar,
   cancelSearchPrompt,
-  handleSearchPromptKey
+  handleSearchPromptKey,
+  handleSplitPromptKey
 } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem } from "./state";
@@ -59,6 +60,18 @@ function createKakouneHandler() {
           return false;
         }
         const handledPrompt = handleSearchPromptKey(view, key);
+        if (handledPrompt) {
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+      }
+
+      if (state.splitPrompt !== null) {
+        if (key === "<Enter>" || key === "<Backspace>" || key === "<Esc>") {
+          return false;
+        }
+        const handledPrompt = handleSplitPromptKey(view, key);
         if (handledPrompt) {
           event.preventDefault();
           event.stopPropagation();

@@ -1,16 +1,24 @@
 import { EditorSelection, type SelectionRange, type Text } from "@codemirror/state";
-import { redo, undo } from "@codemirror/commands";
+import { redo, undo, isolateHistory } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
   kakouneSelectionTypeField,
+  setKakouneJumpStateEffect,
   setKakouneSearchPromptEffect,
   setKakouneSearchSelectionEffect,
+  setKakouneSplitPromptEffect,
+  setKakouneSplitSelectionEffect,
   setKakouneModeEffect,
+  setKakouneRegisterLinewiseEffect,
   setKakouneRegisterEffect,
+  setKakouneRegisterSelectionsEffect,
+  setKakouneSelectionLinewiseEffect,
   setKakouneSelectionTypeEffect,
+  type KakouneJumpEntry,
+  type KakouneJumpState,
   type KakouneMode
 } from "./state";
 
@@ -20,6 +28,139 @@ import {
  * - `"t"` / `"T"` — exclusive forward / backward
  */
 export type KakouneFindKind = "f" | "t" | "F" | "T";
+
+function snapshotJumpEntry(selection: EditorView["state"]["selection"]): KakouneJumpEntry {
+  return {
+    ranges: selection.ranges.map(range => ({ anchor: range.anchor, head: range.head })),
+    mainIndex: selection.mainIndex
+  };
+}
+
+function restoreJumpEntry(entry: KakouneJumpEntry): EditorSelection {
+  return EditorSelection.create(
+    entry.ranges.map(range => EditorSelection.range(range.anchor, range.head)),
+    entry.mainIndex
+  );
+}
+
+function sameJumpEntry(a: KakouneJumpEntry, b: KakouneJumpEntry): boolean {
+  if (a.mainIndex !== b.mainIndex || a.ranges.length !== b.ranges.length) {
+    return false;
+  }
+
+  return a.ranges.every((range, index) => {
+    const other = b.ranges[index];
+    return range.anchor === other.anchor && range.head === other.head;
+  });
+}
+
+function pushJumpState(jumpState: KakouneJumpState, snapshot: KakouneJumpEntry): KakouneJumpState {
+  let entries = jumpState.entries.slice(0, Math.min(jumpState.entries.length, jumpState.currentIndex + 1));
+  entries = entries.filter(entry => !sameJumpEntry(entry, snapshot));
+  entries.push(snapshot);
+  return { entries, currentIndex: entries.length };
+}
+
+function setJumpStateEffect(view: EditorView, jumpState: KakouneJumpState): void {
+  view.dispatch({ effects: setKakouneJumpStateEffect.of(jumpState) });
+}
+
+function pushCurrentJump(view: EditorView): KakouneJumpState {
+  const state = view.state.field(kakouneStateField).jumpState;
+  return pushJumpState(state, snapshotJumpEntry(view.state.selection));
+}
+
+function jumpBackward(view: EditorView, count: number = 1): boolean {
+  const state = view.state.field(kakouneStateField).jumpState;
+  const current = snapshotJumpEntry(view.state.selection);
+  let jumpState = state;
+  let shouldPushCurrent = false;
+
+  if (
+    jumpState.currentIndex === jumpState.entries.length ||
+    !jumpState.entries[jumpState.currentIndex] ||
+    !sameJumpEntry(jumpState.entries[jumpState.currentIndex], current)
+  ) {
+    jumpState = pushJumpState(jumpState, current);
+    shouldPushCurrent = true;
+  }
+
+  const steps = count + (shouldPushCurrent ? 1 : 0);
+  const targetIndex = jumpState.currentIndex - steps;
+  if (targetIndex < 0) {
+    return false;
+  }
+
+  const target = jumpState.entries[targetIndex];
+  view.dispatch({
+    selection: restoreJumpEntry(target),
+    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
+  });
+  return true;
+}
+
+function splitSelections(view: EditorView, pattern: string): boolean {
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern, "g");
+  } catch {
+    return false;
+  }
+
+  const state = view.state;
+  const ranges: SelectionRange[] = [];
+
+  for (const range of state.selection.ranges) {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const text = state.doc.sliceString(from, to);
+    let begin = 0;
+    regex.lastIndex = 0;
+
+    for (;;) {
+      const match = regex.exec(text);
+      if (!match) {
+        break;
+      }
+
+      const matchStart = match.index;
+      const matchEnd = match.index + match[0].length;
+      if (matchStart > begin) {
+        ranges.push(EditorSelection.range(from + begin, from + matchStart));
+      }
+      begin = matchEnd;
+      if (match[0].length === 0) {
+        regex.lastIndex += 1;
+      }
+    }
+
+    if (begin <= text.length) {
+      ranges.push(EditorSelection.range(from + begin, from + text.length));
+    }
+  }
+
+  if (ranges.length === 0) {
+    return false;
+  }
+
+  view.dispatch({ selection: EditorSelection.create(ranges, 0) });
+  return true;
+}
+
+function jumpForward(view: EditorView, count: number = 1): boolean {
+  const jumpState = view.state.field(kakouneStateField).jumpState;
+  const targetIndex = jumpState.currentIndex + count;
+
+  if (targetIndex >= jumpState.entries.length) {
+    return false;
+  }
+
+  view.dispatch({
+    selection: restoreJumpEntry(jumpState.entries[targetIndex]),
+    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
+  });
+  return true;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -160,6 +301,16 @@ function moveSelections(view: EditorView, mapper: (range: SelectionRange) => num
 
   view.dispatch(result);
   return true;
+}
+
+function collectSelectionTexts(state: EditorView["state"], isLine: boolean): string[] {
+  return state.selection.ranges.map(range => {
+    const from = Math.min(range.from, range.to);
+    const to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
+    const adjustedTo = isLine && to < state.doc.length ? to + 1 : to;
+    const text = state.doc.sliceString(from, adjustedTo);
+    return isLine && !text.endsWith("\n") ? `${text}\n` : text;
+  });
 }
 
 function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }, count: number = 1): boolean {
@@ -732,8 +883,10 @@ function jumpToLine(view: EditorView, lineNum: number): boolean {
   const doc = view.state.doc;
   const targetLine = clamp(lineNum, 1, doc.lines);
   const pos = doc.line(targetLine).from;
+  const jumpState = pushCurrentJump(view);
   view.dispatch({
-    selection: EditorSelection.cursor(pos)
+    selection: EditorSelection.cursor(pos),
+    effects: setKakouneJumpStateEffect.of(jumpState)
   });
   return true;
 }
@@ -839,6 +992,20 @@ function setSearchPrompt(view: EditorView, prompt: string | null): boolean {
   return true;
 }
 
+function setSplitPrompt(view: EditorView, prompt: string | null): boolean {
+  const selectionSnapshot = prompt === null
+    ? null
+    : view.state.selection.ranges.map(range => ({ anchor: range.anchor, head: range.head }));
+
+  view.dispatch({
+    effects: [
+      setKakouneSplitPromptEffect.of(prompt),
+      setKakouneSplitSelectionEffect.of(selectionSnapshot)
+    ]
+  });
+  return true;
+}
+
 function appendSearchPrompt(view: EditorView, value: string): boolean {
   const prompt = view.state.field(kakouneStateField).searchPrompt;
   if (prompt === null) {
@@ -856,6 +1023,16 @@ export function deleteSearchPromptChar(view: EditorView): boolean {
   }
 
   return setSearchPrompt(view, prompt.slice(0, -1));
+}
+
+/** Deletes the last character from the active split prompt. */
+export function deleteSplitPromptChar(view: EditorView): boolean {
+  const prompt = view.state.field(kakouneStateField).splitPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  return setSplitPrompt(view, prompt.slice(0, -1));
 }
 
 /**
@@ -877,6 +1054,23 @@ export function cancelSearchPrompt(view: EditorView): boolean {
   return true;
 }
 
+/** Cancels the active split prompt and restores the original selection. */
+export function cancelSplitPrompt(view: EditorView): boolean {
+  const snapshot = view.state.field(kakouneStateField).splitSelection;
+  const selection = snapshot
+    ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
+    : view.state.selection;
+
+  view.dispatch({
+    selection,
+    effects: [
+      setKakouneSplitPromptEffect.of(null),
+      setKakouneSplitSelectionEffect.of(null)
+    ]
+  });
+  return true;
+}
+
 /**
  * Commits the search prompt text, sets it as the search query, and jumps to
  * the next match. Restores the original selection from before the prompt.
@@ -887,26 +1081,33 @@ export function commitSearchPrompt(view: EditorView): boolean {
     return false;
   }
 
-  const snapshot = view.state.field(kakouneStateField).searchSelection;
-  const selection = snapshot
-    ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
-    : view.state.selection;
+  const query = new SearchQuery({
+    search: prompt,
+    literal: true
+  });
+  const from = view.state.selection.main.to;
+  const search = query.getCursor(view.state, from, view.state.doc.length);
+  const first = search.next();
+  let next = first.done ? null : first.value;
+  if (!next) {
+    const wrapSearch = query.getCursor(view.state, 0, from);
+    const wrapped = wrapSearch.next();
+    next = wrapped.done ? null : wrapped.value;
+  }
+  const nextSelection = next ? EditorSelection.single(next.from, next.to) : view.state.selection;
+  const jumpState = pushCurrentJump(view);
 
   view.dispatch({
-    selection,
+    selection: nextSelection,
+    annotations: isolateHistory.of("full"),
     effects: [
+      setKakouneJumpStateEffect.of(jumpState),
       setKakouneSearchPromptEffect.of(null),
       setKakouneSearchSelectionEffect.of(null),
-      setSearchQuery.of(
-        new SearchQuery({
-          search: prompt,
-          literal: true
-        })
-      )
-    ]
+      setSearchQuery.of(query)
+    ],
+    userEvent: "select.search"
   });
-
-  findNext(view);
   return true;
 }
 
@@ -970,6 +1171,36 @@ export function handleSearchPromptKey(view: EditorView, key: string): boolean {
   return true;
 }
 
+/** Handles a key event while the split prompt is active. */
+export function handleSplitPromptKey(view: EditorView, key: string): boolean {
+  const prompt = view.state.field(kakouneStateField).splitPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  if (key === "<Esc>") {
+    return cancelSplitPrompt(view);
+  }
+
+  if (key === "<Enter>") {
+    return splitSelections(view, prompt) && setSplitPrompt(view, null);
+  }
+
+  if (key === "<Backspace>") {
+    return deleteSplitPromptChar(view);
+  }
+
+  if (key === "<Space>") {
+    return setSplitPrompt(view, prompt + " ");
+  }
+
+  if (key.length === 1) {
+    return setSplitPrompt(view, prompt + key);
+  }
+
+  return true;
+}
+
 function addNextTextSelection(view: EditorView): boolean {
   const text = getSearchText(view);
   const next = findNextRange(view, text);
@@ -1011,7 +1242,10 @@ function selectLine(view: EditorView): boolean {
 
   view.dispatch({
     selection: EditorSelection.create(ranges, state.selection.mainIndex),
-    effects: setKakouneSelectionTypeEffect.of("line")
+    effects: [
+      setKakouneSelectionTypeEffect.of("line"),
+      setKakouneSelectionLinewiseEffect.of(true)
+    ]
   });
   return true;
 }
@@ -1019,29 +1253,34 @@ function selectLine(view: EditorView): boolean {
 function deleteSelection(view: EditorView): boolean {
   const state = view.state;
   const isLine = state.field(kakouneSelectionTypeField) === "line";
-  const deleted: string[] = [];
+  const sourceLinewise = state.field(kakouneStateField).selectionLinewise;
+  const deleted = collectSelectionTexts(state, isLine);
 
   const result = state.changeByRange(range => {
     const from = Math.min(range.from, range.to);
     const to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
-    const adjustedTo = isLine && to < state.doc.length ? to + 1 : to;
 
-    if (adjustedTo <= from) {
+    if (to <= from) {
       return {
         range: EditorSelection.cursor(from)
       };
     }
 
-    deleted.push(state.doc.sliceString(from, adjustedTo));
     return {
-      changes: { from, to: adjustedTo, insert: "" },
+      changes: { from, to, insert: "" },
       range: EditorSelection.cursor(from)
     };
   });
 
   view.dispatch({
     ...result,
-    effects: setKakouneRegisterEffect.of(deleted.join("\n"))
+    effects: [
+      setKakouneRegisterEffect.of(deleted.join("\n")),
+      setKakouneRegisterSelectionsEffect.of(deleted.length > 1 ? deleted : null),
+      setKakouneRegisterLinewiseEffect.of(sourceLinewise),
+      setKakouneSelectionLinewiseEffect.of(false)
+    ],
+    selection: EditorSelection.create(result.selection.ranges.map(range => EditorSelection.cursor(range.head)), result.selection.mainIndex)
   });
 
   return true;
@@ -1050,36 +1289,61 @@ function deleteSelection(view: EditorView): boolean {
 function yankSelection(view: EditorView): boolean {
   const state = view.state;
   const isLine = state.field(kakouneSelectionTypeField) === "line";
-  const selected = state.selection.ranges
-    .map(range => {
-      const from = Math.min(range.from, range.to);
-      const to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
-      const adjustedTo = isLine && to < state.doc.length ? to + 1 : to;
-      return state.doc.sliceString(from, adjustedTo);
-    })
-    .join("\n");
+  const sourceLinewise = state.field(kakouneStateField).selectionLinewise;
+  const selected = collectSelectionTexts(state, isLine);
 
-  view.dispatch({ effects: setKakouneRegisterEffect.of(selected) });
+  view.dispatch({
+    effects: [
+      setKakouneRegisterEffect.of(selected.join("\n")),
+      setKakouneRegisterSelectionsEffect.of(selected.length > 1 ? selected : null),
+      setKakouneRegisterLinewiseEffect.of(sourceLinewise),
+      setKakouneSelectionLinewiseEffect.of(isLine)
+    ]
+  });
   return true;
 }
 
-function pasteRegister(view: EditorView): boolean {
+function pasteRegister(view: EditorView, mode: "before" | "after" = "after"): boolean {
   const state = view.state;
-  const register = state.field(kakouneStateField).register;
+  const kakoune = state.field(kakouneStateField);
+  const registerValues = kakoune.registerSelections ?? (kakoune.register ? [kakoune.register] : []);
+  const linewise = kakoune.registerLinewise;
 
-  if (!register) {
+  if (registerValues.length === 0) {
     return false;
   }
 
-  const result = state.changeByRange(range => {
-    const insertAt = range.empty ? range.head : range.to;
-    return {
-      changes: { from: insertAt, insert: register },
-      range: EditorSelection.cursor(insertAt + register.length)
-    };
+  const rangesBefore = state.selection.ranges.map(range => ({
+    anchor: range.anchor,
+    head: range.head,
+    from: range.from,
+    to: range.to,
+    empty: range.empty
+  }));
+  const items = rangesBefore.map((range, index) => {
+    const value = registerValues[index % registerValues.length];
+    const insertAt = mode === "after"
+      ? (range.empty ? Math.min(state.doc.length, range.head + 1) : range.to)
+      : range.from;
+
+    return { from: insertAt, insert: value };
   });
 
-  view.dispatch(result);
+  if (linewise && items.length > 0) {
+    const last = items[items.length - 1];
+    if (!last.insert.endsWith("\n")) {
+      last.insert += "\n";
+    }
+  }
+
+  const changes = items
+    .slice()
+    .sort((a, b) => b.from - a.from)
+    .map(item => ({ from: item.from, insert: item.insert }));
+
+  view.dispatch({
+    changes
+  });
   return true;
 }
 
@@ -1103,7 +1367,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["i"], run: view => setMode(view, "insert"), description: "Insert mode before selections" },
     { keys: ["o"], run: (view, _arg, count) => openLine(view, "below", count ?? 1), description: "Insert new line below and enter insert mode" },
     { keys: ["O"], run: (view, _arg, count) => openLine(view, "above", count ?? 1), description: "Insert new line above and enter insert mode" },
-    { keys: ["a"], run: view => moveSelections(view, range => clamp(range.to + 1, 0, view.state.doc.length)) && setMode(view, "insert"), description: "Insert mode after selections" },
+    { keys: ["a"], run: view => moveSelections(view, range => range.empty ? clamp(range.to + 1, 0, view.state.doc.length) : range.to) && setMode(view, "insert"), description: "Insert mode after selections" },
     { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
     { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },
     { keys: ["h"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
@@ -1117,6 +1381,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["e"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordEndRange(view, range), count ?? 1), description: "Move to word end" },
     { keys: ["E"], run: (view, _arg, count) => extendSelections(view, range => moveWordEndRange(view, range).head, count ?? 1), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
+    { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },
     { keys: [";"], run: view => reduceSelectionsToCursor(view), description: "Reduce selections to cursor" },
@@ -1149,16 +1414,20 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["G", "J"], run: view => extendSelections(view, () => view.state.doc.length), description: "Extend to document end" },
     { keys: ["G", "g"], run: view => extendSelections(view, () => 0), description: "Extend to document start" },
     { keys: ["G", "G"], run: view => extendSelections(view, () => 0), description: "Extend to document start" },
-    { keys: ["g", "k"], run: view => moveSelections(view, () => 0), description: "Move to document start" },
-    { keys: ["g", "j"], run: view => moveSelections(view, () => view.state.doc.line(view.state.doc.lines).from), description: "Move to document end" },
+    { keys: ["g", "k"], run: view => jumpToLine(view, 1), description: "Jump to document start" },
+    { keys: ["g", "j"], run: view => jumpToLine(view, view.state.doc.lines), description: "Jump to document end" },
     { keys: ["d"], run: view => deleteSelection(view), description: "Delete selection" },
     { keys: ["c"], run: view => deleteSelection(view) && setMode(view, "insert"), description: "Change selection" },
     { keys: ["y"], run: view => yankSelection(view), description: "Yank selection" },
-    { keys: ["p"], run: view => pasteRegister(view), description: "Paste register" },
+    { keys: ["p"], run: view => pasteRegister(view, "after"), description: "Paste register after" },
+    { keys: ["P"], run: view => pasteRegister(view, "before"), description: "Paste register before" },
     { keys: ["u"], run: view => undo(view), description: "Undo" },
     { keys: ["U"], run: view => redo(view), description: "Redo" },
+    { keys: ["<C-o>"], run: (view, _arg, count) => jumpBackward(view, count ?? 1), description: "Jump back in history" },
+    { keys: ["<C-i>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
     { keys: ["*"], run: view => setSearchFromSelection(view), description: "Search selection" },
     { keys: ["s"], run: view => setSearchPrompt(view, ""), description: "Select matches" },
+    { keys: ["/"], run: view => setSearchPrompt(view, ""), description: "Search forward" },
     { keys: ["n"], run: view => jumpToNextSearch(view), description: "Jump to next search match" },
     { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view), description: "Jump to previous search match" },
     { keys: ["N"], run: view => addNextTextSelection(view), description: "Add selection for next match" },
@@ -1178,7 +1447,7 @@ function buildSelectBindings(): KakouneBinding[] {
       if (!arg) return true;
       return moveToFind(view, "T", arg);
     }, description: "Select backward until character" },
-    { keys: ["g", "g"], run: view => moveSelections(view, () => 0), description: "Move to document start" }
+    { keys: ["g", "g"], run: view => jumpToLine(view, 1), description: "Jump to document start" }
   ];
 }
 

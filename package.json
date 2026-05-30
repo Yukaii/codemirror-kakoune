@@ -22,6 +22,7 @@
     "build:playground": "vite build",
     "test": "jest",
     "test:watch": "jest --watch",
+    "probe:parity": "node scripts/kakoune-parity-probe.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -31,8 +32,10 @@
     "@codemirror/view": "^6.43.0"
   },
   "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.2",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/language": "^6.12.3",
+    "@codemirror/lint": "^6.9.6",
     "@lezer/highlight": "^1.2.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.1",

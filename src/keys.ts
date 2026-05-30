@@ -1,6 +1,6 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { KakouneMode, WhichKeyItem } from "./state";
+import { kakouneStateField, setKakouneSelectionRepeatCountEffect, type KakouneMode, type WhichKeyItem } from "./state";
 
 /** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
@@ -251,6 +251,7 @@ export class KakouneKeyProcessor {
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
     if (key === "<Esc>") {
       this.reset();
+      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(1) });
     }
 
     if (mode === "select" && key === "." && this.lastInsert.length > 0) {
@@ -263,20 +264,62 @@ export class KakouneKeyProcessor {
       return true;
     }
 
-    if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
-      if (!this.replayingInsert && this.lastMode !== "insert") {
-        this.lastInsert = [];
-      }
+    if (mode === "select" && key === "r") {
+      this.pendingCharBinding = {
+        keys: ["r"],
+        run: (currentView, arg) => {
+          if (!arg) {
+            return false;
+          }
 
-      const result = view.state.changeByRange(range => ({
-        changes: { from: range.head, insert: key },
-        range: EditorSelection.cursor(range.head + 1)
-      }));
-      view.dispatch(result);
-      if (!this.replayingInsert) {
-        this.lastInsert.push(key);
-      }
-      this.lastMode = mode;
+          currentView.dispatch({
+            changes: currentView.state.changeByRange(range => {
+              const from = Math.min(range.from, range.to);
+              const to = range.empty ? Math.min(currentView.state.doc.length, from + 1) : Math.max(range.from, range.to);
+              return {
+                changes: { from, to, insert: arg },
+                range: EditorSelection.cursor(from + arg.length)
+              };
+            }).changes
+          });
+          return true;
+        }
+      };
+      return true;
+    }
+
+    if (mode === "select" && key === "+") {
+      const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
+      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(repeatCount + 1) });
+      return true;
+    }
+
+    if (mode === "insert" && key === "<C-r>") {
+      this.pendingCharBinding = {
+        keys: ["<C-r>"],
+        run: (currentView, arg) => {
+          if (!arg) {
+            return false;
+          }
+
+          const register = currentView.state.field(kakouneStateField).register;
+          if (!register) {
+            return true;
+          }
+
+          const insertion = arg === '"' ? register : "";
+          if (!insertion) {
+            return true;
+          }
+
+          const result = currentView.state.changeByRange(range => ({
+            changes: { from: range.head, insert: insertion },
+            range: EditorSelection.cursor(range.head + insertion.length)
+          }));
+          currentView.dispatch(result);
+          return true;
+        }
+      };
       return true;
     }
 
@@ -291,6 +334,26 @@ export class KakouneKeyProcessor {
       const currentCount = this.count;
       this.count = null;
       return binding.run(view, key, currentCount ?? undefined);
+    }
+
+    if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
+      if (!this.replayingInsert && this.lastMode !== "insert") {
+        this.lastInsert = [];
+      }
+
+      const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
+      const insertText = key.repeat(Math.max(1, repeatCount));
+
+      const result = view.state.changeByRange(range => ({
+        changes: { from: range.head, insert: insertText },
+        range: EditorSelection.cursor(range.head + insertText.length)
+      }));
+      view.dispatch(result);
+      if (!this.replayingInsert) {
+        this.lastInsert.push(key);
+      }
+      this.lastMode = mode;
+      return true;
     }
 
     if (mode === "select" && this.pending.length === 0 && /^[0-9]$/.test(key)) {

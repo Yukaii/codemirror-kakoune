@@ -15,7 +15,7 @@ interface KakouneParityFixture {
 
 interface ParsedFixture {
   text: string;
-  selection: { anchor: number; head: number };
+  selection: Array<{ anchor: number; head: number }>;
 }
 
 interface ParityCase {
@@ -38,9 +38,8 @@ function readFixture(name: string): KakouneParityFixture {
 }
 
 function parseSelectionMarkers(text: string): ParsedFixture {
-  let anchor = -1;
-  let head = -1;
   let output = "";
+  const selections: Array<{ anchor: number; head: number }> = [];
 
   for (let i = 0; i < text.length; i += 1) {
     if (text.startsWith("%(", i)) {
@@ -50,9 +49,10 @@ function parseSelectionMarkers(text: string): ParsedFixture {
       }
 
       const markerText = text.slice(i + 2, end);
-      anchor = output.length;
+      const anchor = output.length;
       output += markerText;
-      head = output.length;
+      const head = output.length;
+      selections.push({ anchor, head });
       i = end;
       continue;
     }
@@ -62,10 +62,7 @@ function parseSelectionMarkers(text: string): ParsedFixture {
 
   return {
     text: output,
-    selection: {
-      anchor: anchor >= 0 ? anchor : 0,
-      head: head >= 0 ? head : 0
-    }
+    selection: selections.length > 0 ? selections : [{ anchor: 0, head: 0 }]
   };
 }
 
@@ -81,8 +78,15 @@ function tokenize(cmd: string): string[] {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|esc|Enter|enter|Backspace|backspace|Space|Tab|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
-          tokens.push(token === "<esc>" ? "<Esc>" : token === "<enter>" ? "<Enter>" : token === "<backspace>" ? "<Backspace>" : token);
+        if (/^<(Esc|esc|Enter|enter|ret|Backspace|backspace|Space|Tab|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/.test(token)) {
+          tokens.push(
+            token === "<esc>" ? "<Esc>" :
+            token === "<enter>" ? "<Enter>" :
+            token === "<backspace>" ? "<Backspace>" :
+            token.startsWith("<a-") ? `<A-${token.slice(3, -1)}>` :
+            token.startsWith("<c-") ? `<C-${token.slice(3, -1)}>` :
+            token
+          );
           i = end;
           continue;
         }
@@ -154,7 +158,7 @@ function runFixture(fixture: KakouneParityFixture): { doc: string; selection: { 
     const view = new EditorView({
       state: EditorState.create({
         doc: parsed.text,
-        selection: EditorSelection.range(parsed.selection.anchor, parsed.selection.head),
+        selection: EditorSelection.create(parsed.selection.map(range => EditorSelection.range(range.anchor, range.head)), 0),
         extensions: [kakoune()]
       }),
       parent
@@ -233,6 +237,11 @@ const parityCases: ParityCase[] = [
     reason: "requires insert-mode text entry at the end of the current line"
   },
   {
+    name: "insert",
+    supported: true,
+    reason: "plain insert-mode typing is already handled by the insert key path"
+  },
+  {
     name: "replace",
     supported: false,
     reason: "requires replace mode behavior the PoC runner does not emulate yet"
@@ -284,7 +293,7 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
-    expect(summary).toMatchObject({ supported: 11, total: 280, percentage: "3.93" });
+    expect(summary).toMatchObject({ supported: 12, total: 280, percentage: "4.29" });
     console.log(
       `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );

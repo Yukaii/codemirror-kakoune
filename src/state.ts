@@ -14,6 +14,24 @@ export interface WhichKeyItem {
   description?: string;
 }
 
+/** A selection snapshot stored in the Kakoune jump list. */
+export interface KakouneJumpSelection {
+  anchor: number;
+  head: number;
+}
+
+/** A full selection snapshot stored in the Kakoune jump list. */
+export interface KakouneJumpEntry {
+  ranges: KakouneJumpSelection[];
+  mainIndex: number;
+}
+
+/** The internal jump list state maintained by the Kakoune extension. */
+export interface KakouneJumpState {
+  entries: KakouneJumpEntry[];
+  currentIndex: number;
+}
+
 /** Callback invoked when the pending key sequence or which-key items change. */
 export type WhichKeyCallback = (
   /** The currently pending key sequence. */
@@ -30,10 +48,24 @@ export interface KakouneState {
   mode: KakouneMode;
   /** The yank/paste register. */
   register: string;
+  /** Per-selection register contents, when the register came from multiple selections. */
+  registerSelections: string[] | null;
+  /** Whether the current selection source is linewise. */
+  selectionLinewise: boolean;
+  /** Whether the active register was populated from a linewise selection. */
+  registerLinewise: boolean;
+  /** Number of times each selection should be duplicated for insertion. */
+  selectionRepeatCount: number;
   /** Active search prompt text, or `null` if no prompt is open. */
   searchPrompt: string | null;
   /** Snapshot of selections before opening the search prompt, or `null`. */
   searchSelection: Array<{ anchor: number; head: number }> | null;
+  /** Active split prompt text, or `null` if no split prompt is open. */
+  splitPrompt: string | null;
+  /** Snapshot of selections before opening the split prompt, or `null`. */
+  splitSelection: Array<{ anchor: number; head: number }> | null;
+  /** Kakoune jump list state. */
+  jumpState: KakouneJumpState;
 }
 
 /** Options for configuring the {@link kakoune} extension. */
@@ -65,8 +97,16 @@ export const kakouneInitialModeFacet: Facet<KakouneMode, KakouneMode> = Facet.de
 export const setKakouneModeEffect: StateEffectType<KakouneMode> = StateEffect.define<KakouneMode>();
 /** State effect that updates the yank/paste register. */
 export const setKakouneRegisterEffect: StateEffectType<string> = StateEffect.define<string>();
+/** State effect that updates per-selection register contents. */
+export const setKakouneRegisterSelectionsEffect: StateEffectType<string[] | null> = StateEffect.define<string[] | null>();
+/** State effect that marks the current selection source as linewise or not. */
+export const setKakouneSelectionLinewiseEffect: StateEffectType<boolean> = StateEffect.define<boolean>();
+/** State effect that marks the active register as linewise or not. */
+export const setKakouneRegisterLinewiseEffect: StateEffectType<boolean> = StateEffect.define<boolean>();
 /** State effect that sets or clears the search prompt text. */
 export const setKakouneSearchPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
+/** State effect that sets or clears the split prompt text. */
+export const setKakouneSplitPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
 /**
  * State effect that stores a snapshot of selections before opening the search
  * prompt, so they can be restored if the search is cancelled.
@@ -76,6 +116,18 @@ export const setKakouneSearchSelectionEffect: StateEffectType<
 > = StateEffect.define<
   Array<{ anchor: number; head: number }> | null
 >();
+/** State effect that stores a snapshot of selections before opening the split prompt. */
+export const setKakouneSplitSelectionEffect: StateEffectType<
+  Array<{ anchor: number; head: number }> | null
+> = StateEffect.define<
+  Array<{ anchor: number; head: number }> | null
+>();
+
+/** State effect that updates the Kakoune jump list state. */
+export const setKakouneJumpStateEffect: StateEffectType<KakouneJumpState> = StateEffect.define<KakouneJumpState>();
+
+/** State effect that updates the Kakoune selection repeat count. */
+export const setKakouneSelectionRepeatCountEffect: StateEffectType<number> = StateEffect.define<number>();
 
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
@@ -108,8 +160,15 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
     return {
       mode: state.facet(kakouneInitialModeFacet),
       register: "",
+      registerSelections: null,
+      selectionLinewise: false,
+      registerLinewise: false,
+      selectionRepeatCount: 1,
       searchPrompt: null,
-      searchSelection: null
+      searchSelection: null,
+      splitPrompt: null,
+      splitSelection: null,
+      jumpState: { entries: [], currentIndex: 0 }
     };
   },
   update(value, transaction) {
@@ -120,10 +179,24 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, mode: effect.value };
       } else if (effect.is(setKakouneRegisterEffect)) {
         next = { ...next, register: effect.value };
+      } else if (effect.is(setKakouneRegisterSelectionsEffect)) {
+        next = { ...next, registerSelections: effect.value };
+      } else if (effect.is(setKakouneSelectionLinewiseEffect)) {
+        next = { ...next, selectionLinewise: effect.value };
+      } else if (effect.is(setKakouneRegisterLinewiseEffect)) {
+        next = { ...next, registerLinewise: effect.value };
       } else if (effect.is(setKakouneSearchPromptEffect)) {
         next = { ...next, searchPrompt: effect.value };
       } else if (effect.is(setKakouneSearchSelectionEffect)) {
         next = { ...next, searchSelection: effect.value };
+      } else if (effect.is(setKakouneSplitPromptEffect)) {
+        next = { ...next, splitPrompt: effect.value };
+      } else if (effect.is(setKakouneSplitSelectionEffect)) {
+        next = { ...next, splitSelection: effect.value };
+      } else if (effect.is(setKakouneJumpStateEffect)) {
+        next = { ...next, jumpState: effect.value };
+      } else if (effect.is(setKakouneSelectionRepeatCountEffect)) {
+        next = { ...next, selectionRepeatCount: effect.value };
       }
     }
 
