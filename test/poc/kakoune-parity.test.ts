@@ -222,7 +222,24 @@ const parityCases: ParityCase[] = [
 
 const parityCasesByName = new Map(parityCases.map(entry => [entry.name, entry]));
 
+function getParityCoverageSummary(): { supported: number; total: number; percentage: string } {
+  const supported = parityCases.filter(entry => entry.supported).length;
+  const total = parityCases.filter(entry => entry.name !== "open-above").length;
+  return {
+    supported,
+    total,
+    percentage: total === 0 ? "0.00" : ((supported / total) * 100).toFixed(2)
+  };
+}
+
 describe("kakoune parity sample", () => {
+  it("prints coverage summary", () => {
+    const summary = getParityCoverageSummary();
+    console.log(
+      `Kakoune fixture parity coverage: ${summary.supported}/${summary.total} (${summary.percentage}%)`
+    );
+  });
+
   const fixtures: KakouneParityFixture[] = parityCases.map(entry => readFixture(entry.name));
 
   for (const fixture of fixtures) {
