@@ -241,13 +241,15 @@ const parityCases: ParityCase[] = [
   },
   {
     name: "change",
-    supported: false,
-    reason: "requires insert-mode text entry, which the PoC runner does not emulate"
+    supported: true,
+    reason: "requires insert-mode text entry and selection deletion semantics",
+    expectedSelection: { anchor: 12, head: 12 }
   },
   {
     name: "append-at-eol",
-    supported: false,
-    reason: "requires insert-mode text entry, which the PoC runner does not emulate"
+    supported: true,
+    reason: "requires insert-mode text entry at the end of the current line",
+    expectedSelection: { anchor: 6, head: 6 }
   },
   {
     name: "replace",
@@ -301,7 +303,7 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
 describe("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
-    expect(summary).toMatchObject({ supported: 9, total: 280, percentage: "3.21" });
+    expect(summary).toMatchObject({ supported: 11, total: 280, percentage: "3.93" });
     console.log(
       `Kakoune corpus parity coverage: ${summary.supported}/${summary.total} supported parity cases (${summary.percentage}%)`
     );
