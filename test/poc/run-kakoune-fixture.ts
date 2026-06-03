@@ -15,6 +15,7 @@ export interface KakouneFixtureResult {
   selectionRanges: Array<{ anchor: number; head: number }>;
   mode: "select" | "insert";
   tokens: string[];
+  error?: string;
 }
 
 function parseSelectionMarkers(text: string): { text: string; selection: Array<{ anchor: number; head: number }> } {
@@ -46,6 +47,24 @@ function parseSelectionMarkers(text: string): { text: string; selection: Array<{
   };
 }
 
+function parseInsertMappings(rc?: string): Map<string, string[]> {
+  const mappings = new Map<string, string[]>();
+  const line = rc?.trim();
+  if (!line) {
+    return mappings;
+  }
+
+  const match = line.match(/^map\s+global\s+insert\s+(\S+)\s+'(.+)'$/);
+  if (!match) {
+    return mappings;
+  }
+
+  const trigger = match[1];
+  const mapped = tokenizeKakouneCmd(match[2]);
+  mappings.set(trigger, mapped);
+  return mappings;
+}
+
 export function tokenizeKakouneCmd(cmd: string): string[] {
   const tokens: string[] = [];
 
@@ -60,10 +79,11 @@ export function tokenizeKakouneCmd(cmd: string): string[] {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|esc|Enter|enter|ret|Backspace|backspace|Space|Tab|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/.test(token)) {
+        if (/^<(Esc|esc|Enter|enter|ret|Backspace|backspace|Space|Tab|tab|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/.test(token)) {
           tokens.push(
             token === "<esc>" ? "<Esc>" :
             token === "<enter>" || token === "<ret>" ? "<Enter>" :
+            token === "<tab>" ? "<Tab>" :
             token === "<backspace>" ? "<Backspace>" :
             token.startsWith("<a-") ? `<A-${token.slice(3, -1)}>` :
             token.startsWith("<c-") ? `<C-${token.slice(3, -1)}>` :
@@ -87,6 +107,7 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
 
   try {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
+    processor.setInsertMappings(parseInsertMappings(input.rc));
     const parsed = parseSelectionMarkers(input.in ?? "");
     const view = new EditorView({
       state: EditorState.create({
@@ -96,9 +117,6 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
       }),
       parent
     });
-
-    // PoC placeholder: keep rc accepted without trying to interpret Kakoune rc files.
-    void input.rc;
 
     for (const token of tokenizeKakouneCmd(input.cmd)) {
       const state = getKakouneState(view.state);
@@ -121,7 +139,8 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
       doc: view.state.doc.toString(),
       selectionRanges: view.state.selection.ranges.map(range => ({ anchor: range.anchor, head: range.head })),
       mode: state.mode,
-      tokens: tokenizeKakouneCmd(input.cmd)
+      tokens: tokenizeKakouneCmd(input.cmd),
+      error: state.commandError ?? undefined
     };
   } finally {
     parent.remove();

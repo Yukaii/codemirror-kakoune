@@ -13,14 +13,15 @@ const ROOT = resolve(process.cwd(), "test/kakoune/test/normal");
 const DOC_PATH = resolve(process.cwd(), "docs/kakoune-parity-progress.md");
 function readFixture(name) {
   const dir = join(ROOT, name);
-  if (!existsSync(join(dir, "out")) || !existsSync(join(dir, "cmd"))) {
+  if (!existsSync(join(dir, "cmd"))) {
     return null;
   }
 
   return {
     name,
     in: existsSync(join(dir, "in")) ? readFileSync(join(dir, "in"), "utf8") : "",
-    out: readFileSync(join(dir, "out"), "utf8"),
+    out: existsSync(join(dir, "out")) ? readFileSync(join(dir, "out"), "utf8") : undefined,
+    error: existsSync(join(dir, "error")) ? readFileSync(join(dir, "error"), "utf8") : undefined,
     cmd: readFileSync(join(dir, "cmd"), "utf8")
   };
 }
@@ -43,7 +44,8 @@ function buildProbeTest(candidateName) {
     '  return {',
     '    name,',
     '    in: existsSync(join(dir, "in")) ? readFileSync(join(dir, "in"), "utf8") : "",',
-    '    out: readFileSync(join(dir, "out"), "utf8"),',
+    '    out: existsSync(join(dir, "out")) ? readFileSync(join(dir, "out"), "utf8") : undefined,',
+    '    error: existsSync(join(dir, "error")) ? readFileSync(join(dir, "error"), "utf8") : undefined,',
     '    cmd: readFileSync(join(dir, "cmd"), "utf8")',
     '  };',
     '}',
@@ -69,7 +71,12 @@ function buildProbeTest(candidateName) {
     `test(${JSON.stringify(candidateName)}, () => {`,
     `  const fixture = readFixture(${JSON.stringify(candidateName)});`,
     '  const actual = runKakouneFixture({ in: fixture.in, cmd: fixture.cmd });',
-    '  expect(normalize(actual.doc)).toBe(normalize(parseSelectionMarkers(fixture.out)));',
+    '  if (fixture.out !== undefined) {',
+    '    expect(normalize(actual.doc)).toBe(normalize(parseSelectionMarkers(fixture.out)));',
+    '  }',
+    '  if (fixture.error) {',
+    '    expect(actual.error).toBe(normalize(fixture.error));',
+    '  }',
     '});',
     ''
   ].join("\n");

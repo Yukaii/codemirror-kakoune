@@ -6,6 +6,7 @@ import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, set
 import {
   kakouneStateField,
   kakouneSelectionTypeField,
+  setKakouneCommandErrorEffect,
   setKakouneJumpStateEffect,
   setKakouneSearchPromptEffect,
   setKakouneSearchSelectionEffect,
@@ -66,6 +67,10 @@ function setJumpStateEffect(view: EditorView, jumpState: KakouneJumpState): void
   view.dispatch({ effects: setKakouneJumpStateEffect.of(jumpState) });
 }
 
+function setCommandError(view: EditorView, message: string | null): void {
+  view.dispatch({ effects: setKakouneCommandErrorEffect.of(message) });
+}
+
 function pushCurrentJump(view: EditorView): KakouneJumpState {
   const state = view.state.field(kakouneStateField).jumpState;
   return pushJumpState(state, snapshotJumpEntry(view.state.selection));
@@ -89,10 +94,12 @@ function jumpBackward(view: EditorView, count: number = 1): boolean {
   const steps = count + (shouldPushCurrent ? 1 : 0);
   const targetIndex = jumpState.currentIndex - steps;
   if (targetIndex < 0) {
+    setCommandError(view, "'exec': no previous jump");
     return false;
   }
 
   const target = jumpState.entries[targetIndex];
+  setCommandError(view, null);
   view.dispatch({
     selection: restoreJumpEntry(target),
     effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
@@ -153,9 +160,11 @@ function jumpForward(view: EditorView, count: number = 1): boolean {
   const targetIndex = jumpState.currentIndex + count;
 
   if (targetIndex >= jumpState.entries.length) {
+    setCommandError(view, "'exec': no next jump");
     return false;
   }
 
+  setCommandError(view, null);
   view.dispatch({
     selection: restoreJumpEntry(jumpState.entries[targetIndex]),
     effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })

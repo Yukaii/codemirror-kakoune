@@ -66,6 +66,8 @@ export interface KakouneState {
   splitPrompt: string | null;
   /** Snapshot of selections before opening the split prompt, or `null`. */
   splitSelection: Array<{ anchor: number; head: number }> | null;
+  /** Last command error message, or `null` if none. */
+  commandError: string | null;
   /** Kakoune jump list state. */
   jumpState: KakouneJumpState;
 }
@@ -132,6 +134,8 @@ export const setKakouneJumpStateEffect: StateEffectType<KakouneJumpState> = Stat
 export const setKakouneSelectionRepeatCountEffect: StateEffectType<number> = StateEffect.define<number>();
 /** State effect that stores replace-mode insert anchors after `c`. */
 export const setKakouneReplaceInsertAnchorsEffect: StateEffectType<number[] | null> = StateEffect.define<number[] | null>();
+/** State effect that sets or clears the last command error. */
+export const setKakouneCommandErrorEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
 
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
@@ -173,6 +177,7 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       searchSelection: null,
       splitPrompt: null,
       splitSelection: null,
+      commandError: null,
       jumpState: { entries: [], currentIndex: 0 }
     };
   },
@@ -204,6 +209,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, selectionRepeatCount: effect.value };
       } else if (effect.is(setKakouneReplaceInsertAnchorsEffect)) {
         next = { ...next, replaceInsertAnchors: effect.value };
+      } else if (effect.is(setKakouneCommandErrorEffect)) {
+        next = { ...next, commandError: effect.value };
       }
     }
 

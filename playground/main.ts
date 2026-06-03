@@ -451,6 +451,7 @@ updateStatus(view);
 
 let pendingCtrl = false;
 let pendingAlt = false;
+let forwardingBrowserShortcut = false;
 const ctrlBtn = vk.querySelector<HTMLButtonElement>("[data-mod='ctrl']");
 const altBtn = vk.querySelector<HTMLButtonElement>("[data-mod='alt']");
 
@@ -462,24 +463,29 @@ document.addEventListener(
   "keydown",
   (event) => {
     const kbEvent = event as KeyboardEvent;
-    if (isSynthetic || !view.hasFocus) {
+    if (isSynthetic || forwardingBrowserShortcut || !view.hasFocus) {
       return;
     }
 
     if (kbEvent.ctrlKey && !kbEvent.altKey && !kbEvent.metaKey && (kbEvent.key === "o" || kbEvent.key === "i" || kbEvent.key === "Tab")) {
       kbEvent.preventDefault();
       kbEvent.stopImmediatePropagation();
-      view.contentDOM.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: kbEvent.key,
-          code: kbEvent.code,
-          ctrlKey: true,
-          altKey: false,
-          shiftKey: kbEvent.shiftKey,
-          bubbles: true,
-          cancelable: true
-        })
-      );
+      forwardingBrowserShortcut = true;
+      try {
+        view.contentDOM.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: kbEvent.key,
+            code: kbEvent.code,
+            ctrlKey: true,
+            altKey: false,
+            shiftKey: kbEvent.shiftKey,
+            bubbles: true,
+            cancelable: true
+          })
+        );
+      } finally {
+        forwardingBrowserShortcut = false;
+      }
     }
   },
   { capture: true }

@@ -26,15 +26,15 @@
 - paste-before-multiple-selections
 - paste-all-after
 - paste-all-before
-
-## Still Red
+- paste-all-replace
 - jump/forward-invalid-count
 - jump/backward-invalid-count
-- paste-all-replace
 - insert-replace
-- repeat-insert/repeat-insert-mapped
 - repeat-insert/repeat-normal-exec
 - repeat-insert/repeat-normal-movement
+
+## Still Red
+- repeat-insert/repeat-insert-mapped
 - repeat-insert/repeat-insert-hooks
 - repeat-insert/repeat-insert-mapped-word-completion
 - concat-paste-line
