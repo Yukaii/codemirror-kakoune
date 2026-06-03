@@ -189,6 +189,23 @@ function isPrefix(prefix: string[], candidate: string[]): boolean {
   return prefix.every((part, index) => part === candidate[index]);
 }
 
+function tokenizeSimpleKeys(text: string): string[] {
+  const tokens: string[] = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "<") {
+      const end = text.indexOf(">", i + 1);
+      if (end > i + 1) {
+        tokens.push(text.slice(i, end + 1));
+        i = end;
+        continue;
+      }
+    }
+    tokens.push(ch);
+  }
+  return tokens;
+}
+
 /**
  * Processes keyboard events against Kakoune-style key bindings.
  *
@@ -199,11 +216,125 @@ export class KakouneKeyProcessor {
   private pending: string[] = [];
   private pendingCharBinding: KakouneBinding | null = null;
   private count: number | null = null;
-  private lastInsert: string[] = [];
+  private lastInsertKeys: string[] = [];
+  private currentInsertKeys: string[] = [];
+  private handleDepth = 0;
   private replayingInsert = false;
-  private lastMode: KakouneMode | null = null;
+  private temporaryNormal = false;
+  private temporaryNormalSelection: Array<{ anchor: number; head: number }> | null = null;
+  private commandPrompt: string | null = null;
+  private insertMappings = new Map<string, string[]>();
 
   constructor(private readonly bindings: Record<KakouneMode, KakouneBinding[]>) {}
+
+  beginTemporaryNormal(): void {
+    this.temporaryNormal = true;
+  }
+
+  private restoreTemporaryNormalSelection(view: EditorView): void {
+    if (!this.temporaryNormalSelection) {
+      return;
+    }
+
+    view.dispatch({
+      selection: EditorSelection.create(
+        this.temporaryNormalSelection.map(range => EditorSelection.range(range.anchor, range.head)),
+        0
+      )
+    });
+    this.temporaryNormalSelection = null;
+  }
+
+  setInsertMappings(mappings: Map<string, string[]>): void {
+    this.insertMappings = mappings;
+  }
+
+  private shouldRecordKey(mode: KakouneMode): boolean {
+    return !this.replayingInsert && this.handleDepth <= 1 && (mode === "insert" || this.temporaryNormal || this.commandPrompt !== null);
+  }
+
+  private recordKey(key: string): void {
+    if (key === "<Esc>") {
+      return;
+    }
+    this.currentInsertKeys.push(key);
+  }
+
+  private finalizeInsertSession(): void {
+    if (this.currentInsertKeys.length > 0) {
+      this.lastInsertKeys = this.currentInsertKeys.slice();
+      this.currentInsertKeys = [];
+    }
+  }
+
+  private insertText(view: EditorView, text: string, preserveReplaceAnchors = false): boolean {
+    const kakoune = view.state.field(kakouneStateField);
+    const anchors = kakoune.replaceInsertAnchors ?? view.state.selection.ranges.map(range => range.head);
+    const insertions = anchors.map(() => text);
+    return applySequentialInserts(view, anchors, insertions, preserveReplaceAnchors);
+  }
+
+  private enterCommandPrompt(): boolean {
+    this.commandPrompt = "";
+    return true;
+  }
+
+  private commitCommandPrompt(view: EditorView): boolean {
+    const prompt = this.commandPrompt;
+    this.commandPrompt = null;
+    if (prompt === null) {
+      return true;
+    }
+
+    if (prompt.startsWith("execute-keys ")) {
+      const payload = prompt.slice("execute-keys ".length);
+      this.temporaryNormal = false;
+      for (const key of tokenizeSimpleKeys(payload)) {
+        this.handle("insert", key, view);
+      }
+    }
+
+    this.temporaryNormal = false;
+    return true;
+  }
+
+  private clearTemporaryNormalIfDone(): void {
+    if (this.temporaryNormal && this.commandPrompt === null && this.pending.length === 0 && this.pendingCharBinding === null) {
+      this.temporaryNormal = false;
+    }
+  }
+
+  private handleCommandPromptKey(view: EditorView, key: string): boolean {
+    if (key === "<Esc>") {
+      this.commandPrompt = null;
+      this.temporaryNormal = false;
+      return true;
+    }
+
+    if (key === "<Enter>") {
+      return this.commitCommandPrompt(view);
+    }
+
+    if (key === "<Backspace>") {
+      if (this.commandPrompt === null) {
+        return true;
+      }
+      this.commandPrompt = this.commandPrompt.slice(0, -1);
+      return true;
+    }
+
+    if (key === "<Space>") {
+      this.commandPrompt += " ";
+      return true;
+    }
+
+    if (key.length === 1 && !key.startsWith("<")) {
+      this.commandPrompt += key;
+      return true;
+    }
+
+    return true;
+  }
 
   /** Clears the pending sequence, count, and character binding. */
   reset(): void {
@@ -249,22 +380,75 @@ export class KakouneKeyProcessor {
    * @returns `true` if the key was consumed.
    */
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
-    if (key === "<Esc>") {
-      this.reset();
-      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(1) });
+    this.handleDepth += 1;
+    try {
+      return this.processKey(mode, key, view, true);
+    } finally {
+      this.handleDepth -= 1;
+    }
+  }
+
+  private processKey(mode: KakouneMode, key: string, view: EditorView, recordKey: boolean): boolean {
+    if (this.commandPrompt !== null) {
+      return this.handleCommandPromptKey(view, key);
     }
 
-    if (mode === "select" && key === "." && this.lastInsert.length > 0) {
-      this.replayingInsert = true;
-      for (const insertKey of this.lastInsert) {
-        this.handle("insert", insertKey, view);
+    if (mode === "insert") {
+      const insertMapping = this.insertMappings.get(key);
+      if (insertMapping) {
+        for (const mappedKey of insertMapping) {
+          this.processKey("insert", mappedKey, view, true);
+        }
+        this.clearTemporaryNormalIfDone();
+        return true;
       }
-      this.replayingInsert = false;
-      this.lastMode = mode;
+    }
+
+    if (recordKey && this.shouldRecordKey(mode)) {
+      this.recordKey(key);
+    }
+
+    if (key === "<Esc>") {
+      this.reset();
+      if (mode === "insert") {
+        this.finalizeInsertSession();
+      }
+      this.temporaryNormal = false;
+      const bindings = this.bindings[mode];
+      const escapeBinding = bindings.find(binding => binding.keys.length === 1 && binding.keys[0] === "<Esc>");
+      if (escapeBinding) {
+        return escapeBinding.run(view, undefined, undefined);
+      }
+
+      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(1) });
       return true;
     }
 
-    if (mode === "select" && key === "r") {
+    const effectiveMode = this.temporaryNormal && mode === "insert" ? "select" : mode;
+
+    if (effectiveMode === "select" && key === "." && this.lastInsertKeys.length > 0) {
+      this.replayingInsert = true;
+      try {
+        for (const replayKey of this.lastInsertKeys) {
+          this.processKey("insert", replayKey, view, false);
+        }
+      } finally {
+        this.replayingInsert = false;
+      }
+      this.clearTemporaryNormalIfDone();
+      return true;
+    }
+
+    if (mode === "insert" && key === "<A-;>") {
+      this.temporaryNormal = true;
+      return true;
+    }
+
+    if (effectiveMode === "select" && key === ":") {
+      return this.enterCommandPrompt();
+    }
+
+    if (effectiveMode === "select" && key === "r") {
       this.pendingCharBinding = {
         keys: ["r"],
         run: (currentView, arg) => {
@@ -288,13 +472,13 @@ export class KakouneKeyProcessor {
       return true;
     }
 
-    if (mode === "select" && key === "+") {
+    if (effectiveMode === "select" && key === "+") {
       const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
       view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(repeatCount + 1) });
       return true;
     }
 
-    if (mode === "insert" && key === "<C-r>") {
+    if (effectiveMode === "insert" && key === "<C-r>") {
       this.pendingCharBinding = {
         keys: ["<C-r>"],
         run: (currentView, arg) => {
@@ -334,33 +518,27 @@ export class KakouneKeyProcessor {
 
       const currentCount = this.count;
       this.count = null;
-      return binding.run(view, key, currentCount ?? undefined);
+      const handled = binding.run(view, key, currentCount ?? undefined);
+      this.clearTemporaryNormalIfDone();
+      return handled;
     }
 
-    if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
-      if (!this.replayingInsert && this.lastMode !== "insert") {
-        this.lastInsert = [];
-      }
-
+    if (effectiveMode === "insert" && key.length === 1 && !key.startsWith("<")) {
       const kakoune = view.state.field(kakouneStateField);
-      const anchors = kakoune.replaceInsertAnchors ?? view.state.selection.ranges.map(range => range.head);
-      const insertions = anchors.map(() => key.repeat(Math.max(1, kakoune.selectionRepeatCount)));
-      applySequentialInserts(view, anchors, insertions, true);
-      if (!this.replayingInsert) {
-        this.lastInsert.push(key);
-      }
-      this.lastMode = mode;
+      const inserted = key.repeat(Math.max(1, kakoune.selectionRepeatCount));
+      this.insertText(view, inserted, false);
+      this.clearTemporaryNormalIfDone();
       return true;
     }
 
-    if (mode === "select" && this.pending.length === 0 && /^[0-9]$/.test(key)) {
+    if (effectiveMode === "select" && this.pending.length === 0 && /^[0-9]$/.test(key)) {
       if (key !== "0" || this.count !== null) {
         this.count = (this.count ?? 0) * 10 + Number.parseInt(key, 10);
         return true;
       }
     }
 
-    const bindings = this.bindings[mode];
+    const bindings = this.bindings[effectiveMode];
     const nextSequence = [...this.pending, key];
     const exact = bindings.find(binding => sequenceKey(binding.keys) === sequenceKey(nextSequence));
     const hasLongerPrefix = bindings.some(binding => isPrefix(nextSequence, binding.keys) && binding.keys.length > nextSequence.length);
@@ -375,7 +553,13 @@ export class KakouneKeyProcessor {
       const currentCount = this.count;
       this.pending = [];
       this.count = null;
-      return exact.run(view, undefined, currentCount ?? undefined);
+      const handled = exact.run(view, undefined, currentCount ?? undefined);
+      if (handled && this.temporaryNormal && mode === "insert") {
+        this.temporaryNormal = false;
+        this.restoreTemporaryNormalSelection(view);
+      }
+      this.clearTemporaryNormalIfDone();
+      return handled;
     }
 
     if (hasLongerPrefix) {
@@ -393,7 +577,13 @@ export class KakouneKeyProcessor {
         this.count = null;
         const handled = pendingBinding.run(view, undefined, currentCount ?? undefined);
         if (handled) {
-          return this.handle(mode, key, view);
+          if (this.temporaryNormal && mode === "insert") {
+            this.temporaryNormal = false;
+            this.restoreTemporaryNormalSelection(view);
+          }
+          const result = this.processKey(effectiveMode, key, view, recordKey);
+          this.clearTemporaryNormalIfDone();
+          return result;
         }
       }
     }
@@ -410,7 +600,13 @@ export class KakouneKeyProcessor {
         const currentCount = this.count;
         this.pending = [];
         this.count = null;
-        return single.run(view, undefined, currentCount ?? undefined);
+        const handled = single.run(view, undefined, currentCount ?? undefined);
+        if (handled && this.temporaryNormal && mode === "insert") {
+          this.temporaryNormal = false;
+          this.restoreTemporaryNormalSelection(view);
+        }
+        this.clearTemporaryNormalIfDone();
+        return handled;
       }
     }
 
@@ -421,7 +617,7 @@ export class KakouneKeyProcessor {
     }
 
     this.pending = [];
-    this.lastMode = mode;
+    this.clearTemporaryNormalIfDone();
     return false;
   }
 }
@@ -445,7 +641,7 @@ function applySequentialInserts(view: EditorView, positions: number[], inserts: 
 
   view.dispatch({
     changes,
-    selection: EditorSelection.create(nextPositions.map(position => EditorSelection.cursor(position)), 0),
+    selection: EditorSelection.create(nextPositions.map(position => EditorSelection.range(position, position)), 0),
     effects: preserveReplaceAnchors ? [setKakouneReplaceInsertAnchorsEffect.of(nextPositions)] : []
   });
 

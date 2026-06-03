@@ -40,4 +40,27 @@ describe("runKakouneFixture", () => {
     expect(result.mode).toBe("select");
     expect(result.selectionRanges[0]?.head).toBe(0);
   });
+
+  it("surfaces jump count errors", () => {
+    const result = runKakouneFixture({
+      in: "foo\nbar\nqux",
+      cmd: "gj\n/bar<ret>\n/qux<ret>\n<c-o><c-o><c-o>\n42<c-i>"
+    });
+
+    expect(result.error).toBe("'exec': no next jump");
+  });
+
+  it("expands a simple insert-mode map from rc", () => {
+    const first = runKakouneFixture({
+      rc: "map global insert y '<a-;>gh'",
+      cmd: "ixyz<esc>"
+    });
+    const result = runKakouneFixture({
+      rc: "map global insert y '<a-;>gh'",
+      cmd: "ixyz<esc>."
+    });
+
+    expect(first.doc).toBe("zx");
+    expect(result.doc).toBe("zzxx");
+  });
 });
