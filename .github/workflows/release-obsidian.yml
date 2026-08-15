@@ -3,8 +3,8 @@ name: Release Obsidian Plugin
 on:
   push:
     tags:
-      - "obsidian-*"
-      - "obsidian-v*"
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*"
   workflow_dispatch:
     inputs:
       version:
@@ -20,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -51,10 +53,10 @@ jobs:
           node scripts/sync-obsidian-version.mjs
           VERSION=$(node -p "require('./packages/obsidian-kakoune/package.json').version")
           git add manifest.json versions.json packages/obsidian-kakoune/package.json packages/obsidian-kakoune/manifest.json packages/obsidian-kakoune/versions.json
-          git commit -m "chore(obsidian): release v$VERSION"
-          git tag -a "obsidian-v$VERSION" -m "obsidian-v$VERSION"
+          git commit -m "chore(obsidian): release $VERSION"
+          git tag -a "$VERSION" -m "$VERSION"
           git push origin HEAD:${{ github.ref_name }}
-          git push origin "obsidian-v$VERSION"
+          git push origin "$VERSION"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -69,12 +71,19 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION=$(node -p "require('./packages/obsidian-kakoune/package.json').version")
-            TAG="obsidian-v$VERSION"
+            TAG="$VERSION"
           else
             TAG="$GITHUB_REF_NAME"
           fi
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "Release tag: $TAG"
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            packages/obsidian-kakoune/main.js
+            packages/obsidian-kakoune/styles.css
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

@@ -1,4 +1,4 @@
-import { EditorSelection, type SelectionRange, type Text } from "@codemirror/state";
+import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import { redo, undo, isolateHistory } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
@@ -27,7 +27,6 @@ import {
   type KakouneFindKind,
   type KakouneJumpEntry,
   type KakouneJumpState,
-  type KakouneLastSelect,
   type KakouneMode
 } from "./state";
 
@@ -61,10 +60,6 @@ function pushJumpState(jumpState: KakouneJumpState, snapshot: KakouneJumpEntry):
   entries = entries.filter(entry => !sameJumpEntry(entry, snapshot));
   entries.push(snapshot);
   return { entries, currentIndex: entries.length };
-}
-
-function setJumpStateEffect(view: EditorView, jumpState: KakouneJumpState): void {
-  view.dispatch({ effects: setKakouneJumpStateEffect.of(jumpState) });
 }
 
 function setCommandError(view: EditorView, message: string | null): void {
@@ -445,32 +440,6 @@ function collectSelectionTexts(state: EditorView["state"], isLine: boolean): str
     const text = state.doc.sliceString(from, adjustedTo);
     return isLine && !text.endsWith("\n") ? `${text}\n` : text;
   });
-}
-
-function applySequentialInserts(view: EditorView, positions: number[], inserts: string[], preserveReplaceAnchors: boolean): boolean {
-  if (positions.length === 0 || inserts.length === 0) {
-    return false;
-  }
-
-  const changes: Array<{ from: number; insert: string }> = [];
-  const nextPositions: number[] = [];
-  let offset = 0;
-
-  for (let i = 0; i < positions.length; i += 1) {
-    const insert = inserts[Math.min(i, inserts.length - 1)];
-    const from = positions[i] + offset;
-    changes.push({ from, insert });
-    nextPositions.push(from + insert.length);
-    offset += insert.length;
-  }
-
-  view.dispatch({
-    changes,
-    selection: EditorSelection.create(nextPositions.map(position => EditorSelection.cursor(position)), 0),
-    effects: preserveReplaceAnchors ? [setKakouneReplaceInsertAnchorsEffect.of(nextPositions)] : []
-  });
-
-  return true;
 }
 
 function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }, count: number = 1): boolean {
@@ -1975,15 +1944,6 @@ function jumpToPreviousSearch(view: EditorView): boolean {
   }
 
   return findPrevious(view);
-}
-
-function selectSearchMatches(view: EditorView): boolean {
-  const query = getSearchQuery(view.state);
-  if (!query.valid || !query.search) {
-    return false;
-  }
-
-  return selectMatches(view);
 }
 
 /**

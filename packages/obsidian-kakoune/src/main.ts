@@ -1,4 +1,4 @@
-import { App, MarkdownView, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, MarkdownView, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from "obsidian";
 import { Compartment, Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { kakoune, kakouneStateField, getKakouneState } from "codemirror-kakoune";
@@ -45,22 +45,22 @@ export default class KakounePlugin extends Plugin {
       this.statusBarItemEl = this.addStatusBarItem();
       this.statusBarItemEl.addClass("kakoune-status-bar");
       this.statusBarItemEl.addEventListener("click", () => {
-        this.toggleEnabled();
+        void this.toggleEnabled();
       });
       this.renderStatusBar("select", []);
     }
 
     // Register Commands
     this.addCommand({
-      id: "toggle-kakoune",
-      name: "Toggle Kakoune modal editing",
+      id: "toggle",
+      name: "Toggle modal editing",
       callback: () => {
-        this.toggleEnabled();
+        void this.toggleEnabled();
       }
     });
 
     this.addCommand({
-      id: "kakoune-mode-select",
+      id: "switch-to-normal-mode",
       name: "Switch to normal mode",
       editorCallback: (editor) => {
         // @ts-expect-error Obsidian Editor provides cm EditorView internally
@@ -77,7 +77,7 @@ export default class KakounePlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "kakoune-mode-insert",
+      id: "switch-to-insert-mode",
       name: "Switch to insert mode",
       editorCallback: (editor) => {
         // @ts-expect-error Obsidian Editor provides cm EditorView internally
@@ -115,7 +115,8 @@ export default class KakounePlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const data = (await this.loadData()) as Partial<KakounePluginSettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
   }
 
   async saveSettings(): Promise<void> {
@@ -216,7 +217,7 @@ export default class KakounePlugin extends Plugin {
         this.statusBarItemEl = this.addStatusBarItem();
         this.statusBarItemEl.addClass("kakoune-status-bar");
         this.statusBarItemEl.addEventListener("click", () => {
-          this.toggleEnabled();
+          void this.toggleEnabled();
         });
       }
       const view = this.getActiveEditorView();
@@ -243,6 +244,53 @@ class KakouneSettingTab extends PluginSettingTab {
   constructor(app: App, plugin: KakounePlugin) {
     super(app, plugin);
     this.plugin = plugin;
+  }
+
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        name: "Enable Kakoune modal editing",
+        desc: "Toggle Kakoune modal keybindings and motions in Obsidian editor.",
+        control: {
+          type: "toggle",
+          key: "enabled",
+          defaultValue: DEFAULT_SETTINGS.enabled
+        }
+      },
+      {
+        name: "Show status bar item",
+        desc: "Display the active Kakoune mode (NORMAL / INSERT) in the status bar.",
+        control: {
+          type: "toggle",
+          key: "showStatusBar",
+          defaultValue: DEFAULT_SETTINGS.showStatusBar
+        }
+      },
+      {
+        name: "Default initial mode",
+        desc: "Initial mode when opening a document.",
+        control: {
+          type: "dropdown",
+          key: "defaultMode",
+          defaultValue: DEFAULT_SETTINGS.defaultMode,
+          options: {
+            select: "Normal",
+            insert: "Insert"
+          }
+        }
+      }
+    ];
+  }
+
+  async setControlValue(key: string, value: unknown): Promise<void> {
+    if (key === "enabled" && typeof value === "boolean") {
+      this.plugin.settings.enabled = value;
+    } else if (key === "showStatusBar" && typeof value === "boolean") {
+      this.plugin.settings.showStatusBar = value;
+    } else if (key === "defaultMode" && (value === "select" || value === "insert")) {
+      this.plugin.settings.defaultMode = value;
+    }
+    await this.plugin.saveSettings();
   }
 
   display(): void {

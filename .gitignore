@@ -6,3 +6,5 @@ coverage/
 *.log
 pnpm-debug.log*
 packages/obsidian-kakoune/main.js
+/main.js
+/styles.css

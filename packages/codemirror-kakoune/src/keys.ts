@@ -1,4 +1,4 @@
-import { EditorSelection, type SelectionRange } from "@codemirror/state";
+import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import {
   kakouneStateField,
