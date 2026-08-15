@@ -1,5 +1,5 @@
-import { EditorView } from "@codemirror/view";
-import { EditorState, type Extension } from "@codemirror/state";
+import { Decoration, drawSelection, EditorView } from "@codemirror/view";
+import { EditorState, type Extension, type Range } from "@codemirror/state";
 import { Prec } from "@codemirror/state";
 import { keymap, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { history } from "@codemirror/commands";
@@ -32,6 +32,7 @@ import {
   commitSearchPrompt,
   deleteSearchPromptChar,
   cancelSearchPrompt,
+  cancelPipePrompt,
   handleSearchPromptKey,
   commitSelectPrompt,
   deleteSelectPromptChar,
@@ -80,9 +81,7 @@ export {
   kakouneCommands
 } from "./commands";
 
-function createKakouneHandler() {
-  const processor = new KakouneKeyProcessor(buildKakouneCommands());
-
+function createKakouneHandler(processor: KakouneKeyProcessor) {
   return EditorView.domEventHandlers({
     beforeinput(event, view) {
       const state = view.state.field(kakouneStateField);
@@ -144,10 +143,16 @@ function createKakouneHandler() {
         }
       }
 
+      if (key === "<Esc>") {
+        return false;
+      }
+
       const mode = state.mode;
 
-      if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
-        return false;
+      if (mode === "insert") {
+        if (key !== "<A-;>" && !processor.hasInsertMapping(key)) {
+          return false;
+        }
       }
 
       const handled = processor.handle(mode, key, view);
@@ -182,29 +187,11 @@ function createKakouneHandler() {
   });
 }
 
-const kakouneModeAttributes = ViewPlugin.fromClass(
-  class {
-    constructor(view: EditorView) {
-      this.updateView(view);
-    }
-
-    update(update: { view: EditorView }): void {
-      this.updateView(update.view);
-    }
-
-    destroy(): void {
-      this.view?.dom.removeAttribute("data-kakoune-mode");
-      this.view = undefined;
-    }
-
-    private view?: EditorView;
-
-    private updateView(view: EditorView): void {
-      this.view = view;
-      view.dom.dataset.kakouneMode = view.state.field(kakouneStateField).mode;
-    }
-  }
-);
+const kakouneEditorAttributes = EditorView.editorAttributes.of(view => {
+  const kakouneState = view.state.field(kakouneStateField, false);
+  const mode = kakouneState ? kakouneState.mode : "select";
+  return { "data-kakoune-mode": mode };
+});
 
 const kakouneLineCursor = ViewPlugin.fromClass(
   class {
@@ -213,7 +200,9 @@ const kakouneLineCursor = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate): void {
-      if (update.selectionSet || update.docChanged) {
+      const selectionTypeChanged = update.startState.field(kakouneSelectionTypeField) !==
+        update.state.field(kakouneSelectionTypeField);
+      if (update.selectionSet || update.docChanged || selectionTypeChanged) {
         this.updateCursor(update.view);
       }
     }
@@ -231,6 +220,37 @@ const kakouneLineCursor = ViewPlugin.fromClass(
     }
   }
 );
+
+const kakouneSelectionMark = Decoration.mark({
+  class: "cm-selectionBackground cm-kakoune-selection"
+});
+
+const kakouneSelectionDecorations = EditorView.decorations.compute(
+  ["selection"],
+  state => {
+    const decorations: Range<Decoration>[] = [];
+    for (const selection of state.selection.ranges) {
+      if (!selection.empty) {
+        decorations.push(kakouneSelectionMark.range(selection.from, selection.to));
+      }
+    }
+    return Decoration.set(decorations);
+  }
+);
+
+const kakouneBaseTheme = EditorView.baseTheme({
+  "&[data-kakoune-mode='select'] .cm-cursor, &[data-kakoune-mode='select'] .cm-cursor-primary, &[data-kakoune-mode='select'] .cm-cursor-secondary": {
+    borderLeft: "1ch solid var(--color-accent, var(--caret-color, currentColor)) !important",
+    opacity: "0.7",
+    marginLeft: "0 !important"
+  },
+  "&[data-kakoune-mode='insert'] .cm-cursor, &[data-kakoune-mode='insert'] .cm-cursor-primary": {
+    borderLeft: "1.5px solid var(--caret-color, currentColor) !important"
+  },
+  "& .cm-selectionLayer > .cm-selectionBackground": {
+    display: "none !important"
+  }
+});
 
 /**
  * Creates a CodeMirror extension that enables Kakoune-style modal editing.
@@ -254,14 +274,19 @@ const kakouneLineCursor = ViewPlugin.fromClass(
  */
 export function kakoune(options: KakouneOptions = {}): Extension {
   const initialMode = options.initialMode ?? "select";
+  const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
   const extensions: Extension[] = [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
     kakouneSelectionTypeField,
     EditorState.allowMultipleSelections.of(true),
     history(),
-    kakouneModeAttributes,
+    drawSelection(),
+    kakouneEditorAttributes,
     kakouneLineCursor,
+    kakouneSelectionDecorations,
+    kakouneBaseTheme,
     Prec.highest(
       keymap.of([
         {
@@ -313,14 +338,27 @@ export function kakoune(options: KakouneOptions = {}): Extension {
             if (state.splitPrompt !== null) {
               return cancelSplitPrompt(view);
             }
+            if (state.pipePrompt !== null) {
+              return cancelPipePrompt(view);
+            }
 
-            return false;
+            processor.handle(state.mode, "<Esc>", view);
+            const whichKeyCallback = view.state.facet(kakouneWhichKeyFacet);
+            if (whichKeyCallback) {
+              const currentMode = view.state.field(kakouneStateField).mode;
+              whichKeyCallback(
+                processor.getPending(),
+                processor.getPendingItems(currentMode),
+                processor.isWaitingForChar()
+              );
+            }
+            return true;
           }
         }
       ])
     ),
     search(),
-    createKakouneHandler()
+    createKakouneHandler(processor)
   ];
 
   if (options.onWhichKey) {

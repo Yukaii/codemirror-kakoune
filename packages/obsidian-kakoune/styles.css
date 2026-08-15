@@ -1,0 +1,46 @@
+.kakoune-status-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+  user-select: none;
+}
+
+.kakoune-status-bar .kakoune-mode-badge {
+  padding: 1px 5px;
+  border-radius: var(--radius-s);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.kakoune-status-bar[data-mode="select"] .kakoune-mode-badge {
+  background-color: var(--color-accent);
+  color: var(--text-on-accent);
+}
+
+.kakoune-status-bar[data-mode="insert"] .kakoune-mode-badge {
+  background-color: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.kakoune-status-bar .kakoune-pending-keys,
+.kakoune-status-bar .kakoune-prompt {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.cm-editor[data-kakoune-mode="select"] .cm-cursor,
+.cm-editor[data-kakoune-mode="select"] .cm-cursor-primary,
+.cm-editor[data-kakoune-mode="select"] .cm-cursor-secondary {
+  border-left: 1ch solid var(--text-accent, var(--color-accent, var(--caret-color, #7aa2f7))) !important;
+  margin-left: 0 !important;
+  opacity: 0.7 !important;
+}
+
+.cm-editor[data-kakoune-mode="insert"] .cm-cursor,
+.cm-editor[data-kakoune-mode="insert"] .cm-cursor-primary {
+  border-left: 1.5px solid var(--caret-color, currentColor) !important;
+}

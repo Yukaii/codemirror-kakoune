@@ -5,3 +5,4 @@ coverage/
 .vite/
 *.log
 pnpm-debug.log*
+packages/obsidian-kakoune/main.js

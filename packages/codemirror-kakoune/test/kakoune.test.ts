@@ -85,6 +85,13 @@ describe("normalizeKeyStroke", () => {
 });
 
 describe("KakouneKeyProcessor", () => {
+  it("renders a drawn cursor for a zero-width selection", () => {
+    const view = createView("hello");
+
+    expect(view.state.selection.main.empty).toBe(true);
+    expect(view.dom.querySelector(".cm-cursorLayer")).not.toBeNull();
+  });
+
   it("tracks prefixes and executes complete sequences", () => {
     const view = createView("hello\nworld");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -142,6 +149,30 @@ describe("KakouneKeyProcessor", () => {
 
     expect(second.anchor).toBe(first.anchor);
     expect(second.head).toBe(view.state.doc.line(2).to + 1);
+  });
+
+  it("highlights only text for linewise and characterwise multiline selections", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    expect(processor.handle("select", "x", view)).toBe(true);
+
+    const highlights = Array.from(
+      view.dom.querySelectorAll<HTMLElement>(".cm-kakoune-selection")
+    );
+    expect(highlights.map(highlight => highlight.textContent)).toEqual(["alpha beta"]);
+    expect(view.dom.classList.contains("cm-line-selection")).toBe(true);
+
+    view.dispatch({ selection: EditorSelection.cursor(2) });
+    expect(processor.handle("select", "G", view)).toBe(true);
+    expect(processor.handle("select", "j", view)).toBe(true);
+
+    const multilineHighlights = Array.from(
+      view.dom.querySelectorAll<HTMLElement>(".cm-kakoune-selection")
+    );
+    expect(multilineHighlights.map(highlight => highlight.textContent).join(""))
+      .toBe("pha betagamma delta");
+    expect(view.dom.classList.contains("cm-line-selection")).toBe(false);
   });
 
   it("keeps an empty line in the x selection range", () => {
@@ -580,7 +611,11 @@ describe("kakoune extension", () => {
 
     // Select entire buffer
     expect(processor.handle("select", "%", view)).toBe(true);
-    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "s", bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
     expect(view.state.field(kakouneStateField).selectPrompt).toBe("");
 
     for (const key of "beta") {
@@ -610,7 +645,11 @@ describe("kakoune extension", () => {
 
     // Select all
     expect(processor.handle("select", "%", view)).toBe(true);
-    expect(processor.handle("select", "S", view)).toBe(true);
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "S", shiftKey: true, bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
     expect(view.state.field(kakouneStateField).splitPrompt).toBe("");
 
     for (const key of "\\s+") {
