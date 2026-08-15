@@ -32,6 +32,7 @@ import {
   commitSearchPrompt,
   deleteSearchPromptChar,
   cancelSearchPrompt,
+  cancelPipePrompt,
   handleSearchPromptKey,
   commitSelectPrompt,
   deleteSelectPromptChar,
@@ -80,9 +81,7 @@ export {
   kakouneCommands
 } from "./commands";
 
-function createKakouneHandler() {
-  const processor = new KakouneKeyProcessor(buildKakouneCommands());
-
+function createKakouneHandler(processor: KakouneKeyProcessor) {
   return EditorView.domEventHandlers({
     beforeinput(event, view) {
       const state = view.state.field(kakouneStateField);
@@ -142,6 +141,10 @@ function createKakouneHandler() {
           event.stopPropagation();
           return true;
         }
+      }
+
+      if (key === "<Esc>") {
+        return false;
       }
 
       const mode = state.mode;
@@ -254,6 +257,8 @@ const kakouneLineCursor = ViewPlugin.fromClass(
  */
 export function kakoune(options: KakouneOptions = {}): Extension {
   const initialMode = options.initialMode ?? "select";
+  const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
   const extensions: Extension[] = [
     kakouneInitialModeFacet.of(initialMode),
     kakouneStateField,
@@ -313,14 +318,27 @@ export function kakoune(options: KakouneOptions = {}): Extension {
             if (state.splitPrompt !== null) {
               return cancelSplitPrompt(view);
             }
+            if (state.pipePrompt !== null) {
+              return cancelPipePrompt(view);
+            }
 
-            return false;
+            processor.handle(state.mode, "<Esc>", view);
+            const whichKeyCallback = view.state.facet(kakouneWhichKeyFacet);
+            if (whichKeyCallback) {
+              const currentMode = view.state.field(kakouneStateField).mode;
+              whichKeyCallback(
+                processor.getPending(),
+                processor.getPendingItems(currentMode),
+                processor.isWaitingForChar()
+              );
+            }
+            return true;
           }
         }
       ])
     ),
     search(),
-    createKakouneHandler()
+    createKakouneHandler(processor)
   ];
 
   if (options.onWhichKey) {

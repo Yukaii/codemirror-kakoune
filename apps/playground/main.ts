@@ -181,7 +181,7 @@ function applyFontSettings(view: EditorView, family: FontFamily, size: FontSize)
 const updateStatus = (view: EditorView): void => {
   const state = view.state.field(kakouneStateField);
   const searchQuery = getSearchQuery(view.state);
-  modePill.textContent = state.mode;
+  modePill.textContent = state.mode === "select" ? "normal" : state.mode;
   const promptStr =
     state.searchPrompt !== null
       ? `search: ${state.searchPrompt}`

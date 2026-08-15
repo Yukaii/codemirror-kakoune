@@ -15,6 +15,11 @@ const DEFAULT_SETTINGS: KakounePluginSettings = {
   defaultMode: "select"
 };
 
+function formatModeLabel(mode: string): string {
+  if (mode === "select") return "NORMAL";
+  return mode.toUpperCase();
+}
+
 export default class KakounePlugin extends Plugin {
   settings: KakounePluginSettings = DEFAULT_SETTINGS;
   private statusBarItemEl: HTMLElement | null = null;
@@ -56,7 +61,7 @@ export default class KakounePlugin extends Plugin {
 
     this.addCommand({
       id: "kakoune-mode-select",
-      name: "Switch to select mode",
+      name: "Switch to normal mode",
       editorCallback: (editor) => {
         // @ts-expect-error Obsidian Editor provides cm EditorView internally
         const cm = editor.cm as EditorView | undefined;
@@ -184,7 +189,7 @@ export default class KakounePlugin extends Plugin {
     this.statusBarItemEl.setAttribute("data-mode", mode);
 
     const badge = this.statusBarItemEl.createSpan({ cls: "kakoune-mode-badge" });
-    badge.setText(mode.toUpperCase());
+    badge.setText(formatModeLabel(mode));
 
     if (pendingKeys.length > 0 || this.isWaitingForChar) {
       const pendingEl = this.statusBarItemEl.createSpan({ cls: "kakoune-pending-keys" });
@@ -244,7 +249,7 @@ class KakouneSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Show status bar item")
-      .setDesc("Display the active Kakoune mode (SELECT / INSERT) in the status bar.")
+      .setDesc("Display the active Kakoune mode (NORMAL / INSERT) in the status bar.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showStatusBar).onChange(async (value) => {
           this.plugin.settings.showStatusBar = value;
@@ -257,7 +262,7 @@ class KakouneSettingTab extends PluginSettingTab {
       .setDesc("Initial mode when opening a document.")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("select", "Select (Normal)")
+          .addOption("select", "Normal")
           .addOption("insert", "Insert")
           .setValue(this.plugin.settings.defaultMode)
           .onChange(async (value) => {

@@ -737,6 +737,12 @@ export function commitPipePrompt(view: EditorView): boolean {
   return true;
 }
 
+/** Cancels the active pipe prompt. */
+export function cancelPipePrompt(view: EditorView): boolean {
+  view.dispatch({ effects: setKakounePipePromptEffect.of(null) });
+  return true;
+}
+
 export function handlePipePromptKey(view: EditorView, key: string): boolean {
   const kakoune = view.state.field(kakouneStateField);
   const prompt = kakoune.pipePrompt;
@@ -2307,7 +2313,12 @@ function openLine(view: EditorView, direction: "above" | "below", count: number 
 
 function buildSelectBindings(): KakouneBinding[] {
   return [
-    { keys: ["<Esc>"], run: () => true, description: "Do nothing / Cancel prefix" },
+    { keys: ["<Esc>"], run: view => {
+      if (view.state.selection.ranges.length > 1) {
+        view.dispatch({ selection: EditorSelection.create([view.state.selection.main], 0) });
+      }
+      return true;
+    }, description: "Reduce selections to single selection / Cancel prefix" },
     { keys: ["i"], run: view => setMode(view, "insert"), description: "Insert mode before selections" },
     { keys: ["o"], run: (view, _arg, count) => openLine(view, "below", count ?? 1), description: "Insert new line below and enter insert mode" },
     { keys: ["O"], run: (view, _arg, count) => openLine(view, "above", count ?? 1), description: "Insert new line above and enter insert mode" },
