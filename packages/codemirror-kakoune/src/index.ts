@@ -187,29 +187,11 @@ function createKakouneHandler(processor: KakouneKeyProcessor) {
   });
 }
 
-const kakouneModeAttributes = ViewPlugin.fromClass(
-  class {
-    constructor(view: EditorView) {
-      this.updateView(view);
-    }
-
-    update(update: { view: EditorView }): void {
-      this.updateView(update.view);
-    }
-
-    destroy(): void {
-      this.view?.dom.removeAttribute("data-kakoune-mode");
-      this.view = undefined;
-    }
-
-    private view?: EditorView;
-
-    private updateView(view: EditorView): void {
-      this.view = view;
-      view.dom.dataset.kakouneMode = view.state.field(kakouneStateField).mode;
-    }
-  }
-);
+const kakouneEditorAttributes = EditorView.editorAttributes.of(view => {
+  const kakouneState = view.state.field(kakouneStateField, false);
+  const mode = kakouneState ? kakouneState.mode : "select";
+  return { "data-kakoune-mode": mode };
+});
 
 const kakouneLineCursor = ViewPlugin.fromClass(
   class {
@@ -239,14 +221,12 @@ const kakouneLineCursor = ViewPlugin.fromClass(
 
 const kakouneBaseTheme = EditorView.baseTheme({
   "&[data-kakoune-mode='select'] .cm-cursor, &[data-kakoune-mode='select'] .cm-cursor-primary, &[data-kakoune-mode='select'] .cm-cursor-secondary": {
-    borderLeft: "none",
-    backgroundColor: "var(--color-accent, var(--caret-color, currentColor))",
-    opacity: "0.6",
-    width: "0.55em",
-    pointerEvents: "none"
+    borderLeft: "1ch solid var(--color-accent, var(--caret-color, currentColor)) !important",
+    opacity: "0.7",
+    marginLeft: "0 !important"
   },
-  "&[data-kakoune-mode='insert'] .cm-cursor": {
-    borderLeftWidth: "1.5px"
+  "&[data-kakoune-mode='insert'] .cm-cursor, &[data-kakoune-mode='insert'] .cm-cursor-primary": {
+    borderLeft: "1.5px solid var(--caret-color, currentColor) !important"
   }
 });
 
@@ -280,7 +260,7 @@ export function kakoune(options: KakouneOptions = {}): Extension {
     kakouneSelectionTypeField,
     EditorState.allowMultipleSelections.of(true),
     history(),
-    kakouneModeAttributes,
+    kakouneEditorAttributes,
     kakouneLineCursor,
     kakouneBaseTheme,
     Prec.highest(
