@@ -6,7 +6,7 @@ import { history, defaultKeymap, historyKeymap } from "@codemirror/commands";
 import { foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldKeymap } from "@codemirror/language";
 import { closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
 import { lintKeymap } from "@codemirror/lint";
-import { kakoune, kakouneStateField } from "../src/index";
+import { kakoune, kakouneStateField } from "codemirror-kakoune";
 import {
   buildPlaygroundEditorTheme,
   isPlaygroundThemeName,

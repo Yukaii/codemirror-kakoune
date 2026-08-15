@@ -8,7 +8,7 @@ module.exports = {
       }
     ]
   },
-  testMatch: ["**/test/**/*.test.ts"],
+  testMatch: ["<rootDir>/test/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
   clearMocks: true
 };

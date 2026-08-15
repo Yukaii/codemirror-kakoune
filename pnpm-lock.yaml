@@ -7,6 +7,55 @@ settings:
 importers:
 
   .:
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  apps/playground:
+    dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.2
+        version: 6.20.2
+      '@codemirror/commands':
+        specifier: ^6.10.3
+        version: 6.10.3
+      '@codemirror/lang-javascript':
+        specifier: ^6.2.5
+        version: 6.2.5
+      '@codemirror/language':
+        specifier: ^6.12.3
+        version: 6.12.3
+      '@codemirror/lint':
+        specifier: ^6.9.6
+        version: 6.9.6
+      '@codemirror/search':
+        specifier: ^6.7.0
+        version: 6.7.0
+      '@codemirror/state':
+        specifier: ^6.6.0
+        version: 6.6.0
+      '@codemirror/view':
+        specifier: ^6.43.0
+        version: 6.43.0
+      '@lezer/highlight':
+        specifier: ^1.2.3
+        version: 1.2.3
+      codemirror:
+        specifier: ^6.0.2
+        version: 6.0.2
+      codemirror-kakoune:
+        specifier: workspace:*
+        version: link:../../packages/codemirror-kakoune
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.14
+        version: 8.0.14(@types/node@25.9.1)
+
+  packages/codemirror-kakoune:
     dependencies:
       '@codemirror/commands':
         specifier: ^6.10.3
@@ -21,30 +70,12 @@ importers:
         specifier: ^6.43.0
         version: 6.43.0
     devDependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.2
-        version: 6.20.2
-      '@codemirror/lang-javascript':
-        specifier: ^6.2.5
-        version: 6.2.5
-      '@codemirror/language':
-        specifier: ^6.12.3
-        version: 6.12.3
-      '@codemirror/lint':
-        specifier: ^6.9.6
-        version: 6.9.6
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.1
-      codemirror:
-        specifier: ^6.0.2
-        version: 6.0.2
       jest:
         specifier: ^30.4.2
         version: 30.4.2(@types/node@25.9.1)
@@ -60,9 +91,6 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
-      vite:
-        specifier: ^8.0.14
-        version: 8.0.14(@types/node@25.9.1)
 
 packages:
 

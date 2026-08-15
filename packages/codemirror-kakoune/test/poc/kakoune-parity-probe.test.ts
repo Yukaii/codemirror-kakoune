@@ -1,4 +1,4 @@
-import probeHelpers from "../../scripts/kakoune-parity-probe-helpers.cjs";
+import probeHelpers from "../../../../scripts/kakoune-parity-probe-helpers.cjs";
 import { runKakouneFixture, tokenizeKakouneCmd, parseRcMappings } from "./run-kakoune-fixture";
 
 const { parseParityProgress, renderParityProgress, selectNextProbeFixture, promoteParityFixture, findPromotableFixture } = probeHelpers;

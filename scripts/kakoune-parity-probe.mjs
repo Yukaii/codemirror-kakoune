@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   parseParityProgress,
@@ -9,8 +10,10 @@ import {
   selectNextProbeFixture
 } from "./kakoune-parity-probe-helpers.cjs";
 
-const ROOT = resolve(process.cwd(), "test/kakoune/test");
-const DOC_PATH = resolve(process.cwd(), "docs/kakoune-parity-progress.md");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const rootDir = resolve(__dirname, "..");
+const ROOT = resolve(rootDir, "test/kakoune/test");
+const DOC_PATH = resolve(rootDir, "docs/kakoune-parity-progress.md");
 function readFixture(name) {
   let dir = join(ROOT, name);
   if (!existsSync(dir)) {
@@ -117,7 +120,7 @@ function buildProbeTest(candidateName) {
 
 async function main() {
   const progress = parseParityProgress(readFileSync(DOC_PATH, "utf8"));
-  const tempDir = join(process.cwd(), "test/poc/.kakoune-parity-probe");
+  const tempDir = join(rootDir, "packages/codemirror-kakoune/test/poc/.kakoune-parity-probe");
   const testPath = join(tempDir, "probe.test.ts");
 
   mkdirSync(tempDir, { recursive: true });
@@ -130,7 +133,8 @@ async function main() {
 
       writeFileSync(testPath, buildProbeTest(fixture.name));
 
-      const result = spawnSync("pnpm", ["exec", "jest", "--runInBand", "--runTestsByPath", testPath], {
+      const result = spawnSync("pnpm", ["--filter", "codemirror-kakoune", "exec", "jest", "--runInBand", "--runTestsByPath", testPath], {
+        cwd: rootDir,
         encoding: "utf8"
       });
 

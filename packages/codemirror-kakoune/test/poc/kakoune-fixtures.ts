@@ -17,7 +17,13 @@ function readOptionalFile(path: string): string | undefined {
 }
 
 export function resolveKakouneRoot(override?: string): string {
-  return override || process.env.KAKOUNE_ROOT || join(process.cwd(), "test/kakoune");
+  if (override) return override;
+  if (process.env.KAKOUNE_ROOT) return process.env.KAKOUNE_ROOT;
+  const cwdTestPath = join(process.cwd(), "test/kakoune");
+  if (existsSync(cwdTestPath)) return cwdTestPath;
+  const relativeFromHere = join(__dirname, "../../../../test/kakoune");
+  if (existsSync(relativeFromHere)) return relativeFromHere;
+  return cwdTestPath;
 }
 
 function walk(root: string, dir: string, fixtures: KakouneFixture[]): void {
