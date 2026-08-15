@@ -38,6 +38,10 @@
 - deindent
 - indent
 - trim
+- align
+- align-tab
+- replace-lines
+- undo-after-replace-lines
 
 ## Still Red
 - repeat-insert/repeat-insert-mapped
@@ -54,18 +58,14 @@
 - pipe-to
 - pipe-to-reg
 - reload
-- replace-lines
 - replay-complex-insert
 - replay-macro
 - selection-undo/fold-redundant-entries
 - selection-undo/redo
 - selection-undo/undo
 - selection-undo/windisplay-hook
-- undo-after-replace-lines
 - user-modes/lock
 - user-modes/once
-- align
-- align-tab
 - pipe
 - pipe-reg
 - pipe-to

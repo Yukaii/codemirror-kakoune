@@ -189,4 +189,20 @@ describe("kakoune parity probe helpers", () => {
     expect(result.doc).toBe("line 3\n  line 1\n    line 2");
   });
 
+  it("aligns selections with spaces and tabs", () => {
+    const spaces = runKakouneFixture({ in: "a %(a)\nbb %(b)b\nccc %(c)cc", cmd: "&" });
+    expect(spaces.doc).toBe("a   a\nbb  bb\nccc ccc");
+
+    const tabs = runKakouneFixture({ in: "\t\t\t\tif (%(v)alid)\n\t\t\t\t%(x)", cmd: "&" });
+    expect(tabs.doc).toBe("\t\t\t\tif (valid)\n\t\t\t\t\tx");
+  });
+
+  it("replaces lines with yanked text across split selections and handles undo", () => {
+    const replaced = runKakouneFixture({ in: "line 1\nline 2\nline 3\nline 4", cmd: "ey%<a-s>R" });
+    expect(replaced.doc).toBe("linelinelineline");
+
+    const undone = runKakouneFixture({ in: "line 1\nline 2\nline 3\nline 4", cmd: "ey%<a-s>RuU" });
+    expect(undone.doc).toBe("linelinelineline");
+  });
+
 });

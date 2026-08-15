@@ -552,6 +552,66 @@ function indentSelectedLines(view: EditorView, indent: boolean, count: number = 
   return true;
 }
 
+function alignSelections(view: EditorView): boolean {
+  const state = view.state;
+  const ranges = state.selection.ranges;
+  if (ranges.length <= 1) {
+    return true;
+  }
+
+  // Calculate visual column for each selection's anchor / start position
+  const tabstop = 4; // Use 4-column tabstop if tabs are present, matching standard editor configuration
+  const visualCols = ranges.map(range => {
+    const line = state.doc.lineAt(range.head);
+    const prefix = state.doc.sliceString(line.from, Math.min(range.from, range.to));
+    let col = 0;
+    for (let i = 0; i < prefix.length; i += 1) {
+      if (prefix[i] === "\t") {
+        col += tabstop - (col % tabstop);
+      } else {
+        col += 1;
+      }
+    }
+    return { col, hasTabs: prefix.includes("\t") };
+  });
+
+  const maxCol = Math.max(...visualCols.map(v => v.col));
+  const changes: Array<{ from: number; to: number; insert: string }> = [];
+
+  for (let i = 0; i < ranges.length; i += 1) {
+    const { col, hasTabs } = visualCols[i];
+    const diff = maxCol - col;
+    if (diff > 0) {
+      const pos = Math.min(ranges[i].from, ranges[i].to);
+      const insert = hasTabs && diff % tabstop === 0
+        ? "\t".repeat(diff / tabstop)
+        : " ".repeat(diff);
+      changes.push({
+        from: pos,
+        to: pos,
+        insert
+      });
+    }
+  }
+
+  if (changes.length === 0) {
+    return true;
+  }
+
+  const changeSet = state.changes(changes);
+  const nextRanges = ranges.map(range => {
+    const anchor = changeSet.mapPos(range.anchor);
+    const head = changeSet.mapPos(range.head);
+    return EditorSelection.range(anchor, head);
+  });
+
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(nextRanges, state.selection.mainIndex)
+  });
+  return true;
+}
+
 function convertTabsSpaces(view: EditorView, toTabs: boolean): boolean {
   const state = view.state;
   const tabSize = 8; // Kakoune default tabstop is 8
@@ -609,8 +669,9 @@ function splitSelectionsOnLines(view: EditorView): boolean {
     for (let l = startLine.number; l <= endLine.number; l += 1) {
       const line = state.doc.line(l);
       const lineStart = Math.max(from, line.from);
-      const lineEnd = Math.min(to, line.to);
-      if (lineEnd > lineStart || (lineEnd === lineStart && startLine.number === endLine.number)) {
+      // Kakoune <a-s> splits selections across lines including the newline character (i.e. up to next line from or doc length)
+      const lineEnd = l < state.doc.lines ? Math.min(to, line.to + 1) : Math.min(to, line.to);
+      if (lineEnd >= lineStart && (lineEnd > lineStart || startLine.number === endLine.number || l < endLine.number)) {
         newRanges.push(
           range.head >= range.anchor
             ? EditorSelection.range(lineStart, lineEnd)
@@ -625,7 +686,11 @@ function splitSelectionsOnLines(view: EditorView): boolean {
   }
 
   view.dispatch({
-    selection: EditorSelection.create(newRanges, 0)
+    selection: EditorSelection.create(newRanges, 0),
+    effects: [
+      setKakouneSelectionTypeEffect.of("char"),
+      setKakouneSelectionLinewiseEffect.of(false)
+    ]
   });
   return true;
 }
@@ -1590,7 +1655,7 @@ function yankSelection(view: EditorView): boolean {
   return true;
 }
 
-function pasteRegister(view: EditorView, mode: "before" | "after" = "after"): boolean {
+function pasteRegister(view: EditorView, mode: "before" | "after" | "replace" = "after"): boolean {
   const state = view.state;
   const kakoune = state.field(kakouneStateField);
   const registerValues = kakoune.registerSelections ?? (kakoune.register ? [kakoune.register] : []);
@@ -1609,11 +1674,23 @@ function pasteRegister(view: EditorView, mode: "before" | "after" = "after"): bo
   }));
   const items = rangesBefore.map((range, index) => {
     const value = registerValues[index % registerValues.length];
-    const insertAt = mode === "after"
-      ? (range.empty ? Math.min(state.doc.length, range.head + 1) : range.to)
-      : range.from;
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const insertAt = mode === "before"
+      ? from
+      : mode === "after"
+        ? (range.empty ? Math.min(state.doc.length, range.head + 1) : to)
+        : from;
+    const replaceTo = mode === "replace"
+      ? to
+      : insertAt;
 
-    return { from: insertAt, insert: value };
+    let insertText = value;
+    if (mode === "replace" && !kakoune.registerLinewise && value.endsWith("\n")) {
+      insertText = value.slice(0, -1);
+    }
+
+    return { from: insertAt, to: replaceTo, insert: insertText };
   });
 
   if (linewise && items.length > 0) {
@@ -1626,7 +1703,9 @@ function pasteRegister(view: EditorView, mode: "before" | "after" = "after"): bo
   const changes = items
     .slice()
     .sort((a, b) => b.from - a.from)
-    .map(item => ({ from: item.from, insert: item.insert }));
+    .map(item => mode === "replace"
+      ? { from: item.from, to: item.to, insert: item.insert }
+      : { from: item.from, insert: item.insert });
 
   view.dispatch({
     changes
@@ -1650,13 +1729,22 @@ function pasteAllRegister(view: EditorView, mode: "before" | "after" | "replace"
     const insertAt = mode === "before"
       ? from
       : mode === "after"
-        ? (range.empty ? Math.min(state.doc.length, range.head + 1) : to)
+        ? (kakoune.registerLinewise
+          ? (range.empty ? state.doc.lineAt(range.head).to : to)
+          : (range.empty ? Math.min(state.doc.length, range.head + 1) : to))
         : from;
     const replaceTo = mode === "replace"
       ? (range.empty ? Math.min(state.doc.length, from + 1) : to)
       : insertAt;
 
-    return { from: insertAt, to: replaceTo, insert: all };
+    let insertText = all;
+    if (kakoune.registerLinewise && mode === "after") {
+      if (insertAt === state.doc.length && !state.doc.sliceString(0, insertAt).endsWith("\n")) {
+        insertText = "\n" + (insertText.endsWith("\n") ? insertText.slice(0, -1) : insertText);
+      }
+    }
+
+    return { from: insertAt, to: replaceTo, insert: insertText };
   });
 
   view.dispatch({
@@ -1746,6 +1834,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["y"], run: view => yankSelection(view), description: "Yank selection" },
     { keys: ["p"], run: view => pasteRegister(view, "after"), description: "Paste register after" },
     { keys: ["P"], run: view => pasteRegister(view, "before"), description: "Paste register before" },
+    { keys: ["R"], run: view => pasteRegister(view, "replace"), description: "Replace selection with register" },
     { keys: ["<A-p>"], run: view => pasteAllRegister(view, "after"), description: "Paste all after" },
     { keys: ["<A-P>"], run: view => pasteAllRegister(view, "before"), description: "Paste all before" },
     { keys: ["<A-R>"], run: view => pasteAllRegister(view, "replace"), description: "Paste all replace" },
@@ -1764,6 +1853,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: [">"], run: (view, _arg, count) => indentSelectedLines(view, true, count ?? 1), description: "Indent selected lines" },
     { keys: ["<A-s>"], run: view => splitSelectionsOnLines(view), description: "Split selections on line boundaries" },
     { keys: ["_"], run: view => trimSelectionsWhitespace(view), description: "Trim selections whitespace" },
+    { keys: ["&"], run: view => alignSelections(view), description: "Align selections" },
     { keys: ["@"], run: view => convertTabsSpaces(view, false), description: "Convert tabs to spaces" },
     { keys: ["<A-@>"], run: view => convertTabsSpaces(view, true), description: "Convert spaces to tabs" },
     { keys: ["f"], run: (view, arg) => {
