@@ -1,6 +1,7 @@
 # CodeMirror Kakoune
 
 [![npm version](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune)
+[![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune)
 
 A CodeMirror 6 extension that brings Kakoune-style modal editing into the browser.
 
@@ -10,6 +11,12 @@ Install the package via `npm`, `pnpm`, or `yarn`:
 
 ```bash
 npm install codemirror-kakoune
+```
+
+Or via [JSR](https://jsr.io/@ykmade/codemirror-kakoune):
+
+```bash
+npx jsr add @ykmade/codemirror-kakoune
 ```
 
 ## Usage
