@@ -5,6 +5,7 @@ import { KakouneKeyProcessor } from "../../src/keys";
 import {
   buildKakouneCommands,
   handleSearchPromptKey,
+  handleSelectPromptKey,
   handleSplitPromptKey,
   handlePipePromptKey
 } from "../../src/commands";
@@ -219,6 +220,11 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
       const state = getKakouneState(view.state);
       if (state.searchPrompt !== null) {
         handleSearchPromptKey(view, token);
+        continue;
+      }
+
+      if (state.selectPrompt !== null) {
+        handleSelectPromptKey(view, token);
         continue;
       }
 

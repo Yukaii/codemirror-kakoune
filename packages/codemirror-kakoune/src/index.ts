@@ -12,6 +12,12 @@ import {
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect,
   setKakouneLastSelectEffect,
+  setKakouneSearchPromptEffect,
+  setKakouneSearchSelectionEffect,
+  setKakouneSelectPromptEffect,
+  setKakouneSelectSelectionEffect,
+  setKakouneSplitPromptEffect,
+  setKakouneSplitSelectionEffect,
   type KakouneFindKind,
   type KakouneLastSelect,
   type KakouneMode,
@@ -27,7 +33,15 @@ import {
   deleteSearchPromptChar,
   cancelSearchPrompt,
   handleSearchPromptKey,
-  handleSplitPromptKey
+  commitSelectPrompt,
+  deleteSelectPromptChar,
+  cancelSelectPrompt,
+  handleSelectPromptKey,
+  commitSplitPrompt,
+  deleteSplitPromptChar,
+  cancelSplitPrompt,
+  handleSplitPromptKey,
+  kakouneCommands
 } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem, KakouneFindKind, KakouneLastSelect } from "./state";
@@ -38,12 +52,33 @@ export {
   setKakouneNamedRegistersEffect,
   setKakouneSelectionHistoryEffect,
   setKakouneLastSelectEffect,
+  setKakouneSearchPromptEffect,
+  setKakouneSearchSelectionEffect,
+  setKakouneSelectPromptEffect,
+  setKakouneSelectSelectionEffect,
+  setKakouneSplitPromptEffect,
+  setKakouneSplitSelectionEffect,
   kakouneWhichKeyFacet,
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect
 } from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
-export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
+export {
+  buildKakouneCommands,
+  commitSearchPrompt,
+  deleteSearchPromptChar,
+  cancelSearchPrompt,
+  handleSearchPromptKey,
+  commitSelectPrompt,
+  deleteSelectPromptChar,
+  cancelSelectPrompt,
+  handleSelectPromptKey,
+  commitSplitPrompt,
+  deleteSplitPromptChar,
+  cancelSplitPrompt,
+  handleSplitPromptKey,
+  kakouneCommands
+} from "./commands";
 
 function createKakouneHandler() {
   const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -51,8 +86,13 @@ function createKakouneHandler() {
   return EditorView.domEventHandlers({
     beforeinput(event, view) {
       const state = view.state.field(kakouneStateField);
-      // Block all direct text input in select mode and during search prompt
-      if (state.mode !== "insert" || state.searchPrompt !== null) {
+      // Block all direct text input in select mode and during any prompt
+      if (
+        state.mode !== "insert" ||
+        state.searchPrompt !== null ||
+        state.selectPrompt !== null ||
+        state.splitPrompt !== null
+      ) {
         event.preventDefault();
         event.stopPropagation();
         return true;
@@ -73,6 +113,18 @@ function createKakouneHandler() {
           return false;
         }
         const handledPrompt = handleSearchPromptKey(view, key);
+        if (handledPrompt) {
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+      }
+
+      if (state.selectPrompt !== null) {
+        if (key === "<Enter>" || key === "<Backspace>" || key === "<Esc>") {
+          return false;
+        }
+        const handledPrompt = handleSelectPromptKey(view, key);
         if (handledPrompt) {
           event.preventDefault();
           event.stopPropagation();
@@ -216,35 +268,53 @@ export function kakoune(options: KakouneOptions = {}): Extension {
           key: "Enter",
           run(view) {
             const state = view.state.field(kakouneStateField);
-            if (state.searchPrompt === null) {
-              // Swallow Enter in select mode so the default keymap doesn't insert a newline
-              return state.mode !== "insert";
+            if (state.searchPrompt !== null) {
+              return commitSearchPrompt(view);
+            }
+            if (state.selectPrompt !== null) {
+              return commitSelectPrompt(view);
+            }
+            if (state.splitPrompt !== null) {
+              return commitSplitPrompt(view);
             }
 
-            return commitSearchPrompt(view);
+            // Swallow Enter in select mode so the default keymap doesn't insert a newline
+            return state.mode !== "insert";
           }
         },
         {
           key: "Backspace",
           run(view) {
             const state = view.state.field(kakouneStateField);
-            if (state.searchPrompt === null) {
-              // Swallow Backspace in select mode so the default keymap doesn't delete
-              return state.mode !== "insert";
+            if (state.searchPrompt !== null) {
+              return deleteSearchPromptChar(view);
+            }
+            if (state.selectPrompt !== null) {
+              return deleteSelectPromptChar(view);
+            }
+            if (state.splitPrompt !== null) {
+              return deleteSplitPromptChar(view);
             }
 
-            return deleteSearchPromptChar(view);
+            // Swallow Backspace in select mode so the default keymap doesn't delete
+            return state.mode !== "insert";
           }
         },
         {
           key: "Escape",
           run(view) {
             const state = view.state.field(kakouneStateField);
-            if (state.searchPrompt === null) {
-              return false;
+            if (state.searchPrompt !== null) {
+              return cancelSearchPrompt(view);
+            }
+            if (state.selectPrompt !== null) {
+              return cancelSelectPrompt(view);
+            }
+            if (state.splitPrompt !== null) {
+              return cancelSplitPrompt(view);
             }
 
-            return cancelSearchPrompt(view);
+            return false;
           }
         }
       ])

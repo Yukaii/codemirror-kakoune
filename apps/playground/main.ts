@@ -182,13 +182,18 @@ const updateStatus = (view: EditorView): void => {
   const state = view.state.field(kakouneStateField);
   const searchQuery = getSearchQuery(view.state);
   modePill.textContent = state.mode;
-  const searchStr =
+  const promptStr =
     state.searchPrompt !== null
-      ? `select: ${state.searchPrompt}`
-      : searchQuery.valid && searchQuery.search
-        ? searchQuery.search
-        : "—";
-  searchContent.textContent = searchStr;
+      ? `search: ${state.searchPrompt}`
+      : state.selectPrompt !== null
+        ? `select: ${state.selectPrompt}`
+        : state.splitPrompt !== null
+          ? `split: ${state.splitPrompt}`
+          : searchQuery.valid && searchQuery.search
+            ? searchQuery.search
+            : "—";
+  searchContent.textContent = promptStr;
+  searchPill.textContent = promptStr;
   const registerStr = state.register ? JSON.stringify(state.register) : '""';
   registerContent.textContent = registerStr;
 };

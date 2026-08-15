@@ -89,6 +89,10 @@ export interface KakouneState {
   searchPrompt: string | null;
   /** Snapshot of selections before opening the search prompt, or `null`. */
   searchSelection: Array<{ anchor: number; head: number }> | null;
+  /** Active select regex prompt text, or `null` if no select prompt is open. */
+  selectPrompt: string | null;
+  /** Snapshot of selections before opening the select prompt, or `null`. */
+  selectSelection: Array<{ anchor: number; head: number }> | null;
   /** Active split prompt text, or `null` if no split prompt is open. */
   splitPrompt: string | null;
   /** Snapshot of selections before opening the split prompt, or `null`. */
@@ -149,6 +153,8 @@ export const setKakouneSelectionLinewiseEffect: StateEffectType<boolean> = State
 export const setKakouneRegisterLinewiseEffect: StateEffectType<boolean> = StateEffect.define<boolean>();
 /** State effect that sets or clears the search prompt text. */
 export const setKakouneSearchPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
+/** State effect that sets or clears the select prompt text. */
+export const setKakouneSelectPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
 /** State effect that sets or clears the split prompt text. */
 export const setKakouneSplitPromptEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
 /**
@@ -156,6 +162,12 @@ export const setKakouneSplitPromptEffect: StateEffectType<string | null> = State
  * prompt, so they can be restored if the search is cancelled.
  */
 export const setKakouneSearchSelectionEffect: StateEffectType<
+  Array<{ anchor: number; head: number }> | null
+> = StateEffect.define<
+  Array<{ anchor: number; head: number }> | null
+>();
+/** State effect that stores a snapshot of selections before opening the select prompt. */
+export const setKakouneSelectSelectionEffect: StateEffectType<
   Array<{ anchor: number; head: number }> | null
 > = StateEffect.define<
   Array<{ anchor: number; head: number }> | null
@@ -227,6 +239,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       replaceInsertAnchors: null,
       searchPrompt: null,
       searchSelection: null,
+      selectPrompt: null,
+      selectSelection: null,
       splitPrompt: null,
       splitSelection: null,
       pipePrompt: null,
@@ -287,6 +301,10 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, searchPrompt: effect.value };
       } else if (effect.is(setKakouneSearchSelectionEffect)) {
         next = { ...next, searchSelection: effect.value };
+      } else if (effect.is(setKakouneSelectPromptEffect)) {
+        next = { ...next, selectPrompt: effect.value };
+      } else if (effect.is(setKakouneSelectSelectionEffect)) {
+        next = { ...next, selectSelection: effect.value };
       } else if (effect.is(setKakouneSplitPromptEffect)) {
         next = { ...next, splitPrompt: effect.value };
       } else if (effect.is(setKakouneSplitSelectionEffect)) {
