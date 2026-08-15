@@ -95,6 +95,21 @@ function enterInsert(cm: Cm, after = false): void {
   setMode(cm, "insert");
 }
 
+function insertLine(cm: Cm, above: boolean): void {
+  const selections = cm.listSelections();
+  const next = selections.map(selection => {
+    const line = selection.head.line + (above ? 0 : 1);
+    const position = { line, ch: 0 };
+    return { anchor: position, head: position };
+  });
+  for (const selection of selections.slice().reverse()) {
+    const line = selection.head.line + (above ? 0 : 1);
+    cm.replaceRange("\n", { line, ch: 0 });
+  }
+  cm.setSelections(next);
+  setMode(cm, "insert");
+}
+
 function selectLine(cm: Cm): void {
   cm.setSelections(cm.listSelections().map(selection => {
     const from = { line: selection.head.line, ch: 0 };
@@ -127,11 +142,15 @@ const selectCommands: Record<string, Command> = {
   "$": cm => cm.execCommand("goLineEnd"),
   w: cm => cm.execCommand("goWordRight"),
   b: cm => cm.execCommand("goGroupLeft"),
+  e: cm => cm.execCommand("goWordRight"),
   x: selectLine,
   u: cm => cm.undo(),
   U: cm => cm.redo(),
   d: deleteSelection,
-  y: cm => cm.execCommand("copy")
+  y: cm => cm.execCommand("copy"),
+  c: cm => { deleteSelection(cm); setMode(cm, "insert"); },
+  o: cm => insertLine(cm, false),
+  O: cm => insertLine(cm, true)
 };
 
 // Keep command registration separate from the keymap, matching CM5's Sublime
@@ -152,13 +171,19 @@ export const kakouneKeyMap = {
   G: (editor: Cm) => handleGPrefix(editor, "g"),
   H: normalCommand("h", selectCommands.h), J: normalCommand("j", selectCommands.j), K: normalCommand("k", selectCommands.k), L: normalCommand("l", selectCommands.l),
   W: normalCommand("w", selectCommands.w), B: normalCommand("b", selectCommands.b), X: normalCommand("x", selectCommands.x), D: normalCommand("d", selectCommands.d),
-  I: (editor: Cm) => enterInsert(editor), A: (editor: Cm) => enterInsert(editor, true),
+  E: normalCommand("e", selectCommands.e),
+  I: (editor: Cm) => { moveToLineBoundary(editor, false); enterInsert(editor); },
+  A: (editor: Cm) => { moveToLineBoundary(editor, true); enterInsert(editor, true); },
+  "Shift-G": (editor: Cm) => jumpToDocument(editor, true),
+  O: selectCommands.O,
   U: selectCommands.u, "Shift-U": selectCommands.U,
   g: (editor: Cm) => handleGPrefix(editor, "g"),
   h: normalCommand("h", selectCommands.h), j: normalCommand("j", selectCommands.j), k: normalCommand("k", selectCommands.k), l: normalCommand("l", selectCommands.l),
   w: normalCommand("w", selectCommands.w), b: normalCommand("b", selectCommands.b), x: normalCommand("x", selectCommands.x), d: normalCommand("d", selectCommands.d),
+  e: normalCommand("e", selectCommands.e),
   i: (editor: Cm) => enterInsert(editor), a: (editor: Cm) => enterInsert(editor, true),
-  u: selectCommands.u,
+  o: selectCommands.o, "Shift-O": selectCommands.O,
+  c: selectCommands.c, y: selectCommands.y, u: selectCommands.u,
   Esc: (editor: Cm) => setMode(editor, "select"),
   nofallthrough: true
 } as unknown as CodeMirror.KeyMap;

@@ -23,7 +23,13 @@ html, body { overflow-x: hidden; }
 
 .CodeMirror-linenumber { color: var(--muted); }
 .CodeMirror-cursor { border-left-color: var(--accent); }
-.CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor { border-left: 1ch solid var(--accent); opacity: .7; }
+.CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor {
+  width: .7em;
+  border: 0;
+  background: var(--accent);
+  opacity: .7;
+}
+.CodeMirror[data-kakoune-mode="insert"] .CodeMirror-cursor { border-left: 1.5px solid var(--text); }
 .CodeMirror-selected { background: var(--selection); }
 
 @media (max-width: 768px) {
