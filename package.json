@@ -23,6 +23,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "check:jsr": "npx jsr publish --dry-run",
+    "version": "node scripts/sync-jsr-version.mjs && git add jsr.json",
     "probe:parity": "node scripts/kakoune-parity-probe.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
