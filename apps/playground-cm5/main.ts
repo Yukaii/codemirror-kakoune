@@ -2,7 +2,6 @@ import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/markdown/markdown";
 import { kakoune } from "codemirror-kakoune-cm5";
-import "../playground/style.css";
 import "./style.css";
 
 const textarea = document.querySelector<HTMLTextAreaElement>("#editor-input");
@@ -22,7 +21,11 @@ const settingsToggle = document.querySelector<HTMLButtonElement>("#config-toggle
 const settings = document.querySelector<HTMLDivElement>("#config-modal");
 const settingsClose = document.querySelector<HTMLButtonElement>("#config-modal-close");
 const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select");
+const fontFamilySelect = document.querySelector<HTMLSelectElement>("#font-family-select");
 const fontSizeSelect = document.querySelector<HTMLSelectElement>("#font-size-select");
+const lineNumbersSelect = document.querySelector<HTMLSelectElement>("#line-numbers-select");
+const layoutSelect = document.querySelector<HTMLSelectElement>("#layout-select");
+const vk = document.querySelector<HTMLElement>("#vk");
 
 function updateStatus(): void {
   const mode = wrapper.dataset.kakouneMode === "insert" ? "insert" : "select";
@@ -40,17 +43,48 @@ function applyFontSize(size: string): void {
   window.localStorage.setItem("codemirror-kakoune.cm5.fontSize", size);
 }
 
+function applyFontFamily(family: string): void {
+  const values: Record<string, string> = {
+    mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+    sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    serif: 'Georgia, Cambria, "Times New Roman", Times, serif'
+  };
+  wrapper.style.setProperty("--cm5-font-family", values[family] ?? values.mono);
+  window.localStorage.setItem("codemirror-kakoune.cm5.fontFamily", family);
+}
+
 const savedTheme = window.localStorage.getItem("codemirror-kakoune.cm5.theme") ?? "night";
+const savedFontFamily = window.localStorage.getItem("codemirror-kakoune.cm5.fontFamily") ?? "mono";
 const savedFontSize = window.localStorage.getItem("codemirror-kakoune.cm5.fontSize") ?? "15";
 if (themeSelect) {
   themeSelect.value = savedTheme;
   themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
 }
+if (fontFamilySelect) {
+  fontFamilySelect.value = savedFontFamily;
+  fontFamilySelect.addEventListener("change", () => applyFontFamily(fontFamilySelect.value));
+}
 if (fontSizeSelect) {
   fontSizeSelect.value = savedFontSize;
   fontSizeSelect.addEventListener("change", () => applyFontSize(fontSizeSelect.value));
 }
+if (lineNumbersSelect) {
+  const savedLineNumbers = window.localStorage.getItem("codemirror-kakoune.cm5.lineNumbers") ?? "on";
+  lineNumbersSelect.value = savedLineNumbers;
+  editor.setOption("lineNumbers", savedLineNumbers === "on");
+  lineNumbersSelect.addEventListener("change", () => {
+    editor.setOption("lineNumbers", lineNumbersSelect.value === "on");
+    window.localStorage.setItem("codemirror-kakoune.cm5.lineNumbers", lineNumbersSelect.value);
+  });
+}
+if (layoutSelect) {
+  layoutSelect.value = window.localStorage.getItem("codemirror-kakoune.cm5.layout") ?? "vertical";
+  layoutSelect.addEventListener("change", () => {
+    window.localStorage.setItem("codemirror-kakoune.cm5.layout", layoutSelect.value);
+  });
+}
 applyTheme(savedTheme);
+applyFontFamily(savedFontFamily);
 applyFontSize(savedFontSize);
 
 settingsToggle?.addEventListener("click", () => settings?.classList.toggle("show"));
@@ -65,3 +99,34 @@ const observer = new MutationObserver(updateStatus);
 observer.observe(wrapper, { attributes: true, attributeFilter: ["data-kakoune-mode"] });
 editor.on("cursorActivity", updateStatus);
 updateStatus();
+
+if (vk) {
+  let pendingCtrl = false;
+  let pendingAlt = false;
+  const updateModifiers = () => {
+    vk.querySelector("[data-mod='ctrl']")?.classList.toggle("active", pendingCtrl);
+    vk.querySelector("[data-mod='alt']")?.classList.toggle("active", pendingAlt);
+  };
+  vk.addEventListener("pointerdown", event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".vk-key");
+    if (!button) return;
+    event.preventDefault();
+    button.classList.add("pressed");
+    const mod = button.dataset.mod;
+    if (mod === "ctrl") pendingCtrl = !pendingCtrl;
+    else if (mod === "alt") pendingAlt = !pendingAlt;
+    else {
+      const key = button.dataset.key ?? "";
+      const code = button.dataset.code ?? "";
+      editor.getInputField().dispatchEvent(new KeyboardEvent("keydown", {
+        key, code, ctrlKey: pendingCtrl, altKey: pendingAlt, bubbles: true, cancelable: true
+      }));
+      pendingCtrl = false;
+      pendingAlt = false;
+    }
+    updateModifiers();
+  });
+  document.addEventListener("pointerup", () => {
+    vk.querySelectorAll(".vk-key.pressed").forEach(button => button.classList.remove("pressed"));
+  });
+}

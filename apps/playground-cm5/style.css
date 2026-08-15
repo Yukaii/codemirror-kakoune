@@ -1,8 +1,11 @@
+@import "../playground/style.css";
+
 /* CM5-specific additions; layout and tokens come from the CM6 playground. */
 .CodeMirror {
   height: 100%;
   color: var(--text);
   background: var(--panel);
+  font-family: var(--cm5-font-family, inherit);
   font-size: var(--cm5-font-size, 14px);
   line-height: 1.6;
 }
