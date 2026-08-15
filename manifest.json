@@ -1,0 +1,10 @@
+{
+  "id": "kakoune",
+  "name": "Kakoune",
+  "version": "0.1.0",
+  "minAppVersion": "0.15.0",
+  "description": "Kakoune modal editing keybindings for Obsidian.",
+  "author": "Yukai Huang",
+  "authorUrl": "https://github.com/Yukaii",
+  "isDesktopOnly": false
+}

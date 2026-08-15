@@ -50,7 +50,7 @@ jobs:
           pnpm --filter obsidian-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
           node scripts/sync-obsidian-version.mjs
           VERSION=$(node -p "require('./packages/obsidian-kakoune/package.json').version")
-          git add packages/obsidian-kakoune/package.json packages/obsidian-kakoune/manifest.json packages/obsidian-kakoune/versions.json
+          git add manifest.json versions.json packages/obsidian-kakoune/package.json packages/obsidian-kakoune/manifest.json packages/obsidian-kakoune/versions.json
           git commit -m "chore(obsidian): release v$VERSION"
           git tag -a "obsidian-v$VERSION" -m "obsidian-v$VERSION"
           git push origin HEAD:${{ github.ref_name }}
