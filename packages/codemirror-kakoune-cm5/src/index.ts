@@ -80,6 +80,23 @@ function move(cm: Cm, delta: (cursor: CodeMirror.Position, cm: Cm) => CodeMirror
   })));
 }
 
+function selectWordMotion(cm: Cm, direction: -1 | 1): void {
+  cm.setSelections(cm.listSelections().map(selection => {
+    const anchor = selection.head;
+    const head = cm.findPosH(anchor, direction, "word", false);
+    return { anchor, head };
+  }));
+}
+
+function selectWordEnd(cm: Cm): void {
+  cm.setSelections(cm.listSelections().map(selection => {
+    const anchor = selection.head;
+    const next = cm.findPosH(anchor, 1, "word", false);
+    const head = cm.findPosH(next, 1, "char", false);
+    return { anchor, head };
+  }));
+}
+
 function horizontal(direction: -1 | 1): Command {
   return cm => move(cm, (cursor, editor) => editor.findPosH(cursor, direction, "char", false));
 }
@@ -140,9 +157,9 @@ const selectCommands: Record<string, Command> = {
   k: vertical(-1),
   "0": cm => cm.execCommand("goLineStart"),
   "$": cm => cm.execCommand("goLineEnd"),
-  w: cm => cm.execCommand("goWordRight"),
-  b: cm => cm.execCommand("goGroupLeft"),
-  e: cm => cm.execCommand("goWordRight"),
+  w: cm => selectWordMotion(cm, 1),
+  b: cm => selectWordMotion(cm, -1),
+  e: selectWordEnd,
   x: selectLine,
   u: cm => cm.undo(),
   U: cm => cm.redo(),
