@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/codemirror-kakoune" },
-    { "path": "./apps/playground" }
+    { "path": "./apps/playground" },
+    { "path": "./packages/obsidian-kakoune" }
   ]
 }

@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter playground dev",
-    "build": "pnpm --filter codemirror-kakoune build && pnpm --filter playground build",
+    "build": "pnpm --filter codemirror-kakoune build && pnpm --filter playground build && pnpm --filter obsidian-kakoune build",
     "build:lib": "pnpm --filter codemirror-kakoune build",
     "build:playground": "pnpm --filter playground build",
+    "build:obsidian": "pnpm --filter obsidian-kakoune build",
     "test": "pnpm --filter codemirror-kakoune test",
     "test:watch": "pnpm --filter codemirror-kakoune test:watch",
     "check:jsr": "pnpm --filter codemirror-kakoune check:jsr",

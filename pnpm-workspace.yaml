@@ -3,4 +3,5 @@ packages:
   - "apps/*"
   - "plugins/*"
 allowBuilds:
+  esbuild: true
   unrs-resolver: true

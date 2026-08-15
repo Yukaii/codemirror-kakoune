@@ -1,0 +1,24 @@
+{
+  "name": "obsidian-kakoune",
+  "version": "0.1.0",
+  "description": "Kakoune modal editing for Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "codemirror-kakoune": "workspace:*"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.0",
+    "@types/node": "^25.9.1",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.7.2",
+    "typescript": "^6.0.3"
+  }
+}
