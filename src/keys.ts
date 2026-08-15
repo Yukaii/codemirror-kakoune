@@ -1,6 +1,13 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { kakouneStateField, setKakouneReplaceInsertAnchorsEffect, setKakouneSelectionRepeatCountEffect, type KakouneMode, type WhichKeyItem } from "./state";
+import {
+  kakouneStateField,
+  setKakouneNamedRegistersEffect,
+  setKakouneReplaceInsertAnchorsEffect,
+  setKakouneSelectionRepeatCountEffect,
+  type KakouneMode,
+  type WhichKeyItem
+} from "./state";
 
 /** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
@@ -235,6 +242,9 @@ export class KakouneKeyProcessor {
     this.normalMappings = mappings;
   }
 
+  private macroRecordingRegister: string | null = null;
+  private macroKeys: string[] = [];
+
   setUserModes(modes: Map<string, Map<string, string[]>>): void {
     this.userModes = modes;
   }
@@ -430,6 +440,10 @@ export class KakouneKeyProcessor {
       this.recordKey(key);
     }
 
+    if (this.macroRecordingRegister !== null && key !== "Q") {
+      this.macroKeys.push(key);
+    }
+
     if (key === "<Esc>") {
       this.reset();
       this.activeUserMode = null;
@@ -548,6 +562,36 @@ export class KakouneKeyProcessor {
       return true;
     }
 
+    if (effectiveMode === "select" && key === "Q" && this.pending.length === 0) {
+      if (this.macroRecordingRegister !== null) {
+        // Stop recording and save to named register
+        const regName = this.macroRecordingRegister;
+        this.macroRecordingRegister = null;
+        const keysStr = this.macroKeys.map(k => k === "<Esc>" ? "<esc>" : k === "<Enter>" ? "<ret>" : k).join("");
+        this.macroKeys = [];
+        const namedRegs = new Map(view.state.field(kakouneStateField).namedRegisters);
+        namedRegs.set(regName, keysStr);
+        view.dispatch({ effects: setKakouneNamedRegistersEffect.of(namedRegs) });
+        return true;
+      }
+      // Start recording macro to default register @
+      this.macroRecordingRegister = "@";
+      this.macroKeys = [];
+      return true;
+    }
+
+    if (effectiveMode === "select" && key === "q" && this.pending.length === 0) {
+      const namedRegs = view.state.field(kakouneStateField).namedRegisters;
+      const macroStr = namedRegs.get("@");
+      if (macroStr) {
+        for (const token of tokenizeSimpleKeys(macroStr)) {
+          const curMode = view.state.field(kakouneStateField).mode;
+          this.handle(curMode, token, view);
+        }
+        return true;
+      }
+    }
+
     if (effectiveMode === "select" && key === "+") {
       const repeatCount = view.state.field(kakouneStateField).selectionRepeatCount;
       view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(repeatCount + 1) });
@@ -562,17 +606,15 @@ export class KakouneKeyProcessor {
             return false;
           }
 
-          const register = currentView.state.field(kakouneStateField).register;
+          const kakoune = currentView.state.field(kakouneStateField);
+          const register = arg === '"'
+            ? kakoune.register
+            : (kakoune.namedRegisters.get(arg) ?? (arg === "@" ? kakoune.namedRegisters.get("@") ?? "" : ""));
           if (!register) {
             return true;
           }
 
-          if (arg !== '"') {
-            return true;
-          }
-
-          const kakoune = currentView.state.field(kakouneStateField);
-          const insertions = kakoune.registerSelections ?? [register];
+          const insertions = arg === '"' && kakoune.registerSelections ? kakoune.registerSelections : [register];
           if (insertions.length === 0) {
             return true;
           }

@@ -1,6 +1,6 @@
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { kakoune, getKakouneState } from "../../src";
+import { kakoune, getKakouneState, setKakouneNamedRegistersEffect } from "../../src";
 import { KakouneKeyProcessor } from "../../src/keys";
 import { buildKakouneCommands, handleSearchPromptKey, handleSplitPromptKey } from "../../src/commands";
 
@@ -51,21 +51,39 @@ export function parseRcMappings(rc?: string): {
   insertMappings: Map<string, string[]>;
   normalMappings: Map<string, string[]>;
   userModes: Map<string, Map<string, string[]>>;
+  namedRegisters: Map<string, string>;
 } {
   const insertMappings = new Map<string, string[]>();
   const normalMappings = new Map<string, string[]>();
   const userModes = new Map<string, Map<string, string[]>>();
+  const namedRegisters = new Map<string, string>();
 
   if (!rc) {
-    return { insertMappings, normalMappings, userModes };
+    return { insertMappings, normalMappings, userModes, namedRegisters };
   }
 
   const lines = rc.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
-    const insertMatch = line.match(/^map\s+global\s+insert\s+(\S+)\s+'?(.+?)'?$/);
+    const regMatch = line.match(/^(?:set-register|reg)\s+(\S+)\s+'?(.*?)'?$/);
+    if (regMatch) {
+      const reg = regMatch[1];
+      const val = regMatch[2].replace(/^%\{|%\}$|^'|'$/g, "");
+      namedRegisters.set(reg, val);
+      continue;
+    }
+
+    const insertMatch = line.match(/^map\s+global\s+insert\s+(\S+)\s+'(.*)'$/);
     if (insertMatch) {
       const trigger = insertMatch[1];
-      const val = insertMatch[2].replace(/^'|'$/g, "");
+      const val = insertMatch[2];
+      insertMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const insertMatchNoQuote = line.match(/^map\s+global\s+insert\s+(\S+)\s+(\S+)$/);
+    if (insertMatchNoQuote) {
+      const trigger = insertMatchNoQuote[1];
+      const val = insertMatchNoQuote[2];
       insertMappings.set(trigger, tokenizeKakouneCmd(val));
       continue;
     }
@@ -115,7 +133,7 @@ export function parseRcMappings(rc?: string): {
     }
   }
 
-  return { insertMappings, normalMappings, userModes };
+  return { insertMappings, normalMappings, userModes, namedRegisters };
 }
 
 export function tokenizeKakouneCmd(cmd: string): string[] {
@@ -163,7 +181,7 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
   document.body.appendChild(parent);
 
   try {
-    const { insertMappings, normalMappings, userModes } = parseRcMappings(input.rc);
+    const { insertMappings, normalMappings, userModes, namedRegisters } = parseRcMappings(input.rc);
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
     processor.setInsertMappings(insertMappings);
     processor.setNormalMappings(normalMappings);
@@ -177,6 +195,10 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
       }),
       parent
     });
+
+    if (namedRegisters.size > 0) {
+      view.dispatch({ effects: setKakouneNamedRegistersEffect.of(namedRegisters) });
+    }
 
     for (const token of tokenizeKakouneCmd(input.cmd)) {
       const state = getKakouneState(view.state);

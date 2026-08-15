@@ -13,7 +13,23 @@ const ROOT = resolve(process.cwd(), "test/kakoune/test/normal");
 const DOC_PATH = resolve(process.cwd(), "docs/kakoune-parity-progress.md");
 function readFixture(name) {
   const dir = join(ROOT, name);
-  if (!existsSync(join(dir, "cmd"))) {
+  const cmdFile = join(dir, "cmd");
+  const scriptFile = join(dir, "script");
+  let cmd = "";
+
+  if (existsSync(cmdFile)) {
+    cmd = readFileSync(cmdFile, "utf8");
+  }
+
+  if (!cmd && existsSync(scriptFile)) {
+    const script = readFileSync(scriptFile, "utf8");
+    const match = script.match(/"params":\s*\[\s*"([^"]+)"\s*\]/);
+    if (match) {
+      cmd = match[1];
+    }
+  }
+
+  if (!cmd && !existsSync(cmdFile) && !existsSync(scriptFile)) {
     return null;
   }
 
@@ -23,7 +39,7 @@ function readFixture(name) {
     in: existsSync(join(dir, "in")) ? readFileSync(join(dir, "in"), "utf8") : "",
     out: existsSync(join(dir, "out")) ? readFileSync(join(dir, "out"), "utf8") : undefined,
     error: existsSync(join(dir, "error")) ? readFileSync(join(dir, "error"), "utf8") : undefined,
-    cmd: readFileSync(join(dir, "cmd"), "utf8")
+    cmd
   };
 }
 
@@ -42,13 +58,26 @@ function buildProbeTest(candidateName) {
     '',
     'function readFixture(name) {',
     '  const dir = join(ROOT, name);',
+    '  const cmdFile = join(dir, "cmd");',
+    '  const scriptFile = join(dir, "script");',
+    '  let cmd = "";',
+    '  if (existsSync(cmdFile)) {',
+    '    cmd = readFileSync(cmdFile, "utf8");',
+    '  }',
+    '  if (!cmd && existsSync(scriptFile)) {',
+    '    const script = readFileSync(scriptFile, "utf8");',
+    '    const match = script.match(/"params":\\s*\\[\\s*"([^"]+)"\\s*\\]/);',
+    '    if (match) {',
+    '      cmd = match[1];',
+    '    }',
+    '  }',
     '  return {',
     '    name,',
     '    rc: existsSync(join(dir, "rc")) ? readFileSync(join(dir, "rc"), "utf8") : undefined,',
     '    in: existsSync(join(dir, "in")) ? readFileSync(join(dir, "in"), "utf8") : "",',
     '    out: existsSync(join(dir, "out")) ? readFileSync(join(dir, "out"), "utf8") : undefined,',
     '    error: existsSync(join(dir, "error")) ? readFileSync(join(dir, "error"), "utf8") : undefined,',
-    '    cmd: readFileSync(join(dir, "cmd"), "utf8")',
+    '    cmd',
     '  };',
     '}',
     '',

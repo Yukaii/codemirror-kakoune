@@ -221,4 +221,17 @@ describe("kakoune parity probe helpers", () => {
     expect(once.doc).toBe("hello from foo");
   });
 
+  it("records and replays macros via Q and q", () => {
+    const recorded = runKakouneFixture({
+      cmd: "Qimawww<esc>Q%c<c-r>@"
+    });
+    expect(recorded.doc).toBe("imawww<esc>");
+
+    const replayed = runKakouneFixture({
+      rc: "reg @ imawww",
+      cmd: "q"
+    });
+    expect(replayed.doc).toBe("mawww");
+  });
+
 });

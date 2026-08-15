@@ -28,7 +28,15 @@ import {
 } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem } from "./state";
-export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect, kakouneWhichKeyFacet, kakouneSelectionTypeField, setKakouneSelectionTypeEffect } from "./state";
+export {
+  kakouneStateField,
+  kakouneInitialModeFacet,
+  setKakouneModeEffect,
+  setKakouneNamedRegistersEffect,
+  kakouneWhichKeyFacet,
+  kakouneSelectionTypeField,
+  setKakouneSelectionTypeEffect
+} from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
 export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
 

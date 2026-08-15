@@ -45,6 +45,8 @@
 - repeat-insert/repeat-insert-mapped
 - user-modes/lock
 - user-modes/once
+- replay-macro
+- macro/record-macro
 
 ## Still Red
 - repeat-insert/repeat-insert-hooks
@@ -52,7 +54,6 @@
 - concat-paste-line
 - goto/file
 - goto/last-buffer
-- macro/record-macro
 - macro/replay-macro-mapped-word-completion
 - pipe
 - pipe-reg
@@ -61,7 +62,6 @@
 - pipe-to-reg
 - reload
 - replay-complex-insert
-- replay-macro
 - selection-undo/fold-redundant-entries
 - selection-undo/redo
 - selection-undo/undo

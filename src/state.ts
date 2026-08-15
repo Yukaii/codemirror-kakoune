@@ -68,6 +68,15 @@ export interface KakouneState {
   splitSelection: Array<{ anchor: number; head: number }> | null;
   /** Last command error message, or `null` if none. */
   commandError: string | null;
+  /** Active macro recording register name, or `null` if not recording. */
+  recordingMacroRegister: string | null;
+  /** Keys recorded during the current macro session. */
+  recordedMacroKeys: string[];
+  /** Named registers map. */
+  namedRegisters: Map<string, string>;
+  /** Selection history for selection undo/redo (`<a-u>` / `<a-U>`). */
+  selectionHistory: Array<Array<{ anchor: number; head: number }>>;
+  selectionHistoryIndex: number;
   /** Kakoune jump list state. */
   jumpState: KakouneJumpState;
 }
@@ -136,6 +145,14 @@ export const setKakouneSelectionRepeatCountEffect: StateEffectType<number> = Sta
 export const setKakouneReplaceInsertAnchorsEffect: StateEffectType<number[] | null> = StateEffect.define<number[] | null>();
 /** State effect that sets or clears the last command error. */
 export const setKakouneCommandErrorEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
+/** State effect that sets the recording macro register or null. */
+export const setKakouneRecordingMacroRegisterEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
+/** State effect that sets recorded macro keys. */
+export const setKakouneRecordedMacroKeysEffect: StateEffectType<string[]> = StateEffect.define<string[]>();
+/** State effect that sets named registers. */
+export const setKakouneNamedRegistersEffect: StateEffectType<Map<string, string>> = StateEffect.define<Map<string, string>>();
+/** State effect that updates selection history and index. */
+export const setKakouneSelectionHistoryEffect: StateEffectType<{ history: Array<Array<{ anchor: number; head: number }>>; index: number }> = StateEffect.define<{ history: Array<Array<{ anchor: number; head: number }>>; index: number }>();
 
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
@@ -178,11 +195,31 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       splitPrompt: null,
       splitSelection: null,
       commandError: null,
+      recordingMacroRegister: null,
+      recordedMacroKeys: [],
+      namedRegisters: new Map(),
+      selectionHistory: [],
+      selectionHistoryIndex: 0,
       jumpState: { entries: [], currentIndex: 0 }
     };
   },
   update(value, transaction) {
     let next = value;
+
+    if (transaction.selection && !transaction.effects.some(e => e.is(setKakouneSelectionHistoryEffect))) {
+      const curRanges = transaction.selection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
+      const prev = next.selectionHistory[next.selectionHistoryIndex];
+      const isSame = prev && prev.length === curRanges.length && prev.every((r, i) => r.anchor === curRanges[i].anchor && r.head === curRanges[i].head);
+      if (!isSame) {
+        const truncated = next.selectionHistory.slice(0, next.selectionHistoryIndex + 1);
+        truncated.push(curRanges);
+        next = {
+          ...next,
+          selectionHistory: truncated,
+          selectionHistoryIndex: truncated.length - 1
+        };
+      }
+    }
 
     for (const effect of transaction.effects) {
       if (effect.is(setKakouneModeEffect)) {
@@ -211,6 +248,18 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, replaceInsertAnchors: effect.value };
       } else if (effect.is(setKakouneCommandErrorEffect)) {
         next = { ...next, commandError: effect.value };
+      } else if (effect.is(setKakouneNamedRegistersEffect)) {
+        next = { ...next, namedRegisters: effect.value };
+      } else if (effect.is(setKakouneRecordingMacroRegisterEffect)) {
+        next = { ...next, recordingMacroRegister: effect.value };
+      } else if (effect.is(setKakouneRecordedMacroKeysEffect)) {
+        next = { ...next, recordedMacroKeys: effect.value };
+      } else if (effect.is(setKakouneSelectionHistoryEffect)) {
+        next = {
+          ...next,
+          selectionHistory: effect.value.history,
+          selectionHistoryIndex: effect.value.index
+        };
       }
     }
 

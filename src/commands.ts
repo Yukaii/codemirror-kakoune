@@ -19,6 +19,7 @@ import {
   setKakouneReplaceInsertAnchorsEffect,
   setKakouneSelectionLinewiseEffect,
   setKakouneSelectionTypeEffect,
+  setKakouneSelectionHistoryEffect,
   type KakouneJumpEntry,
   type KakouneJumpState,
   type KakouneMode
@@ -470,6 +471,58 @@ function rotateSelectionsContent(view: EditorView, reverse: boolean): boolean {
     changes,
     selection: EditorSelection.create(newRanges, state.selection.mainIndex)
   });
+  return true;
+}
+
+function undoSelection(view: EditorView): boolean {
+  const kakoune = view.state.field(kakouneStateField);
+  const { selectionHistory, selectionHistoryIndex } = kakoune;
+  if (selectionHistory.length === 0 || selectionHistoryIndex <= 0) {
+    return true;
+  }
+
+  const nextIndex = selectionHistoryIndex - 1;
+  const target = selectionHistory[nextIndex];
+  if (target) {
+    view.dispatch({
+      selection: EditorSelection.create(
+        target.map(r => EditorSelection.range(r.anchor, r.head)),
+        0
+      ),
+      effects: [
+        setKakouneSelectionHistoryEffect.of({
+          history: selectionHistory,
+          index: nextIndex
+        })
+      ]
+    });
+  }
+  return true;
+}
+
+function redoSelection(view: EditorView): boolean {
+  const kakoune = view.state.field(kakouneStateField);
+  const { selectionHistory, selectionHistoryIndex } = kakoune;
+  if (selectionHistory.length === 0 || selectionHistoryIndex >= selectionHistory.length - 1) {
+    return true;
+  }
+
+  const nextIndex = selectionHistoryIndex + 1;
+  const target = selectionHistory[nextIndex];
+  if (target) {
+    view.dispatch({
+      selection: EditorSelection.create(
+        target.map(r => EditorSelection.range(r.anchor, r.head)),
+        0
+      ),
+      effects: [
+        setKakouneSelectionHistoryEffect.of({
+          history: selectionHistory,
+          index: nextIndex
+        })
+      ]
+    });
+  }
   return true;
 }
 
@@ -1840,6 +1893,8 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["<A-R>"], run: view => pasteAllRegister(view, "replace"), description: "Paste all replace" },
     { keys: ["u"], run: view => undo(view), description: "Undo" },
     { keys: ["U"], run: view => redo(view), description: "Redo" },
+    { keys: ["<A-u>"], run: view => undoSelection(view), description: "Undo selection change" },
+    { keys: ["<A-U>"], run: view => redoSelection(view), description: "Redo selection change" },
     { keys: ["<C-o>"], run: (view, _arg, count) => jumpBackward(view, count ?? 1), description: "Jump back in history" },
     { keys: ["<C-i>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
     { keys: ["<C-Tab>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
