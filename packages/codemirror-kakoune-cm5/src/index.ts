@@ -12,7 +12,13 @@ const codeMirror = CodeMirror as typeof CodeMirror & { keyMap: Record<string, Co
 
 function setMode(cm: Cm, mode: KakouneCm5Mode): void {
   cm.getWrapperElement().dataset.kakouneMode = mode;
-  cm.setOption("keyMap", mode === "select" ? "kakoune" : "kakouneInsert");
+  const editor = cm as Cm & { kakouneKeyMap?: CodeMirror.KeyMap };
+  if (editor.kakouneKeyMap) {
+    cm.removeKeyMap(editor.kakouneKeyMap);
+  }
+  editor.kakouneKeyMap = mode === "select" ? kakouneKeyMap : kakouneInsertKeyMap;
+  cm.setOption("keyMap", "default");
+  cm.addKeyMap(editor.kakouneKeyMap);
 }
 
 function move(cm: Cm, delta: (cursor: CodeMirror.Position, cm: Cm) => CodeMirror.Position): void {
@@ -91,15 +97,16 @@ function installCommands(cm: Cm): void {
 }
 
 export const kakouneKeyMap = {
-  h: "kakoune_h", j: "kakoune_j", k: "kakoune_k", l: "kakoune_l",
-  w: "kakoune_w", b: "kakoune_b", x: "kakoune_x", d: "kakouneDelete",
-  i: "kakouneEnterInsert", a: "kakouneAppend", u: "kakoune_u", U: "kakoune_U",
-  Esc: "kakouneEnterSelect",
+  H: selectCommands.h, J: selectCommands.j, K: selectCommands.k, L: selectCommands.l,
+  W: selectCommands.w, B: selectCommands.b, X: selectCommands.x, D: selectCommands.d,
+  I: (editor: Cm) => enterInsert(editor), A: (editor: Cm) => enterInsert(editor, true),
+  U: selectCommands.u, "Shift-U": selectCommands.U,
+  Esc: (editor: Cm) => setMode(editor, "select"),
   nofallthrough: true
-} as unknown as CodeMirror.KeyMap & { nofallthrough: boolean };
+} as unknown as CodeMirror.KeyMap;
 
 export const kakouneInsertKeyMap: CodeMirror.KeyMap = {
-  Esc: "kakouneEnterSelect",
+  Esc: (editor: Cm) => setMode(editor, "select"),
   fallthrough: "default"
 };
 
