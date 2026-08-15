@@ -274,13 +274,18 @@ export class KakouneKeyProcessor {
       selection: EditorSelection.create(
         this.temporaryNormalSelection.map(range => EditorSelection.range(range.anchor, range.head)),
         0
-      )
+      ),
+      scrollIntoView: true
     });
     this.temporaryNormalSelection = null;
   }
 
   setInsertMappings(mappings: Map<string, string[]>): void {
     this.insertMappings = mappings;
+  }
+
+  hasInsertMapping(key: string): boolean {
+    return this.insertMappings.has(key);
   }
 
   private shouldRecordKey(mode: KakouneMode): boolean {
@@ -315,7 +320,7 @@ export class KakouneKeyProcessor {
       changes: { from: range.head, insert: insertText },
       range: EditorSelection.cursor(range.head + insertText.length)
     }));
-    view.dispatch(result);
+    view.dispatch({ ...result, scrollIntoView: true });
     return true;
   }
 

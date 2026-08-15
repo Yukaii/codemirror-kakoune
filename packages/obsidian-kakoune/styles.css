@@ -30,3 +30,17 @@
   opacity: 0.8;
   font-style: italic;
 }
+
+.cm-editor[data-kakoune-mode="select"] .cm-cursor,
+.cm-editor[data-kakoune-mode="select"] .cm-cursor-primary,
+.cm-editor[data-kakoune-mode="select"] .cm-cursor-secondary {
+  border-left: none !important;
+  background-color: var(--text-accent, var(--color-accent, var(--caret-color, #7aa2f7))) !important;
+  opacity: 0.65 !important;
+  width: 0.55em !important;
+  pointer-events: none !important;
+}
+
+.cm-editor[data-kakoune-mode="insert"] .cm-cursor {
+  border-left-width: 1.5px !important;
+}

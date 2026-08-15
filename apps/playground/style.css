@@ -476,6 +476,21 @@ body[data-theme="sepia"] .register-popover {
   text-transform: none;
 }
 
+/* Block cursor for select / normal mode */
+.cm-editor[data-kakoune-mode="select"] .cm-cursor,
+.cm-editor[data-kakoune-mode="select"] .cm-cursor-primary,
+.cm-editor[data-kakoune-mode="select"] .cm-cursor-secondary {
+  border-left: none !important;
+  background-color: var(--accent) !important;
+  opacity: 0.65 !important;
+  width: 0.55em !important;
+  pointer-events: none !important;
+}
+
+.cm-editor[data-kakoune-mode="insert"] .cm-cursor {
+  border-left-width: 1.5px !important;
+}
+
 /* Block cursor for line selections */
 .cm-editor.cm-line-selection .cm-cursor-primary {
   border-left: 1ch solid var(--accent) !important;

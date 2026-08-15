@@ -102,7 +102,8 @@ function jumpBackward(view: EditorView, count: number = 1): boolean {
   setCommandError(view, null);
   view.dispatch({
     selection: restoreJumpEntry(target),
-    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
+    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex }),
+    scrollIntoView: true
   });
   return true;
 }
@@ -265,7 +266,8 @@ function splitSelections(view: EditorView, pattern: string): boolean {
       setKakouneJumpStateEffect.of(jumpState),
       setSearchQuery.of(query)
     ],
-    userEvent: "select.split"
+    userEvent: "select.split",
+    scrollIntoView: true
   });
   setCommandError(view, null);
   return true;
@@ -283,7 +285,8 @@ function jumpForward(view: EditorView, count: number = 1): boolean {
   setCommandError(view, null);
   view.dispatch({
     selection: restoreJumpEntry(jumpState.entries[targetIndex]),
-    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex })
+    effects: setKakouneJumpStateEffect.of({ entries: jumpState.entries, currentIndex: targetIndex }),
+    scrollIntoView: true
   });
   return true;
 }
@@ -430,7 +433,7 @@ function moveSelections(view: EditorView, mapper: (range: SelectionRange) => num
     return { range: current };
   });
 
-  view.dispatch(result);
+  view.dispatch({ ...result, scrollIntoView: true });
   return true;
 }
 
@@ -481,7 +484,7 @@ function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) =>
     return { range: current };
   });
 
-  view.dispatch(result);
+  view.dispatch({ ...result, scrollIntoView: true });
   return true;
 }
 
@@ -494,7 +497,8 @@ function extendSelections(view: EditorView, mapper: (range: SelectionRange) => n
     return EditorSelection.range(range.anchor, head);
   });
   view.dispatch({
-    selection: EditorSelection.create(ranges, view.state.selection.mainIndex)
+    selection: EditorSelection.create(ranges, view.state.selection.mainIndex),
+    scrollIntoView: true
   });
   return true;
 }
@@ -1061,7 +1065,8 @@ function splitSelectionsOnLines(view: EditorView): boolean {
     effects: [
       setKakouneSelectionTypeEffect.of("char"),
       setKakouneSelectionLinewiseEffect.of(false)
-    ]
+    ],
+    scrollIntoView: true
   });
   return true;
 }
@@ -1109,7 +1114,8 @@ function trimSelectionsWhitespace(view: EditorView): boolean {
 function reduceSelectionsToCursor(view: EditorView): boolean {
   const ranges = view.state.selection.ranges.map(range => EditorSelection.cursor(range.head));
   view.dispatch({
-    selection: EditorSelection.create(ranges, ranges.length - 1)
+    selection: EditorSelection.create(ranges, ranges.length - 1),
+    scrollIntoView: true
   });
   return true;
 }
@@ -1120,7 +1126,8 @@ function flipSelections(view: EditorView): boolean {
     EditorSelection.range(range.head, range.anchor)
   );
   view.dispatch({
-    selection: EditorSelection.create(ranges, state.selection.mainIndex)
+    selection: EditorSelection.create(ranges, state.selection.mainIndex),
+    scrollIntoView: true
   });
   return true;
 }
@@ -1616,7 +1623,8 @@ function selectSurroundingObject(
         objectKey,
         inner
       })
-    ]
+    ],
+    scrollIntoView: true
   });
   return true;
 }
@@ -1628,7 +1636,8 @@ function jumpToLine(view: EditorView, lineNum: number): boolean {
   const jumpState = pushCurrentJump(view);
   view.dispatch({
     selection: EditorSelection.cursor(pos),
-    effects: setKakouneJumpStateEffect.of(jumpState)
+    effects: setKakouneJumpStateEffect.of(jumpState),
+    scrollIntoView: true
   });
   return true;
 }
@@ -1641,7 +1650,8 @@ function extendToLine(view: EditorView, lineNum: number): boolean {
     EditorSelection.range(range.anchor, pos)
   );
   view.dispatch({
-    selection: EditorSelection.create(ranges, view.state.selection.mainIndex)
+    selection: EditorSelection.create(ranges, view.state.selection.mainIndex),
+    scrollIntoView: true
   });
   return true;
 }
@@ -1909,7 +1919,8 @@ export function commitSearchPrompt(view: EditorView): boolean {
       setKakouneSearchSelectionEffect.of(null),
       setSearchQuery.of(query)
     ],
-    userEvent: "select.search"
+    userEvent: "select.search",
+    scrollIntoView: true
   });
   return true;
 }
@@ -2076,21 +2087,24 @@ function addNextTextSelection(view: EditorView): boolean {
   }
 
   view.dispatch({
-    selection: view.state.selection.addRange(EditorSelection.range(next.from, next.to), false)
+    selection: view.state.selection.addRange(EditorSelection.range(next.from, next.to), false),
+    scrollIntoView: true
   });
   return true;
 }
 
 function selectAllBuffer(view: EditorView): boolean {
   view.dispatch({
-    selection: EditorSelection.range(0, view.state.doc.length)
+    selection: EditorSelection.range(0, view.state.doc.length),
+    scrollIntoView: true
   });
   return true;
 }
 
 function clearSelections(view: EditorView): boolean {
   view.dispatch({
-    selection: EditorSelection.cursor(view.state.selection.main.head)
+    selection: EditorSelection.cursor(view.state.selection.main.head),
+    scrollIntoView: true
   });
   return true;
 }
@@ -2125,7 +2139,8 @@ function selectLine(view: EditorView): boolean {
     effects: [
       setKakouneSelectionTypeEffect.of("line"),
       setKakouneSelectionLinewiseEffect.of(true)
-    ]
+    ],
+    scrollIntoView: true
   });
   return true;
 }
@@ -2168,7 +2183,8 @@ function deleteSelection(view: EditorView): boolean {
       setKakouneSelectionLinewiseEffect.of(false),
       setKakouneReplaceInsertAnchorsEffect.of(selectionStarts.map(pos => result.changes.mapPos(pos, 1)))
     ],
-    selection: result.selection
+    selection: result.selection,
+    scrollIntoView: true
   });
 
   return true;
@@ -2305,7 +2321,8 @@ function openLine(view: EditorView, direction: "above" | "below", count: number 
 
   view.dispatch({
     changes: { from: insertAt, insert: "\n".repeat(count) },
-    selection: EditorSelection.create(cursorPositions.map(position => EditorSelection.cursor(position)), 0)
+    selection: EditorSelection.create(cursorPositions.map(position => EditorSelection.cursor(position)), 0),
+    scrollIntoView: true
   });
   setMode(view, "insert");
   return true;

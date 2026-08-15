@@ -149,8 +149,10 @@ function createKakouneHandler(processor: KakouneKeyProcessor) {
 
       const mode = state.mode;
 
-      if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
-        return false;
+      if (mode === "insert") {
+        if (key !== "<A-;>" && !processor.hasInsertMapping(key)) {
+          return false;
+        }
       }
 
       const handled = processor.handle(mode, key, view);
@@ -235,6 +237,19 @@ const kakouneLineCursor = ViewPlugin.fromClass(
   }
 );
 
+const kakouneBaseTheme = EditorView.baseTheme({
+  "&[data-kakoune-mode='select'] .cm-cursor, &[data-kakoune-mode='select'] .cm-cursor-primary, &[data-kakoune-mode='select'] .cm-cursor-secondary": {
+    borderLeft: "none",
+    backgroundColor: "var(--color-accent, var(--caret-color, currentColor))",
+    opacity: "0.6",
+    width: "0.55em",
+    pointerEvents: "none"
+  },
+  "&[data-kakoune-mode='insert'] .cm-cursor": {
+    borderLeftWidth: "1.5px"
+  }
+});
+
 /**
  * Creates a CodeMirror extension that enables Kakoune-style modal editing.
  *
@@ -267,6 +282,7 @@ export function kakoune(options: KakouneOptions = {}): Extension {
     history(),
     kakouneModeAttributes,
     kakouneLineCursor,
+    kakouneBaseTheme,
     Prec.highest(
       keymap.of([
         {
