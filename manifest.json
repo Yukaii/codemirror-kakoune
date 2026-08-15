@@ -3,7 +3,7 @@
   "name": "Kakoune",
   "version": "0.1.0",
   "minAppVersion": "0.15.0",
-  "description": "Kakoune modal editing keybindings for Obsidian.",
+  "description": "Selection-first modal editing keybindings inspired by Kakoune.",
   "author": "Yukai Huang",
   "authorUrl": "https://github.com/Yukaii",
   "isDesktopOnly": false

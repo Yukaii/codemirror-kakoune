@@ -1,7 +1,7 @@
 {
   "name": "obsidian-kakoune",
   "version": "0.1.0",
-  "description": "Kakoune modal editing for Obsidian",
+  "description": "Selection-first modal editing keybindings inspired by Kakoune",
   "author": "Yukai Huang",
   "license": "MIT",
   "main": "main.js",
