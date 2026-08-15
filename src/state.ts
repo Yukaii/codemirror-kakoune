@@ -190,7 +190,7 @@ export const setKakouneSelectionHistoryEffect: StateEffectType<{ history: Array<
 export const setKakouneLastSelectEffect: StateEffectType<KakouneLastSelect | null> = StateEffect.define<KakouneLastSelect | null>();
 
 /** State effect that sets the selection type (char-wise or line-wise). */
-export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
+export const setKakouneSelectionTypeEffect: StateEffectType<KakouneSelectionType> = StateEffect.define<KakouneSelectionType>();
 
 /**
  * State field that tracks whether the current selection is character-wise or

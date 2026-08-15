@@ -22,6 +22,7 @@
     "build:playground": "vite build",
     "test": "jest",
     "test:watch": "jest --watch",
+    "check:jsr": "npx jsr publish --dry-run",
     "probe:parity": "node scripts/kakoune-parity-probe.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
