@@ -42,9 +42,11 @@
 - align-tab
 - replace-lines
 - undo-after-replace-lines
+- repeat-insert/repeat-insert-mapped
+- user-modes/lock
+- user-modes/once
 
 ## Still Red
-- repeat-insert/repeat-insert-mapped
 - repeat-insert/repeat-insert-hooks
 - repeat-insert/repeat-insert-mapped-word-completion
 - concat-paste-line
@@ -64,8 +66,6 @@
 - selection-undo/redo
 - selection-undo/undo
 - selection-undo/windisplay-hook
-- user-modes/lock
-- user-modes/once
 - pipe
 - pipe-reg
 - pipe-to

@@ -1740,7 +1740,7 @@ function pasteAllRegister(view: EditorView, mode: "before" | "after" | "replace"
     let insertText = all;
     if (kakoune.registerLinewise && mode === "after") {
       if (insertAt === state.doc.length && !state.doc.sliceString(0, insertAt).endsWith("\n")) {
-        insertText = "\n" + (insertText.endsWith("\n") ? insertText.slice(0, -1) : insertText);
+        insertText = "\n" + (insertText.endsWith("\n") ? insertText : insertText + "\n");
       }
     }
 
@@ -1857,19 +1857,19 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["@"], run: view => convertTabsSpaces(view, false), description: "Convert tabs to spaces" },
     { keys: ["<A-@>"], run: view => convertTabsSpaces(view, true), description: "Convert spaces to tabs" },
     { keys: ["f"], run: (view, arg) => {
-      if (!arg) return true;
+      if (arg === undefined) return false;
       return moveToFind(view, "f", arg);
     }, description: "Select to character" },
     { keys: ["t"], run: (view, arg) => {
-      if (!arg) return true;
+      if (arg === undefined) return false;
       return moveToFind(view, "t", arg);
     }, description: "Select until character" },
     { keys: ["F"], run: (view, arg) => {
-      if (!arg) return true;
+      if (arg === undefined) return false;
       return moveToFind(view, "F", arg);
     }, description: "Select backward to character" },
     { keys: ["T"], run: (view, arg) => {
-      if (!arg) return true;
+      if (arg === undefined) return false;
       return moveToFind(view, "T", arg);
     }, description: "Select backward until character" },
     { keys: ["g", "g"], run: view => jumpToLine(view, 1), description: "Jump to document start" }
@@ -1963,7 +1963,11 @@ export function buildKakouneCommands(): Record<KakouneMode, KakouneBinding[]> {
   return {
     select: [...buildSelectBindings(), ...buildBracketBindings()],
     insert: [
-      { keys: ["<Esc>"], run: view => setMode(view, "select"), description: "Exit insert mode" }
+      { keys: ["<Esc>"], run: view => setMode(view, "select"), description: "Exit insert mode" },
+      { keys: ["<Left>"], run: view => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)), description: "Move left" },
+      { keys: ["<Right>"], run: view => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)), description: "Move right" },
+      { keys: ["<Up>"], run: view => moveSelections(view, range => moveLineColumn(view, range, -1)), description: "Move up" },
+      { keys: ["<Down>"], run: view => moveSelections(view, range => moveLineColumn(view, range, 1)), description: "Move down" }
     ]
   };
 }

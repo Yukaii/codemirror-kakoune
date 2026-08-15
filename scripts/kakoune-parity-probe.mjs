@@ -19,6 +19,7 @@ function readFixture(name) {
 
   return {
     name,
+    rc: existsSync(join(dir, "rc")) ? readFileSync(join(dir, "rc"), "utf8") : undefined,
     in: existsSync(join(dir, "in")) ? readFileSync(join(dir, "in"), "utf8") : "",
     out: existsSync(join(dir, "out")) ? readFileSync(join(dir, "out"), "utf8") : undefined,
     error: existsSync(join(dir, "error")) ? readFileSync(join(dir, "error"), "utf8") : undefined,
@@ -43,6 +44,7 @@ function buildProbeTest(candidateName) {
     '  const dir = join(ROOT, name);',
     '  return {',
     '    name,',
+    '    rc: existsSync(join(dir, "rc")) ? readFileSync(join(dir, "rc"), "utf8") : undefined,',
     '    in: existsSync(join(dir, "in")) ? readFileSync(join(dir, "in"), "utf8") : "",',
     '    out: existsSync(join(dir, "out")) ? readFileSync(join(dir, "out"), "utf8") : undefined,',
     '    error: existsSync(join(dir, "error")) ? readFileSync(join(dir, "error"), "utf8") : undefined,',
@@ -70,7 +72,7 @@ function buildProbeTest(candidateName) {
     '',
     `test(${JSON.stringify(candidateName)}, () => {`,
     `  const fixture = readFixture(${JSON.stringify(candidateName)});`,
-    '  const actual = runKakouneFixture({ in: fixture.in, cmd: fixture.cmd });',
+    '  const actual = runKakouneFixture({ in: fixture.in, rc: fixture.rc, cmd: fixture.cmd });',
     '  if (fixture.out !== undefined) {',
     '    expect(normalize(actual.doc)).toBe(normalize(parseSelectionMarkers(fixture.out)));',
     '  }',

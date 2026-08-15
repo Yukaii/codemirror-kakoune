@@ -1,5 +1,5 @@
 import probeHelpers from "../../scripts/kakoune-parity-probe-helpers.cjs";
-import { runKakouneFixture } from "./run-kakoune-fixture";
+import { runKakouneFixture, tokenizeKakouneCmd, parseRcMappings } from "./run-kakoune-fixture";
 
 const { parseParityProgress, renderParityProgress, selectNextProbeFixture, promoteParityFixture, findPromotableFixture } = probeHelpers;
 
@@ -203,6 +203,22 @@ describe("kakoune parity probe helpers", () => {
 
     const undone = runKakouneFixture({ in: "line 1\nline 2\nline 3\nline 4", cmd: "ey%<a-s>RuU" });
     expect(undone.doc).toBe("linelinelineline");
+  });
+
+  it("supports user modes with lock and single-use execution", () => {
+    const lock = runKakouneFixture({
+      rc: "declare-user-mode foo\nmap global foo f d\nmap global normal <a-,> ':enter-user-mode -lock foo<ret>'",
+      in: "123delete",
+      cmd: "<a-,>fff<esc>f"
+    });
+    expect(lock.doc).toBe("delete");
+
+    const once = runKakouneFixture({
+      rc: "declare-user-mode foo\nmap global foo f 'wchello from foo<esc>'\nmap global normal <a-,> ':enter-user-mode foo<ret>'",
+      in: "bar",
+      cmd: "<a-,>ff"
+    });
+    expect(once.doc).toBe("hello from foo");
   });
 
 });

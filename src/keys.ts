@@ -224,8 +224,20 @@ export class KakouneKeyProcessor {
   private temporaryNormalSelection: Array<{ anchor: number; head: number }> | null = null;
   private commandPrompt: string | null = null;
   private insertMappings = new Map<string, string[]>();
+  private userModes = new Map<string, Map<string, string[]>>();
+  private activeUserMode: { name: string; lock: boolean } | null = null;
+
+  private normalMappings = new Map<string, string[]>();
 
   constructor(private readonly bindings: Record<KakouneMode, KakouneBinding[]>) {}
+
+  setNormalMappings(mappings: Map<string, string[]>): void {
+    this.normalMappings = mappings;
+  }
+
+  setUserModes(modes: Map<string, Map<string, string[]>>): void {
+    this.userModes = modes;
+  }
 
   beginTemporaryNormal(): void {
     this.temporaryNormal = true;
@@ -250,7 +262,7 @@ export class KakouneKeyProcessor {
   }
 
   private shouldRecordKey(mode: KakouneMode): boolean {
-    return !this.replayingInsert && this.handleDepth <= 1 && (mode === "insert" || this.temporaryNormal || this.commandPrompt !== null);
+    return !this.replayingInsert && (mode === "insert" || this.temporaryNormal || this.commandPrompt !== null);
   }
 
   private recordKey(key: string): void {
@@ -303,6 +315,14 @@ export class KakouneKeyProcessor {
       for (const key of tokenizeSimpleKeys(payload)) {
         this.handle("insert", key, view);
       }
+    } else if (prompt.startsWith("enter-user-mode")) {
+      const payload = prompt.slice("enter-user-mode".length).trim();
+      const args = payload.length > 0 ? payload.split(/\s+/) : [];
+      const isLock = args[0] === "-lock";
+      const modeName = isLock ? args[1] : args[0];
+      if (modeName) {
+        this.activeUserMode = { name: modeName, lock: isLock };
+      }
     }
 
     this.temporaryNormal = false;
@@ -339,7 +359,7 @@ export class KakouneKeyProcessor {
       return true;
     }
 
-    if (key.length === 1 && !key.startsWith("<")) {
+    if (key.length === 1) {
       this.commandPrompt += key;
       return true;
     }
@@ -386,17 +406,8 @@ export class KakouneKeyProcessor {
       }));
   }
 
-  /**
-   * Handles a single normalized key in the given mode.
-   * @returns `true` if the key was consumed.
-   */
   handle(mode: KakouneMode, key: string, view: EditorView): boolean {
-    this.handleDepth += 1;
-    try {
-      return this.processKey(mode, key, view, true);
-    } finally {
-      this.handleDepth -= 1;
-    }
+    return this.processKey(mode, key, view, true);
   }
 
   private processKey(mode: KakouneMode, key: string, view: EditorView, recordKey: boolean): boolean {
@@ -421,6 +432,24 @@ export class KakouneKeyProcessor {
 
     if (key === "<Esc>") {
       this.reset();
+      this.activeUserMode = null;
+      if (mode === "insert") {
+        this.finalizeInsertSession();
+      }
+      this.temporaryNormal = false;
+      const bindings = this.bindings[mode];
+      const escapeBinding = bindings.find(binding => binding.keys.length === 1 && binding.keys[0] === "<Esc>");
+      if (escapeBinding) {
+        return escapeBinding.run(view, undefined, undefined);
+      }
+
+      view.dispatch({ effects: setKakouneSelectionRepeatCountEffect.of(1) });
+      return true;
+    }
+
+    if (key === "<Esc>") {
+      this.reset();
+      this.activeUserMode = null;
       if (mode === "insert") {
         this.finalizeInsertSession();
       }
@@ -436,6 +465,42 @@ export class KakouneKeyProcessor {
     }
 
     const effectiveMode = this.temporaryNormal && mode === "insert" ? "select" : mode;
+
+    if (this.activeUserMode) {
+      const modeConfig = this.userModes.get(this.activeUserMode.name);
+      const mapped = modeConfig?.get(key);
+      const activeName = this.activeUserMode.name;
+      const isLock = this.activeUserMode.lock;
+
+      if (!isLock) {
+        this.activeUserMode = null;
+      }
+
+      if (mapped) {
+        // Temporarily clear activeUserMode during re-entrancy so executed keys don't trigger user mode
+        this.activeUserMode = null;
+        for (const mappedKey of mapped) {
+          const currentMode = view.state.field(kakouneStateField).mode;
+          this.handle(currentMode, mappedKey, view);
+        }
+        if (isLock) {
+          this.activeUserMode = { name: activeName, lock: true };
+        }
+        return true;
+      }
+      return false;
+    }
+
+    if (effectiveMode === "select") {
+      const normalMapping = this.normalMappings.get(key);
+      if (normalMapping) {
+        for (const mappedKey of normalMapping) {
+          this.handle("select", mappedKey, view);
+        }
+        this.clearTemporaryNormalIfDone();
+        return true;
+      }
+    }
 
     if (effectiveMode === "select" && key === "." && this.lastInsertKeys.length > 0) {
       this.replayingInsert = true;

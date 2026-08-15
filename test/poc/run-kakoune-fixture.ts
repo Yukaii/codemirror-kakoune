@@ -47,22 +47,75 @@ function parseSelectionMarkers(text: string): { text: string; selection: Array<{
   };
 }
 
-function parseInsertMappings(rc?: string): Map<string, string[]> {
-  const mappings = new Map<string, string[]>();
-  const line = rc?.trim();
-  if (!line) {
-    return mappings;
+export function parseRcMappings(rc?: string): {
+  insertMappings: Map<string, string[]>;
+  normalMappings: Map<string, string[]>;
+  userModes: Map<string, Map<string, string[]>>;
+} {
+  const insertMappings = new Map<string, string[]>();
+  const normalMappings = new Map<string, string[]>();
+  const userModes = new Map<string, Map<string, string[]>>();
+
+  if (!rc) {
+    return { insertMappings, normalMappings, userModes };
   }
 
-  const match = line.match(/^map\s+global\s+insert\s+(\S+)\s+'(.+)'$/);
-  if (!match) {
-    return mappings;
+  const lines = rc.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const insertMatch = line.match(/^map\s+global\s+insert\s+(\S+)\s+'?(.+?)'?$/);
+    if (insertMatch) {
+      const trigger = insertMatch[1];
+      const val = insertMatch[2].replace(/^'|'$/g, "");
+      insertMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const normalMatch = line.match(/^map\s+global\s+normal\s+(\S+)\s+'(.*)'$/);
+    if (normalMatch) {
+      const trigger = normalMatch[1].startsWith("<") ? (
+        normalMatch[1].toLowerCase().startsWith("<a-") ? `<A-${normalMatch[1].slice(3, -1)}>` : normalMatch[1]
+      ) : normalMatch[1];
+      const val = normalMatch[2];
+      normalMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const normalMatchNoQuote = line.match(/^map\s+global\s+normal\s+(\S+)\s+(\S+)$/);
+    if (normalMatchNoQuote) {
+      const trigger = normalMatchNoQuote[1].startsWith("<") ? (
+        normalMatchNoQuote[1].toLowerCase().startsWith("<a-") ? `<A-${normalMatchNoQuote[1].slice(3, -1)}>` : normalMatchNoQuote[1]
+      ) : normalMatchNoQuote[1];
+      const val = normalMatchNoQuote[2];
+      normalMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const userModeMatch = line.match(/^map\s+global\s+(\S+)\s+(\S+)\s+'(.*)'$/);
+    if (userModeMatch && userModeMatch[1] !== "insert" && userModeMatch[1] !== "normal") {
+      const modeName = userModeMatch[1];
+      const trigger = userModeMatch[2];
+      const val = userModeMatch[3];
+      if (!userModes.has(modeName)) {
+        userModes.set(modeName, new Map());
+      }
+      userModes.get(modeName)!.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const userModeMatchNoQuote = line.match(/^map\s+global\s+(\S+)\s+(\S+)\s+(\S+)$/);
+    if (userModeMatchNoQuote && userModeMatchNoQuote[1] !== "insert" && userModeMatchNoQuote[1] !== "normal") {
+      const modeName = userModeMatchNoQuote[1];
+      const trigger = userModeMatchNoQuote[2];
+      const val = userModeMatchNoQuote[3];
+      if (!userModes.has(modeName)) {
+        userModes.set(modeName, new Map());
+      }
+      userModes.get(modeName)!.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
   }
 
-  const trigger = match[1];
-  const mapped = tokenizeKakouneCmd(match[2]);
-  mappings.set(trigger, mapped);
-  return mappings;
+  return { insertMappings, normalMappings, userModes };
 }
 
 export function tokenizeKakouneCmd(cmd: string): string[] {
@@ -79,14 +132,18 @@ export function tokenizeKakouneCmd(cmd: string): string[] {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|esc|Enter|enter|ret|Backspace|backspace|Space|Tab|tab|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/.test(token)) {
+        if (/^<(Esc|esc|Enter|enter|ret|ret\b|Backspace|backspace|Space|Tab|tab|right|left|up|down|Right|Left|Up|Down|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/i.test(token)) {
           tokens.push(
-            token === "<esc>" ? "<Esc>" :
-            token === "<enter>" || token === "<ret>" ? "<Enter>" :
-            token === "<tab>" ? "<Tab>" :
-            token === "<backspace>" ? "<Backspace>" :
-            token.startsWith("<a-") ? `<A-${token.slice(3, -1)}>` :
-            token.startsWith("<c-") ? `<C-${token.slice(3, -1)}>` :
+            /^<esc>$/i.test(token) ? "<Esc>" :
+            /^<(enter|ret)>$/i.test(token) ? "<Enter>" :
+            /^<tab>$/i.test(token) ? "<Tab>" :
+            /^<backspace>$/i.test(token) ? "<Backspace>" :
+            token.toLowerCase() === "<right>" ? "<Right>" :
+            token.toLowerCase() === "<left>" ? "<Left>" :
+            token.toLowerCase() === "<up>" ? "<Up>" :
+            token.toLowerCase() === "<down>" ? "<Down>" :
+            token.toLowerCase().startsWith("<a-") ? `<A-${token.slice(3, -1)}>` :
+            token.toLowerCase().startsWith("<c-") ? `<C-${token.slice(3, -1)}>` :
             token
           );
           i = end;
@@ -106,8 +163,11 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
   document.body.appendChild(parent);
 
   try {
+    const { insertMappings, normalMappings, userModes } = parseRcMappings(input.rc);
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
-    processor.setInsertMappings(parseInsertMappings(input.rc));
+    processor.setInsertMappings(insertMappings);
+    processor.setNormalMappings(normalMappings);
+    processor.setUserModes(userModes);
     const parsed = parseSelectionMarkers(input.in ?? "");
     const view = new EditorView({
       state: EditorState.create({
