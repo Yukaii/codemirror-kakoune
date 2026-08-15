@@ -23,11 +23,21 @@ import {
   commitSearchPrompt,
   deleteSearchPromptChar,
   cancelSearchPrompt,
-  handleSearchPromptKey
+  handleSearchPromptKey,
+  handleSplitPromptKey
 } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem } from "./state";
-export { kakouneStateField, kakouneInitialModeFacet, setKakouneModeEffect, kakouneWhichKeyFacet, kakouneSelectionTypeField, setKakouneSelectionTypeEffect } from "./state";
+export {
+  kakouneStateField,
+  kakouneInitialModeFacet,
+  setKakouneModeEffect,
+  setKakouneNamedRegistersEffect,
+  setKakouneSelectionHistoryEffect,
+  kakouneWhichKeyFacet,
+  kakouneSelectionTypeField,
+  setKakouneSelectionTypeEffect
+} from "./state";
 export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
 export { buildKakouneCommands, commitSearchPrompt, kakouneCommands } from "./commands";
 
@@ -66,9 +76,21 @@ function createKakouneHandler() {
         }
       }
 
+      if (state.splitPrompt !== null) {
+        if (key === "<Enter>" || key === "<Backspace>" || key === "<Esc>") {
+          return false;
+        }
+        const handledPrompt = handleSplitPromptKey(view, key);
+        if (handledPrompt) {
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+      }
+
       const mode = state.mode;
 
-      if (mode === "insert" && key !== "<Esc>") {
+      if (mode === "insert" && key.length === 1 && !key.startsWith("<")) {
         return false;
       }
 

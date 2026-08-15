@@ -1,8 +1,13 @@
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { kakoune, getKakouneState } from "../../src";
+import { kakoune, getKakouneState, setKakouneNamedRegistersEffect, setKakouneSelectionHistoryEffect } from "../../src";
 import { KakouneKeyProcessor } from "../../src/keys";
-import { buildKakouneCommands } from "../../src/commands";
+import {
+  buildKakouneCommands,
+  handleSearchPromptKey,
+  handleSplitPromptKey,
+  handlePipePromptKey
+} from "../../src/commands";
 
 export interface KakouneFixtureInput {
   in?: string;
@@ -15,6 +20,125 @@ export interface KakouneFixtureResult {
   selectionRanges: Array<{ anchor: number; head: number }>;
   mode: "select" | "insert";
   tokens: string[];
+  error?: string;
+}
+
+function parseSelectionMarkers(text: string): { text: string; selection: Array<{ anchor: number; head: number }> } {
+  let output = "";
+  const selection: Array<{ anchor: number; head: number }> = [];
+
+  for (let i = 0; i < text.length; i += 1) {
+    if (text.startsWith("%(", i)) {
+      const end = text.indexOf(")", i + 2);
+      if (end === -1) {
+        throw new Error(`Unterminated selection marker in fixture input: ${text}`);
+      }
+
+      const markerText = text.slice(i + 2, end);
+      const anchor = output.length;
+      output += markerText;
+      const head = output.length;
+      selection.push({ anchor, head });
+      i = end;
+      continue;
+    }
+
+    output += text[i];
+  }
+
+  return {
+    text: output,
+    selection: selection.length > 0 ? selection : [{ anchor: 0, head: 0 }]
+  };
+}
+
+export function parseRcMappings(rc?: string): {
+  insertMappings: Map<string, string[]>;
+  normalMappings: Map<string, string[]>;
+  userModes: Map<string, Map<string, string[]>>;
+  namedRegisters: Map<string, string>;
+} {
+  const insertMappings = new Map<string, string[]>();
+  const normalMappings = new Map<string, string[]>();
+  const userModes = new Map<string, Map<string, string[]>>();
+  const namedRegisters = new Map<string, string>();
+
+  if (!rc) {
+    return { insertMappings, normalMappings, userModes, namedRegisters };
+  }
+
+  const lines = rc.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const regMatch = line.match(/^(?:set-register|reg)\s+(\S+)\s+'?(.*?)'?$/);
+    if (regMatch) {
+      const reg = regMatch[1];
+      const val = regMatch[2].replace(/^%\{|%\}$|^'|'$/g, "");
+      namedRegisters.set(reg, val);
+      continue;
+    }
+
+    const insertMatch = line.match(/^map\s+global\s+insert\s+(\S+)\s+'(.*)'$/);
+    if (insertMatch) {
+      const trigger = insertMatch[1];
+      const val = insertMatch[2];
+      insertMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const insertMatchNoQuote = line.match(/^map\s+global\s+insert\s+(\S+)\s+(\S+)$/);
+    if (insertMatchNoQuote) {
+      const trigger = insertMatchNoQuote[1];
+      const val = insertMatchNoQuote[2];
+      insertMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const normalMatch = line.match(/^map\s+global\s+normal\s+(\S+)\s+'(.*)'$/);
+    if (normalMatch) {
+      const trigger = normalMatch[1].startsWith("<") ? (
+        normalMatch[1].toLowerCase().startsWith("<a-") ? `<A-${normalMatch[1].slice(3, -1)}>` : normalMatch[1]
+      ) : normalMatch[1];
+      const val = normalMatch[2];
+      normalMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const normalMatchNoQuote = line.match(/^map\s+global\s+normal\s+(\S+)\s+(\S+)$/);
+    if (normalMatchNoQuote) {
+      const trigger = normalMatchNoQuote[1].startsWith("<") ? (
+        normalMatchNoQuote[1].toLowerCase().startsWith("<a-") ? `<A-${normalMatchNoQuote[1].slice(3, -1)}>` : normalMatchNoQuote[1]
+      ) : normalMatchNoQuote[1];
+      const val = normalMatchNoQuote[2];
+      normalMappings.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const userModeMatch = line.match(/^map\s+global\s+(\S+)\s+(\S+)\s+'(.*)'$/);
+    if (userModeMatch && userModeMatch[1] !== "insert" && userModeMatch[1] !== "normal") {
+      const modeName = userModeMatch[1];
+      const trigger = userModeMatch[2];
+      const val = userModeMatch[3];
+      if (!userModes.has(modeName)) {
+        userModes.set(modeName, new Map());
+      }
+      userModes.get(modeName)!.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+
+    const userModeMatchNoQuote = line.match(/^map\s+global\s+(\S+)\s+(\S+)\s+(\S+)$/);
+    if (userModeMatchNoQuote && userModeMatchNoQuote[1] !== "insert" && userModeMatchNoQuote[1] !== "normal") {
+      const modeName = userModeMatchNoQuote[1];
+      const trigger = userModeMatchNoQuote[2];
+      const val = userModeMatchNoQuote[3];
+      if (!userModes.has(modeName)) {
+        userModes.set(modeName, new Map());
+      }
+      userModes.get(modeName)!.set(trigger, tokenizeKakouneCmd(val));
+      continue;
+    }
+  }
+
+  return { insertMappings, normalMappings, userModes, namedRegisters };
 }
 
 export function tokenizeKakouneCmd(cmd: string): string[] {
@@ -31,8 +155,20 @@ export function tokenizeKakouneCmd(cmd: string): string[] {
       const end = cmd.indexOf(">", i + 1);
       if (end > i + 1) {
         const token = cmd.slice(i, end + 1);
-        if (/^<(Esc|esc|Enter|enter|Backspace|backspace|A-[^<>]+|C-[^<>]+)>$/.test(token)) {
-          tokens.push(token === "<esc>" ? "<Esc>" : token === "<enter>" ? "<Enter>" : token === "<backspace>" ? "<Backspace>" : token);
+        if (/^<(Esc|esc|Enter|enter|ret|ret\b|Backspace|backspace|Space|Tab|tab|right|left|up|down|Right|Left|Up|Down|A-[^<>]+|a-[^<>]+|C-[^<>]+|c-[^<>]+)>$/i.test(token)) {
+          tokens.push(
+            /^<esc>$/i.test(token) ? "<Esc>" :
+            /^<(enter|ret)>$/i.test(token) ? "<Enter>" :
+            /^<tab>$/i.test(token) ? "<Tab>" :
+            /^<backspace>$/i.test(token) ? "<Backspace>" :
+            token.toLowerCase() === "<right>" ? "<Right>" :
+            token.toLowerCase() === "<left>" ? "<Left>" :
+            token.toLowerCase() === "<up>" ? "<Up>" :
+            token.toLowerCase() === "<down>" ? "<Down>" :
+            token.toLowerCase().startsWith("<a-") ? `<A-${token.slice(3, -1)}>` :
+            token.toLowerCase().startsWith("<c-") ? `<C-${token.slice(3, -1)}>` :
+            token
+          );
           i = end;
           continue;
         }
@@ -50,22 +186,53 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
   document.body.appendChild(parent);
 
   try {
+    const { insertMappings, normalMappings, userModes, namedRegisters } = parseRcMappings(input.rc);
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
+    processor.setInsertMappings(insertMappings);
+    processor.setNormalMappings(normalMappings);
+    processor.setUserModes(userModes);
+    const parsed = parseSelectionMarkers(input.in ?? "");
+    const doc = parsed.text;
+    const initialSelection = EditorSelection.create(parsed.selection.map(range => EditorSelection.range(range.anchor, range.head)), 0);
     const view = new EditorView({
       state: EditorState.create({
-        doc: input.in ?? "",
-        selection: EditorSelection.cursor(0),
+        doc,
+        selection: initialSelection,
         extensions: [kakoune()]
       }),
       parent
     });
 
-    // PoC placeholder: keep rc accepted without trying to interpret Kakoune rc files.
-    void input.rc;
+    const initRanges = initialSelection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
+    view.dispatch({
+      effects: setKakouneSelectionHistoryEffect.of({
+        history: [initRanges],
+        index: 0
+      })
+    });
+
+    if (namedRegisters.size > 0) {
+      view.dispatch({ effects: setKakouneNamedRegistersEffect.of(namedRegisters) });
+    }
 
     for (const token of tokenizeKakouneCmd(input.cmd)) {
-      const mode = getKakouneState(view.state).mode;
-      processor.handle(mode, token, view);
+      const state = getKakouneState(view.state);
+      if (state.searchPrompt !== null) {
+        handleSearchPromptKey(view, token);
+        continue;
+      }
+
+      if (state.splitPrompt !== null) {
+        handleSplitPromptKey(view, token);
+        continue;
+      }
+
+      if (state.pipePrompt !== null) {
+        handlePipePromptKey(view, token);
+        continue;
+      }
+
+      processor.handle(state.mode, token, view);
     }
 
     const state = getKakouneState(view.state);
@@ -74,7 +241,8 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
       doc: view.state.doc.toString(),
       selectionRanges: view.state.selection.ranges.map(range => ({ anchor: range.anchor, head: range.head })),
       mode: state.mode,
-      tokens: tokenizeKakouneCmd(input.cmd)
+      tokens: tokenizeKakouneCmd(input.cmd),
+      error: state.commandError ?? undefined
     };
   } finally {
     parent.remove();

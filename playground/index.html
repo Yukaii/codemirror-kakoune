@@ -28,21 +28,68 @@
           </a>
         </div>
         <div class="controls">
-          <label class="control" for="theme-select">
-            <span>theme</span>
-            <select id="theme-select" name="theme">
-              <option value="night">Night</option>
-              <option value="paper">Paper</option>
-              <option value="sepia">Sepia</option>
-            </select>
-          </label>
-          <label class="control" for="layout-select">
-            <span>which-key</span>
-            <select id="layout-select" name="layout">
-              <option value="vertical">Vertical</option>
-              <option value="horizontal">Horizontal</option>
-            </select>
-          </label>
+          <button id="config-toggle" class="control config-toggle" type="button" title="Open settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.67 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.67 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.67a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>settings</span>
+          </button>
+          <div id="config-modal" class="register-popover config-modal">
+            <div class="popover-header">
+              <span>Settings</span>
+              <button id="config-modal-close" type="button">×</button>
+            </div>
+            <div class="config-body">
+              <div class="config-section">
+                <span class="config-section-title">Appearance</span>
+                <label class="config-row" for="theme-select">
+                  <span>Theme</span>
+                  <select id="theme-select" name="theme">
+                    <option value="night">Night</option>
+                    <option value="paper">Paper</option>
+                    <option value="sepia">Sepia</option>
+                  </select>
+                </label>
+                <label class="config-row" for="font-family-select">
+                  <span>Font family</span>
+                  <select id="font-family-select" name="font-family">
+                    <option value="mono">System Mono</option>
+                    <option value="sans">System Sans</option>
+                    <option value="serif">System Serif</option>
+                  </select>
+                </label>
+                <label class="config-row" for="font-size-select">
+                  <span>Font size</span>
+                  <select id="font-size-select" name="font-size">
+                    <option value="small">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="large">Large</option>
+                  </select>
+                </label>
+              </div>
+              <div class="config-section">
+                <span class="config-section-title">Editor</span>
+                <label class="config-row" for="line-numbers-select">
+                  <span>Line numbers</span>
+                  <select id="line-numbers-select" name="line-numbers">
+                    <option value="absolute">Absolute</option>
+                    <option value="relative">Relative</option>
+                  </select>
+                </label>
+              </div>
+              <div class="config-section">
+                <span class="config-section-title">Which-key</span>
+                <label class="config-row" for="layout-select">
+                  <span>Layout</span>
+                  <select id="layout-select" name="layout">
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
           <span class="state">
             mode: <strong id="mode-pill">select</strong>
             <span class="search-container">

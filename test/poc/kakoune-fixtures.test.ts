@@ -42,6 +42,26 @@ describe("loadKakouneFixtures", () => {
     }
   });
 
+  it("loads an optional error fixture file", () => {
+    const root = mkdtempSync(join(tmpdir(), "kakoune-fixtures-"));
+    const fixtureDir = join(root, "jump-error");
+
+    mkdirSync(fixtureDir, { recursive: true });
+    writeFileSync(join(fixtureDir, "cmd"), "gj");
+    writeFileSync(join(fixtureDir, "error"), "'exec': no next jump");
+
+    try {
+      const fixtures = loadKakouneFixtures(root, 1);
+
+      expect(fixtures[0]).toMatchObject({
+        hasError: true,
+        error: "'exec': no next jump"
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("resolves the repo-relative Kakoune root by default", () => {
     expect(resolveKakouneRoot()).toBe(join(process.cwd(), "test/kakoune"));
   });

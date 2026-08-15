@@ -73,6 +73,15 @@ describe("normalizeKeyStroke", () => {
     });
     expect(normalizeKeyStroke(event)).toBe("<C-{>");
   });
+
+  it("maps Ctrl+I to the Kakoune jump-forward key", () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "Tab",
+      code: "Tab",
+      ctrlKey: true
+    });
+    expect(normalizeKeyStroke(event)).toBe("<C-Tab>");
+  });
 });
 
 describe("KakouneKeyProcessor", () => {
@@ -113,11 +122,12 @@ describe("KakouneKeyProcessor", () => {
     view.dispatch({ selection: EditorSelection.range(8, 3) });
 
     expect(processor.handle("select", "x", view)).toBe(true);
-    expect(view.state.selection.main.anchor).toBe(view.state.doc.lineAt(8).to);
+    // In Kakoune, `x` expands to full line including newline
+    expect(view.state.selection.main.anchor).toBe(view.state.doc.lineAt(8).to + 1);
     expect(view.state.selection.main.head).toBe(view.state.doc.lineAt(8).from);
   });
 
-  it("does not keep extending line selection when x is repeated", () => {
+  it("expands line selection to next line when x is repeated", () => {
     const view = createView("alpha beta\ngamma delta\nthird line");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
@@ -125,12 +135,13 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("select", "x", view)).toBe(true);
     const first = view.state.selection.main;
-    expect(first.head).toBe(view.state.doc.lineAt(3).to);
+    // In Kakoune, `x` expands to full line including newline
+    expect(first.head).toBe(view.state.doc.lineAt(3).to + 1);
     expect(processor.handle("select", "x", view)).toBe(true);
     const second = view.state.selection.main;
 
     expect(second.anchor).toBe(first.anchor);
-    expect(second.head).toBe(first.head);
+    expect(second.head).toBe(view.state.doc.line(2).to + 1);
   });
 
   it("keeps an empty line in the x selection range", () => {
@@ -143,7 +154,7 @@ describe("KakouneKeyProcessor", () => {
 
     expect(processor.handle("select", "x", view)).toBe(true);
     expect(view.state.selection.main.anchor).toBe(firstLine.from);
-    expect(view.state.selection.main.head).toBe(emptyLine.to);
+    expect(view.state.selection.main.head).toBe(emptyLine.to + 1);
   });
 
   it("keeps the original line when x is repeated after extending down with J", () => {
@@ -160,7 +171,7 @@ describe("KakouneKeyProcessor", () => {
 
     expect(view.state.selection.main.anchor).toBe(first.anchor);
     expect(view.state.selection.main.from).toBe(0);
-    expect(view.state.selection.main.to).toBe(view.state.doc.line(2).to);
+    expect(view.state.selection.main.to).toBe(view.state.doc.line(3).to);
   });
 
   it("supports line begin and line end motions through gh and gl", () => {
