@@ -26,6 +26,22 @@ const fontSizeSelect = document.querySelector<HTMLSelectElement>("#font-size-sel
 const lineNumbersSelect = document.querySelector<HTMLSelectElement>("#line-numbers-select");
 const layoutSelect = document.querySelector<HTMLSelectElement>("#layout-select");
 const vk = document.querySelector<HTMLElement>("#vk");
+const hud = document.querySelector<HTMLDivElement>("#which-key-hud");
+const hudItems = document.querySelector<HTMLDivElement>("#which-key-hud .hud-items");
+
+if (hud && hudItems) {
+  hud.dataset.layout = layoutSelect?.value ?? "vertical";
+  editor.getWrapperElement().addEventListener("kakoune-which-key", event => {
+    const detail = (event as CustomEvent<{ pending: string | null; items: string[] }>).detail;
+    hudItems.replaceChildren(...detail.items.map(item => {
+      const element = document.createElement("div");
+      element.className = "hud-item";
+      element.innerHTML = `<span class="hud-key">${item}</span>`;
+      return element;
+    }));
+    hud.classList.toggle("hidden", detail.pending === null);
+  });
+}
 
 function updateStatus(): void {
   const mode = wrapper.dataset.kakouneMode === "insert" ? "insert" : "select";
@@ -79,7 +95,9 @@ if (lineNumbersSelect) {
 }
 if (layoutSelect) {
   layoutSelect.value = window.localStorage.getItem("codemirror-kakoune.cm5.layout") ?? "vertical";
+  if (hud) hud.dataset.layout = layoutSelect.value;
   layoutSelect.addEventListener("change", () => {
+    if (hud) hud.dataset.layout = layoutSelect.value;
     window.localStorage.setItem("codemirror-kakoune.cm5.layout", layoutSelect.value);
   });
 }

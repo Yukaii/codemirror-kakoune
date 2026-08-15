@@ -1,6 +1,9 @@
 @import "../playground/style.css";
 
 /* CM5-specific additions; layout and tokens come from the CM6 playground. */
+html, body { overflow-x: hidden; }
+.shell, .bar, .brand-container { min-width: 0; }
+.brand { overflow: hidden; text-overflow: ellipsis; }
 .CodeMirror {
   height: 100%;
   color: var(--text);

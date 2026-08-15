@@ -12,6 +12,7 @@ const codeMirror = CodeMirror as typeof CodeMirror & { keyMap: Record<string, Co
 
 function setMode(cm: Cm, mode: KakouneCm5Mode): void {
   cm.getWrapperElement().dataset.kakouneMode = mode;
+  (cm as Cm & { kakounePending?: string }).kakounePending = undefined;
   const editor = cm as Cm & { kakouneKeyMap?: CodeMirror.KeyMap };
   if (editor.kakouneKeyMap) {
     cm.removeKeyMap(editor.kakouneKeyMap);
@@ -19,6 +20,57 @@ function setMode(cm: Cm, mode: KakouneCm5Mode): void {
   editor.kakouneKeyMap = mode === "select" ? kakouneKeyMap : kakouneInsertKeyMap;
   cm.setOption("keyMap", "default");
   cm.addKeyMap(editor.kakouneKeyMap);
+}
+
+function signalWhichKey(cm: Cm, pending: string | null): void {
+  if (typeof CustomEvent === "undefined") return;
+  cm.getWrapperElement().dispatchEvent(new CustomEvent("kakoune-which-key", {
+    bubbles: true,
+    detail: { pending, items: pending === "g" ? ["g h", "g l", "g k", "g j", "g g"] : [] }
+  }));
+}
+
+function moveToLineBoundary(cm: Cm, end: boolean): void {
+  move(cm, (cursor, editor) => ({
+    line: cursor.line,
+    ch: end ? editor.getLine(cursor.line).length : 0
+  }));
+}
+
+function jumpToDocument(cm: Cm, end: boolean): void {
+  const line = end ? cm.lastLine() : cm.firstLine();
+  const ch = end ? cm.getLine(line).length : 0;
+  cm.setSelections(cm.listSelections().map(() => ({ anchor: { line, ch }, head: { line, ch } })));
+}
+
+function handleGPrefix(cm: Cm, key: string): boolean {
+  const editor = cm as Cm & { kakounePending?: string };
+  if (editor.kakounePending !== "g") {
+    editor.kakounePending = "g";
+    signalWhichKey(cm, "g");
+    return true;
+  }
+
+  editor.kakounePending = undefined;
+  signalWhichKey(cm, null);
+  switch (key.toLowerCase()) {
+    case "h": moveToLineBoundary(cm, false); return true;
+    case "l": moveToLineBoundary(cm, true); return true;
+    case "k": jumpToDocument(cm, false); return true;
+    case "j": jumpToDocument(cm, true); return true;
+    case "g": jumpToDocument(cm, false); return true;
+    default: return true;
+  }
+}
+
+function normalCommand(key: string, command: Command): Command {
+  return cm => {
+    const editor = cm as Cm & { kakounePending?: string };
+    if (editor.kakounePending === "g") {
+      return handleGPrefix(cm, key);
+    }
+    command(cm);
+  };
 }
 
 function move(cm: Cm, delta: (cursor: CodeMirror.Position, cm: Cm) => CodeMirror.Position): void {
@@ -97,12 +149,14 @@ function installCommands(cm: Cm): void {
 }
 
 export const kakouneKeyMap = {
-  H: selectCommands.h, J: selectCommands.j, K: selectCommands.k, L: selectCommands.l,
-  W: selectCommands.w, B: selectCommands.b, X: selectCommands.x, D: selectCommands.d,
+  G: (editor: Cm) => handleGPrefix(editor, "g"),
+  H: normalCommand("h", selectCommands.h), J: normalCommand("j", selectCommands.j), K: normalCommand("k", selectCommands.k), L: normalCommand("l", selectCommands.l),
+  W: normalCommand("w", selectCommands.w), B: normalCommand("b", selectCommands.b), X: normalCommand("x", selectCommands.x), D: normalCommand("d", selectCommands.d),
   I: (editor: Cm) => enterInsert(editor), A: (editor: Cm) => enterInsert(editor, true),
   U: selectCommands.u, "Shift-U": selectCommands.U,
-  h: selectCommands.h, j: selectCommands.j, k: selectCommands.k, l: selectCommands.l,
-  w: selectCommands.w, b: selectCommands.b, x: selectCommands.x, d: selectCommands.d,
+  g: (editor: Cm) => handleGPrefix(editor, "g"),
+  h: normalCommand("h", selectCommands.h), j: normalCommand("j", selectCommands.j), k: normalCommand("k", selectCommands.k), l: normalCommand("l", selectCommands.l),
+  w: normalCommand("w", selectCommands.w), b: normalCommand("b", selectCommands.b), x: normalCommand("x", selectCommands.x), d: normalCommand("d", selectCommands.d),
   i: (editor: Cm) => enterInsert(editor), a: (editor: Cm) => enterInsert(editor, true),
   u: selectCommands.u,
   Esc: (editor: Cm) => setMode(editor, "select"),
