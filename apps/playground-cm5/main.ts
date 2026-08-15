@@ -1,9 +1,10 @@
 import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 import { kakoune } from "codemirror-kakoune-cm5";
+import "../playground/style.css";
 import "./style.css";
 
-const textarea = document.querySelector<HTMLTextAreaElement>("#editor");
+const textarea = document.querySelector<HTMLTextAreaElement>("#editor-input");
 if (!textarea) throw new Error("CM5 playground editor is missing.");
 
 const editor = CodeMirror.fromTextArea(textarea, {
@@ -15,10 +16,9 @@ kakoune(editor);
 
 const wrapper = editor.getWrapperElement();
 const modePill = document.querySelector<HTMLElement>("#mode-pill");
-const modeLabel = document.querySelector<HTMLElement>("#mode-label");
-const cursorPosition = document.querySelector<HTMLElement>("#cursor-position");
-const settingsToggle = document.querySelector<HTMLButtonElement>("#settings-toggle");
-const settings = document.querySelector<HTMLDivElement>("#settings");
+const settingsToggle = document.querySelector<HTMLButtonElement>("#config-toggle");
+const settings = document.querySelector<HTMLDivElement>("#config-modal");
+const settingsClose = document.querySelector<HTMLButtonElement>("#config-modal-close");
 const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select");
 const fontSizeSelect = document.querySelector<HTMLSelectElement>("#font-size-select");
 
@@ -26,11 +26,6 @@ function updateStatus(): void {
   const mode = wrapper.dataset.kakouneMode === "insert" ? "insert" : "select";
   document.body.dataset.mode = mode;
   if (modePill) modePill.textContent = mode;
-  if (modeLabel) modeLabel.textContent = `${mode} mode`;
-  if (cursorPosition) {
-    const cursor = editor.getCursor();
-    cursorPosition.textContent = `Ln ${cursor.line + 1}, Col ${cursor.ch + 1}`;
-  }
 }
 
 function applyTheme(theme: string): void {
@@ -40,7 +35,6 @@ function applyTheme(theme: string): void {
 
 function applyFontSize(size: string): void {
   wrapper.style.setProperty("--cm5-font-size", `${size}px`);
-  wrapper.querySelector<HTMLElement>(".CodeMirror-code")?.style.setProperty("font-size", `${size}px`);
   window.localStorage.setItem("codemirror-kakoune.cm5.fontSize", size);
 }
 
@@ -57,10 +51,11 @@ if (fontSizeSelect) {
 applyTheme(savedTheme);
 applyFontSize(savedFontSize);
 
-settingsToggle?.addEventListener("click", () => settings?.classList.toggle("hidden"));
+settingsToggle?.addEventListener("click", () => settings?.classList.toggle("show"));
+settingsClose?.addEventListener("click", () => settings?.classList.remove("show"));
 document.addEventListener("click", event => {
   if (settings && settingsToggle && !settings.contains(event.target as Node) && !settingsToggle.contains(event.target as Node)) {
-    settings.classList.add("hidden");
+    settings.classList.remove("show");
   }
 });
 

@@ -3,57 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=overlays-content" />
-    <title>CodeMirror Kakoune CM5 Playground</title>
+    <title>CodeMirror Kakoune Playground</title>
   </head>
   <body data-theme="night">
     <main class="shell">
       <header class="bar">
         <div class="brand-container">
           <span class="brand">codemirror-kakoune</span>
-          <nav class="version-nav" aria-label="Playground versions">
+          <nav class="playground-nav" aria-label="Playground versions">
             <a href="../">CM6</a>
             <a href="./" aria-current="page">CM5</a>
           </nav>
-          <a class="icon-link" href="https://github.com/Yukaii/codemirror-kakoune" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">↗</a>
+          <a href="https://github.com/Yukaii/codemirror-kakoune" class="github-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">↗</a>
         </div>
         <div class="controls">
-          <span class="state">
-            mode: <strong id="mode-pill">select</strong>
-            <span class="hint">CM5 keymap</span>
-          </span>
-          <button id="settings-toggle" class="settings-button" type="button">settings</button>
-          <div id="settings" class="settings-panel hidden">
-            <label>Theme <select id="theme-select"><option value="night">Night</option><option value="paper">Paper</option></select></label>
-            <label>Font size <select id="font-size-select"><option value="14">Small</option><option value="15" selected>Medium</option><option value="17">Large</option></select></label>
+          <button id="config-toggle" class="control config-toggle" type="button">settings</button>
+          <div id="config-modal" class="register-popover config-modal">
+            <div class="popover-header"><span>Settings</span><button id="config-modal-close" type="button">×</button></div>
+            <div class="config-body">
+              <div class="config-section">
+                <span class="config-section-title">Appearance</span>
+                <label class="config-row" for="theme-select"><span>Theme</span><select id="theme-select"><option value="night">Night</option><option value="paper">Paper</option><option value="sepia">Sepia</option></select></label>
+                <label class="config-row" for="font-size-select"><span>Font size</span><select id="font-size-select"><option value="13">Small</option><option value="14" selected>Medium</option><option value="16">Large</option></select></label>
+              </div>
+            </div>
           </div>
+          <span class="state">mode: <strong id="mode-pill">select</strong><span class="hint">CM5 keymap</span></span>
         </div>
       </header>
 
-      <section class="intro">
-        <div>
-          <span class="eyebrow">CodeMirror 5 playground</span>
-          <h1>Selection-first editing, on the classic engine.</h1>
-          <p>Try the native CM5 keymap below. Start in select mode, use <kbd>i</kbd> to insert, and press <kbd>Esc</kbd> to return.</p>
-        </div>
-        <div class="mode-card"><span class="mode-dot"></span><span id="mode-label">select mode</span></div>
-      </section>
-
-      <section class="editor-frame">
-        <div id="editor-toolbar"><span>untitled.txt</span><span id="cursor-position">Ln 1, Col 1</span></div>
-        <textarea id="editor">Welcome to the CodeMirror 5 Kakoune playground.
+      <div id="editor">
+        <textarea id="editor-input">Welcome to the CodeMirror 5 Kakoune playground.
 
 Move with h, j, k, l. Press x to select a line, d to delete, i or a to insert, and Esc to return to select mode.
 
 This playground uses CodeMirror 5's native keyMap and command APIs.</textarea>
-      </section>
+      </div>
 
-      <section class="key-guide" aria-label="Key guide">
-        <div><span class="guide-title">select</span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd><kbd>w</kbd><kbd>b</kbd><kbd>x</kbd><kbd>d</kbd></div>
-        <div><span class="guide-title">insert</span><kbd>i</kbd><kbd>a</kbd><kbd>Esc</kbd></div>
-        <div><span class="guide-title">history</span><kbd>u</kbd><kbd>U</kbd></div>
-      </section>
-
-      <footer class="footer"><span>CM5 keymap integration</span><a href="https://codemirror.net/5/" target="_blank" rel="noopener noreferrer">CodeMirror 5 docs ↗</a></footer>
+      <div class="hint">Select mode: <strong>h j k l</strong> move, <strong>x</strong> selects a line, <strong>d</strong> deletes. Insert mode: <strong>i</strong> or <strong>a</strong>, then <strong>Esc</strong>.</div>
+      <footer class="footer"><span>inspired by <a href="https://kakoune.org" target="_blank" rel="noopener noreferrer">kakoune</a>, built on <a href="https://codemirror.net/5/" target="_blank" rel="noopener noreferrer">CodeMirror 5</a></span></footer>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>
