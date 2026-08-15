@@ -1,5 +1,6 @@
 import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
+import "codemirror/mode/markdown/markdown";
 import { kakoune } from "codemirror-kakoune-cm5";
 import "../playground/style.css";
 import "./style.css";
@@ -9,7 +10,8 @@ if (!textarea) throw new Error("CM5 playground editor is missing.");
 
 const editor = CodeMirror.fromTextArea(textarea, {
   lineNumbers: true,
-  mode: "text/plain",
+  mode: "markdown",
+  lineWrapping: true,
   viewportMargin: Infinity
 });
 kakoune(editor);
@@ -25,7 +27,7 @@ const fontSizeSelect = document.querySelector<HTMLSelectElement>("#font-size-sel
 function updateStatus(): void {
   const mode = wrapper.dataset.kakouneMode === "insert" ? "insert" : "select";
   document.body.dataset.mode = mode;
-  if (modePill) modePill.textContent = mode;
+  if (modePill) modePill.textContent = mode === "select" ? "normal" : "insert";
 }
 
 function applyTheme(theme: string): void {
