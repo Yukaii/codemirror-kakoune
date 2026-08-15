@@ -1,6 +1,5 @@
 :root {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --bg: #0f1115;
   --panel: #151922;
   --panel-border: #273044;
@@ -69,7 +68,6 @@ body {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 48px);
-  height: calc(100dvh - 48px);
 }
 
 .bar {
@@ -477,22 +475,28 @@ body[data-theme="sepia"] .register-popover {
 }
 
 /* Block cursor for select / normal mode */
+.cm-editor[data-kakoune-mode="select"] .cm-cursorLayer .cm-cursor,
+.cm-editor[data-kakoune-mode="select"] .cm-cursorLayer .cm-cursor-primary,
+.cm-editor[data-kakoune-mode="select"] .cm-cursorLayer .cm-cursor-secondary,
 .cm-editor[data-kakoune-mode="select"] .cm-cursor,
 .cm-editor[data-kakoune-mode="select"] .cm-cursor-primary,
 .cm-editor[data-kakoune-mode="select"] .cm-cursor-secondary {
-  border-left: 1ch solid var(--accent) !important;
-  margin-left: 0 !important;
-  opacity: 0.7 !important;
+  border-left: 1ch solid var(--accent);
+  margin-left: 0;
+  opacity: 0.7;
 }
 
+.cm-editor[data-kakoune-mode="insert"] .cm-cursorLayer .cm-cursor,
+.cm-editor[data-kakoune-mode="insert"] .cm-cursorLayer .cm-cursor-primary,
 .cm-editor[data-kakoune-mode="insert"] .cm-cursor,
 .cm-editor[data-kakoune-mode="insert"] .cm-cursor-primary {
-  border-left: 1.5px solid var(--text) !important;
+  border-left: 1.5px solid var(--text);
 }
 
 /* Block cursor for line selections */
+.cm-editor.cm-line-selection .cm-cursorLayer .cm-cursor-primary,
 .cm-editor.cm-line-selection .cm-cursor-primary {
-  border-left: 1ch solid var(--accent) !important;
+  border-left: 1ch solid var(--accent);
   border-radius: 2px;
 }
 
@@ -507,14 +511,13 @@ body[data-theme="sepia"] .register-popover {
 
 .footer a {
   color: var(--muted);
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 .footer a:hover {
   color: var(--accent);
-  text-decoration-color: var(--accent);
+  text-decoration: underline;
 }
 
 .vk {

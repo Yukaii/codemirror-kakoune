@@ -32,15 +32,20 @@
   font-style: italic;
 }
 
+.cm-editor[data-kakoune-mode="select"] .cm-cursorLayer .cm-cursor,
+.cm-editor[data-kakoune-mode="select"] .cm-cursorLayer .cm-cursor-primary,
+.cm-editor[data-kakoune-mode="select"] .cm-cursorLayer .cm-cursor-secondary,
 .cm-editor[data-kakoune-mode="select"] .cm-cursor,
 .cm-editor[data-kakoune-mode="select"] .cm-cursor-primary,
 .cm-editor[data-kakoune-mode="select"] .cm-cursor-secondary {
-  border-left: 1ch solid var(--text-accent, var(--color-accent, var(--caret-color, #7aa2f7))) !important;
-  margin-left: 0 !important;
-  opacity: 0.7 !important;
+  border-left: 1ch solid var(--text-accent, var(--color-accent, var(--caret-color, #7aa2f7)));
+  margin-left: 0;
+  opacity: 0.7;
 }
 
+.cm-editor[data-kakoune-mode="insert"] .cm-cursorLayer .cm-cursor,
+.cm-editor[data-kakoune-mode="insert"] .cm-cursorLayer .cm-cursor-primary,
 .cm-editor[data-kakoune-mode="insert"] .cm-cursor,
 .cm-editor[data-kakoune-mode="insert"] .cm-cursor-primary {
-  border-left: 1.5px solid var(--caret-color, currentColor) !important;
+  border-left: 1.5px solid var(--caret-color, currentColor);
 }

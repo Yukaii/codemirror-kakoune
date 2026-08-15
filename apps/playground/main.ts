@@ -245,6 +245,18 @@ const initialFontSize: FontSize = isFontSize(window.localStorage.getItem(fontSiz
   ? window.localStorage.getItem(fontSizeStorageKey) as FontSize
   : "medium";
 
+function createChild<K extends keyof HTMLElementTagNameMap>(
+  parent: HTMLElement,
+  tag: K,
+  options?: { cls?: string; text?: string }
+): HTMLElementTagNameMap[K] {
+  const el = parent.ownerDocument.createElement(tag);
+  if (options?.cls) el.className = options.cls;
+  if (options?.text !== undefined) el.textContent = options.text;
+  parent.appendChild(el);
+  return el;
+}
+
 const view = new EditorView({
   state: EditorState.create({
     doc: [
@@ -306,21 +318,10 @@ const view = new EditorView({
 
           hudItems.innerHTML = "";
           for (const item of items) {
-            const el = document.createElement("div");
-            el.className = "hud-item";
-
-            const keyEl = document.createElement("span");
-            keyEl.className = "hud-key";
+            const el = createChild(hudItems, "div", { cls: "hud-item" });
             const remainingKeys = item.keys.slice(pending.length);
-            keyEl.textContent = remainingKeys.join(" ");
-
-            const descEl = document.createElement("span");
-            descEl.className = "hud-desc";
-            descEl.textContent = item.description || "";
-
-            el.appendChild(keyEl);
-            el.appendChild(descEl);
-            hudItems.appendChild(el);
+            createChild(el, "span", { cls: "hud-key", text: remainingKeys.join(" ") });
+            createChild(el, "span", { cls: "hud-desc", text: item.description || "" });
           }
         }
       }),
@@ -467,23 +468,22 @@ if (!ctrlBtn || !altBtn) {
 document.addEventListener(
   "keydown",
   (event) => {
-    const kbEvent = event as KeyboardEvent;
     if (isSynthetic || forwardingBrowserShortcut || !view.hasFocus) {
       return;
     }
 
-    if (kbEvent.ctrlKey && !kbEvent.altKey && !kbEvent.metaKey && (kbEvent.key === "o" || kbEvent.key === "i" || kbEvent.key === "Tab")) {
-      kbEvent.preventDefault();
-      kbEvent.stopImmediatePropagation();
+    if (event.ctrlKey && !event.altKey && !event.metaKey && (event.key === "o" || event.key === "i" || event.key === "Tab")) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       forwardingBrowserShortcut = true;
       try {
         view.contentDOM.dispatchEvent(
           new KeyboardEvent("keydown", {
-            key: kbEvent.key,
-            code: kbEvent.code,
+            key: event.key,
+            code: event.code,
             ctrlKey: true,
             altKey: false,
-            shiftKey: kbEvent.shiftKey,
+            shiftKey: event.shiftKey,
             bubbles: true,
             cancelable: true
           })

@@ -7,24 +7,11 @@ import { search } from "@codemirror/search";
 import {
   kakouneInitialModeFacet,
   kakouneStateField,
-  setKakouneModeEffect,
   kakouneWhichKeyFacet,
   kakouneSelectionTypeField,
-  setKakouneSelectionTypeEffect,
-  setKakouneLastSelectEffect,
-  setKakouneSearchPromptEffect,
-  setKakouneSearchSelectionEffect,
-  setKakouneSelectPromptEffect,
-  setKakouneSelectSelectionEffect,
-  setKakouneSplitPromptEffect,
-  setKakouneSplitSelectionEffect,
-  type KakouneFindKind,
-  type KakouneLastSelect,
   type KakouneMode,
   type KakouneOptions,
-  type KakouneState,
-  type WhichKeyCallback,
-  type WhichKeyItem
+  type KakouneState
 } from "./state";
 import { KakouneKeyProcessor, normalizeKeyStroke } from "./keys";
 import {
@@ -41,8 +28,7 @@ import {
   commitSplitPrompt,
   deleteSplitPromptChar,
   cancelSplitPrompt,
-  handleSplitPromptKey,
-  kakouneCommands
+  handleSplitPromptKey
 } from "./commands";
 
 export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem, KakouneFindKind, KakouneLastSelect } from "./state";
@@ -240,15 +226,15 @@ const kakouneSelectionDecorations = EditorView.decorations.compute(
 
 const kakouneBaseTheme = EditorView.baseTheme({
   "&[data-kakoune-mode='select'] .cm-cursor, &[data-kakoune-mode='select'] .cm-cursor-primary, &[data-kakoune-mode='select'] .cm-cursor-secondary": {
-    borderLeft: "1ch solid var(--color-accent, var(--caret-color, currentColor)) !important",
+    borderLeft: "1ch solid var(--color-accent, var(--caret-color, currentColor))",
     opacity: "0.7",
-    marginLeft: "0 !important"
+    marginLeft: "0"
   },
   "&[data-kakoune-mode='insert'] .cm-cursor, &[data-kakoune-mode='insert'] .cm-cursor-primary": {
-    borderLeft: "1.5px solid var(--caret-color, currentColor) !important"
+    borderLeft: "1.5px solid var(--caret-color, currentColor)"
   },
   "& .cm-selectionLayer > .cm-selectionBackground": {
-    display: "none !important"
+    display: "none"
   }
 });
 
