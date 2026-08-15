@@ -50,7 +50,7 @@ Bring Kakoune's fast, selection-first modal editing paradigm into Obsidian's Mar
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [GitHub Release](https://github.com/Yukaii/codemirror-kakoune/releases).
 2. Inside your Obsidian vault, navigate to the plugins folder:
    ```
-   <your-vault>/.obsidian/plugins/obsidian-kakoune/
+   <your-vault>/.obsidian/plugins/kakoune/
    ```
    *(Create the directory if it does not exist)*.
 3. Place `main.js`, `manifest.json`, and `styles.css` inside that folder.
