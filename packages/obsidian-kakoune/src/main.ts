@@ -176,13 +176,22 @@ export default class KakounePlugin extends Plugin {
     try {
       const state = view.state.field(kakouneStateField, false);
       const mode = state ? state.mode : this.settings.defaultMode;
-      this.renderStatusBar(mode, this.pendingKeys);
+      const prompt = state
+        ? state.searchPrompt !== null
+          ? `search: ${state.searchPrompt}`
+          : state.selectPrompt !== null
+            ? `select: ${state.selectPrompt}`
+            : state.splitPrompt !== null
+              ? `split: ${state.splitPrompt}`
+              : null
+        : null;
+      this.renderStatusBar(mode, this.pendingKeys, prompt);
     } catch {
       this.renderStatusBar(this.settings.defaultMode, this.pendingKeys);
     }
   }
 
-  private renderStatusBar(mode: string, pendingKeys: string[]): void {
+  private renderStatusBar(mode: string, pendingKeys: string[], prompt: string | null = null): void {
     if (!this.statusBarItemEl) return;
 
     this.statusBarItemEl.empty();
@@ -191,7 +200,10 @@ export default class KakounePlugin extends Plugin {
     const badge = this.statusBarItemEl.createSpan({ cls: "kakoune-mode-badge" });
     badge.setText(formatModeLabel(mode));
 
-    if (pendingKeys.length > 0 || this.isWaitingForChar) {
+    if (prompt !== null) {
+      const promptEl = this.statusBarItemEl.createSpan({ cls: "kakoune-prompt" });
+      promptEl.setText(` ${prompt}`);
+    } else if (pendingKeys.length > 0 || this.isWaitingForChar) {
       const pendingEl = this.statusBarItemEl.createSpan({ cls: "kakoune-pending-keys" });
       const prompt = this.isWaitingForChar ? " (char?)" : "";
       pendingEl.setText(` ${pendingKeys.join(" ")}${prompt}`);

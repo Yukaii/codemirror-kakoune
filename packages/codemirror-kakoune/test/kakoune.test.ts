@@ -611,7 +611,11 @@ describe("kakoune extension", () => {
 
     // Select entire buffer
     expect(processor.handle("select", "%", view)).toBe(true);
-    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "s", bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
     expect(view.state.field(kakouneStateField).selectPrompt).toBe("");
 
     for (const key of "beta") {
@@ -641,7 +645,11 @@ describe("kakoune extension", () => {
 
     // Select all
     expect(processor.handle("select", "%", view)).toBe(true);
-    expect(processor.handle("select", "S", view)).toBe(true);
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "S", shiftKey: true, bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
     expect(view.state.field(kakouneStateField).splitPrompt).toBe("");
 
     for (const key of "\\s+") {

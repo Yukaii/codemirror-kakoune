@@ -26,7 +26,8 @@
   color: var(--text-on-accent);
 }
 
-.kakoune-status-bar .kakoune-pending-keys {
+.kakoune-status-bar .kakoune-pending-keys,
+.kakoune-status-bar .kakoune-prompt {
   opacity: 0.8;
   font-style: italic;
 }
