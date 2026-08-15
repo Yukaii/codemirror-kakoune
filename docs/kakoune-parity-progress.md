@@ -32,18 +32,20 @@
 - insert-replace
 - repeat-insert/repeat-normal-exec
 - repeat-insert/repeat-normal-movement
+- rotate-content
+- convert-tabs-to-spaces
+- convert-spaces-to-tabs
+- deindent
+- indent
+- trim
 
 ## Still Red
 - repeat-insert/repeat-insert-mapped
 - repeat-insert/repeat-insert-hooks
 - repeat-insert/repeat-insert-mapped-word-completion
 - concat-paste-line
-- convert-spaces-to-tabs
-- convert-tabs-to-spaces
-- deindent
 - goto/file
 - goto/last-buffer
-- indent
 - macro/record-macro
 - macro/replay-macro-mapped-word-completion
 - pipe
@@ -55,20 +57,15 @@
 - replace-lines
 - replay-complex-insert
 - replay-macro
-- rotate-content
 - selection-undo/fold-redundant-entries
 - selection-undo/redo
 - selection-undo/undo
 - selection-undo/windisplay-hook
-- trim
 - undo-after-replace-lines
 - user-modes/lock
 - user-modes/once
 - align
 - align-tab
-- convert-spaces-to-tabs
-- convert-tabs-to-spaces
-- indent
 - pipe
 - pipe-reg
 - pipe-to

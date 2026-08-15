@@ -426,6 +426,250 @@ function rotateSelections(view: EditorView, reverse: boolean): boolean {
   return true;
 }
 
+function rotateSelectionsContent(view: EditorView, reverse: boolean): boolean {
+  const state = view.state;
+  const ranges = state.selection.ranges;
+  if (ranges.length <= 1) {
+    return true;
+  }
+
+  const texts = ranges.map(range => {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    return state.doc.sliceString(from, to);
+  });
+
+  // Kakoune <a-)> shifts content forward: text of selection N moves to selection N+1,
+  // so selection N receives text from selection N-1.
+  const rotatedTexts = reverse
+    ? [...texts.slice(1), texts[0]]
+    : [texts[texts.length - 1], ...texts.slice(0, texts.length - 1)];
+
+  const sortedIndices = ranges.map((_, i) => i).sort((a, b) => ranges[a].from - ranges[b].from);
+
+  const changes: Array<{ from: number; to: number; insert: string }> = [];
+  for (const idx of sortedIndices) {
+    const range = ranges[idx];
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const insert = rotatedTexts[idx];
+    changes.push({ from, to, insert });
+  }
+
+  const changeSet = state.changes(changes);
+  const newRanges = ranges.map((range, idx) => {
+    const from = Math.min(range.from, range.to);
+    const mappedFrom = changeSet.mapPos(from, 1);
+    const insertLen = rotatedTexts[idx].length;
+    return range.head >= range.anchor
+      ? EditorSelection.range(mappedFrom, mappedFrom + insertLen)
+      : EditorSelection.range(mappedFrom + insertLen, mappedFrom);
+  });
+
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(newRanges, state.selection.mainIndex)
+  });
+  return true;
+}
+
+function indentSelectedLines(view: EditorView, indent: boolean, count: number = 1): boolean {
+  const state = view.state;
+  const lineNumbers = new Set<number>();
+
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(Math.min(range.from, range.to)).number;
+    const endPos = Math.max(range.from, range.to);
+    // If range ends at line beginning and is not empty, don't include that line
+    const endLine = range.empty
+      ? startLine
+      : (endPos > state.doc.lineAt(startLine).from && state.doc.lineAt(endPos).from === endPos)
+        ? Math.max(startLine, state.doc.lineAt(endPos).number - 1)
+        : state.doc.lineAt(endPos).number;
+
+    for (let l = startLine; l <= endLine; l += 1) {
+      lineNumbers.add(l);
+    }
+  }
+
+  const sortedLines = Array.from(lineNumbers).sort((a, b) => a - b);
+  const tabSize = 4;
+  const changes: Array<{ from: number; to: number; insert: string }> = [];
+
+  for (const lineNum of sortedLines) {
+    const line = state.doc.line(lineNum);
+    if (line.length === 0) {
+      continue;
+    }
+
+    if (indent) {
+      changes.push({
+        from: line.from,
+        to: line.from,
+        insert: " ".repeat(tabSize * count)
+      });
+    } else {
+      // Deindent: remove up to tabSize * count spaces or tabs from start of line
+      let spacesToRemove = tabSize * count;
+      let pos = line.from;
+      while (spacesToRemove > 0 && pos < line.to) {
+        const ch = state.doc.sliceString(pos, pos + 1);
+        if (ch === " ") {
+          spacesToRemove -= 1;
+          pos += 1;
+        } else if (ch === "\t") {
+          spacesToRemove -= tabSize;
+          pos += 1;
+        } else {
+          break;
+        }
+      }
+      if (pos > line.from) {
+        changes.push({
+          from: line.from,
+          to: pos,
+          insert: ""
+        });
+      }
+    }
+  }
+
+  if (changes.length === 0) {
+    return true;
+  }
+
+  const changeSet = state.changes(changes);
+  const nextRanges = state.selection.ranges.map(range => {
+    const anchor = changeSet.mapPos(range.anchor);
+    const head = changeSet.mapPos(range.head);
+    return EditorSelection.range(anchor, head);
+  });
+
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(nextRanges, state.selection.mainIndex)
+  });
+  return true;
+}
+
+function convertTabsSpaces(view: EditorView, toTabs: boolean): boolean {
+  const state = view.state;
+  const tabSize = 8; // Kakoune default tabstop is 8
+  const changes: Array<{ from: number; to: number; insert: string }> = [];
+
+  for (const range of state.selection.ranges) {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const text = state.doc.sliceString(from, to);
+
+    if (toTabs) {
+      // In Kakoune, convert-spaces-to-tabs replaces exact tabSize (8) spaces with a tab
+      const converted = text.replace(new RegExp(" ".repeat(tabSize), "g"), "\t");
+      if (converted !== text) {
+        changes.push({ from, to, insert: converted });
+      }
+    } else {
+      // Convert tabs to spaces
+      const converted = text.replace(/\t/g, " ".repeat(tabSize));
+      if (converted !== text) {
+        changes.push({ from, to, insert: converted });
+      }
+    }
+  }
+
+  if (changes.length === 0) {
+    return true;
+  }
+
+  const changeSet = state.changes(changes);
+  const nextRanges = state.selection.ranges.map(range => {
+    const anchor = changeSet.mapPos(range.anchor);
+    const head = changeSet.mapPos(range.head);
+    return EditorSelection.range(anchor, head);
+  });
+
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(nextRanges, state.selection.mainIndex)
+  });
+  return true;
+}
+
+function splitSelectionsOnLines(view: EditorView): boolean {
+  const state = view.state;
+  const newRanges: SelectionRange[] = [];
+
+  for (const range of state.selection.ranges) {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+
+    const startLine = state.doc.lineAt(from);
+    const endLine = state.doc.lineAt(to);
+
+    for (let l = startLine.number; l <= endLine.number; l += 1) {
+      const line = state.doc.line(l);
+      const lineStart = Math.max(from, line.from);
+      const lineEnd = Math.min(to, line.to);
+      if (lineEnd > lineStart || (lineEnd === lineStart && startLine.number === endLine.number)) {
+        newRanges.push(
+          range.head >= range.anchor
+            ? EditorSelection.range(lineStart, lineEnd)
+            : EditorSelection.range(lineEnd, lineStart)
+        );
+      }
+    }
+  }
+
+  if (newRanges.length === 0) {
+    return true;
+  }
+
+  view.dispatch({
+    selection: EditorSelection.create(newRanges, 0)
+  });
+  return true;
+}
+
+function trimSelectionsWhitespace(view: EditorView): boolean {
+  const state = view.state;
+  const newRanges: SelectionRange[] = [];
+
+  for (const range of state.selection.ranges) {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const text = state.doc.sliceString(from, to);
+
+    let startOffset = 0;
+    while (startOffset < text.length && /\s/.test(text[startOffset])) {
+      startOffset += 1;
+    }
+
+    let endOffset = text.length;
+    while (endOffset > startOffset && /\s/.test(text[endOffset - 1])) {
+      endOffset -= 1;
+    }
+
+    if (startOffset < endOffset) {
+      const trimmedFrom = from + startOffset;
+      const trimmedTo = from + endOffset;
+      newRanges.push(
+        range.head >= range.anchor
+          ? EditorSelection.range(trimmedFrom, trimmedTo)
+          : EditorSelection.range(trimmedTo, trimmedFrom)
+      );
+    }
+  }
+
+  if (newRanges.length === 0) {
+    return true;
+  }
+
+  view.dispatch({
+    selection: EditorSelection.create(newRanges, 0)
+  });
+  return true;
+}
+
 function reduceSelectionsToCursor(view: EditorView): boolean {
   const ranges = view.state.selection.ranges.map(range => EditorSelection.cursor(range.head));
   view.dispatch({
@@ -1467,6 +1711,8 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["<A-;>"], run: view => flipSelections(view), description: "Flip selection direction" },
     { keys: [")"], run: view => rotateSelections(view, false), description: "Rotate selections forward" },
     { keys: ["("], run: view => rotateSelections(view, true), description: "Rotate selections backward" },
+    { keys: ["<A-)>"], run: view => rotateSelectionsContent(view, false), description: "Rotate selections content forward" },
+    { keys: ["<A-(>"], run: view => rotateSelectionsContent(view, true), description: "Rotate selections content backward" },
     { keys: ["g"], run: (_view, _arg, count) => {
       if (count !== undefined) return jumpToLine(_view, count);
       return false;
@@ -1514,6 +1760,12 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["n"], run: view => jumpToNextSearch(view), description: "Jump to next search match" },
     { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view), description: "Jump to previous search match" },
     { keys: ["N"], run: view => addNextTextSelection(view), description: "Add selection for next match" },
+    { keys: ["<"], run: (view, _arg, count) => indentSelectedLines(view, false, count ?? 1), description: "Deindent selected lines" },
+    { keys: [">"], run: (view, _arg, count) => indentSelectedLines(view, true, count ?? 1), description: "Indent selected lines" },
+    { keys: ["<A-s>"], run: view => splitSelectionsOnLines(view), description: "Split selections on line boundaries" },
+    { keys: ["_"], run: view => trimSelectionsWhitespace(view), description: "Trim selections whitespace" },
+    { keys: ["@"], run: view => convertTabsSpaces(view, false), description: "Convert tabs to spaces" },
+    { keys: ["<A-@>"], run: view => convertTabsSpaces(view, true), description: "Convert spaces to tabs" },
     { keys: ["f"], run: (view, arg) => {
       if (!arg) return true;
       return moveToFind(view, "f", arg);

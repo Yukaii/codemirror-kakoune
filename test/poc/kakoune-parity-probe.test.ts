@@ -162,4 +162,31 @@ describe("kakoune parity probe helpers", () => {
     expect(result.doc).toBe("c’est facile.");
   });
 
+  it("rotates selections content", () => {
+    const result = runKakouneFixture({ in: "%(foo) %(bar) %(baz)", cmd: "<a-)>" });
+
+    expect(result.doc).toBe("baz foo bar");
+  });
+
+  it("converts tabs to spaces and spaces to tabs", () => {
+    const spaces = runKakouneFixture({ in: "void main()\n{\n\tfoo();\n}", cmd: "%@" });
+    expect(spaces.doc).toBe("void main()\n{\n        foo();\n}");
+
+    const tabs = runKakouneFixture({ in: "void main()\n{\n        foo();\n}", cmd: "%<a-@>" });
+    expect(tabs.doc).toBe("void main()\n{\n\tfoo();\n}");
+  });
+
+  it("indents and deindents selected lines", () => {
+    const deindented = runKakouneFixture({ in: "    foo", cmd: "<" });
+    expect(deindented.doc).toBe("foo");
+
+    const indented = runKakouneFixture({ in: "    %(foo)", cmd: "<" });
+    expect(indented.doc).toBe("foo");
+  });
+
+  it("trims whitespace from selections", () => {
+    const result = runKakouneFixture({ in: "line 1\n  line 2\n    line 3", cmd: "%<a-s>_<a-)>" });
+    expect(result.doc).toBe("line 3\n  line 1\n    line 2");
+  });
+
 });
