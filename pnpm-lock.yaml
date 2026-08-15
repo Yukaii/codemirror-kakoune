@@ -88,6 +88,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.0
         version: 6.43.0
+      kakoune-core:
+        specifier: workspace:*
+        version: link:../kakoune-core
     devDependencies:
       '@types/jest':
         specifier: ^30.0.0
@@ -112,6 +115,10 @@ importers:
         version: 6.0.3
 
   packages/codemirror-kakoune-cm5:
+    dependencies:
+      kakoune-core:
+        specifier: workspace:*
+        version: link:../kakoune-core
     devDependencies:
       '@types/codemirror':
         specifier: ^5.60.16
@@ -119,6 +126,12 @@ importers:
       codemirror:
         specifier: ^5.65.20
         version: 5.65.21
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/kakoune-core:
+    devDependencies:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

@@ -4,7 +4,8 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "noEmit": true,
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "paths": { "kakoune-core": ["../kakoune-core/src"] }
   },
   "include": ["src", "test", "jest.config.cjs"]
 }

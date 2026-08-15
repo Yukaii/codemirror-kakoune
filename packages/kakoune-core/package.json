@@ -1,26 +1,25 @@
 {
-  "name": "codemirror-kakoune-cm5",
+  "name": "kakoune-core",
   "version": "0.3.4",
-  "description": "Kakoune-style modal editing for CodeMirror 5.",
+  "description": "Framework-agnostic Kakoune modal editing engine.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": ["dist"],
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": {
-    "kakoune-core": "workspace:*"
-  },
-  "peerDependencies": {
-    "codemirror": ">=5.0.0 <6"
-  },
   "devDependencies": {
-    "@types/codemirror": "^5.60.16",
-    "codemirror": "^5.65.20",
     "typescript": "^6.0.3"
   }
 }

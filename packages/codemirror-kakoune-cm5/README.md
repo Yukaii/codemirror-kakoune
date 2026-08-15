@@ -1,6 +1,6 @@
 # CodeMirror Kakoune CM5
 
-CodeMirror 5 integration using the native CM5 keymap and command APIs.
+CodeMirror 5 adapter over the shared `kakoune-core` engine.
 
 ```ts
 import CodeMirror from "codemirror";

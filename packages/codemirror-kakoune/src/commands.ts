@@ -2,6 +2,11 @@ import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import { redo, undo, isolateHistory } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
+import {
+  moveWordBackwardRange as coreWordBackward,
+  moveWordEndRange as coreWordEnd,
+  moveWordForwardRange as coreWordForward
+} from "kakoune-core";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
@@ -305,107 +310,16 @@ function moveLineColumn(view: EditorView, range: SelectionRange, delta: number):
   return clamp(nextLine.from + column, nextLine.from, nextLine.to);
 }
 
-function getCharClass(char: string | undefined): "word" | "punctuation" | "whitespace" {
-  if (char === undefined) return "whitespace";
-  if (/[\s\n\r]/.test(char)) return "whitespace";
-  if (isWordChar(char)) return "word";
-  return "punctuation";
-}
-
-function isAtWordEnd(doc: string, pos: number): boolean {
-  if (pos < 0 || pos >= doc.length) return false;
-  const cls = getCharClass(doc[pos]);
-  if (cls === "whitespace") return false;
-
-  const nextCls = pos + 1 < doc.length ? getCharClass(doc[pos + 1]) : "whitespace";
-  return cls !== nextCls;
-}
-
-function isAtWordStart(doc: string, pos: number): boolean {
-  if (pos < 0 || pos >= doc.length) return false;
-  const cls = getCharClass(doc[pos]);
-  if (cls === "whitespace") return false;
-
-  const prevCls = pos > 0 ? getCharClass(doc[pos - 1]) : "whitespace";
-  return cls !== prevCls;
-}
-
 function moveWordForwardRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
-  const doc = view.state.doc.toString();
-  const len = doc.length;
-  const startPos = range.empty && isAtWordEnd(doc, range.head) ? range.head + 1 : range.head;
-  let pos = clamp(startPos, 0, len);
-
-  // Step 1: Skip initial whitespaces
-  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
-    pos += 1;
-  }
-
-  const anchor = pos;
-
-  if (pos < len) {
-    const cls = getCharClass(doc[pos]);
-    // Step 2: Skip characters of the same class (word or punctuation)
-    while (pos < len && getCharClass(doc[pos]) === cls) {
-      pos += 1;
-    }
-  }
-
-  // Step 3: Skip following whitespaces
-  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
-    pos += 1;
-  }
-
-  return { anchor, head: pos };
+  return coreWordForward(view.state.doc.toString(), { anchor: range.anchor, head: range.head });
 }
 
 function moveWordBackwardRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
-  const doc = view.state.doc.toString();
-  let pos = range.head;
-
-  // Step 1: Skip initial whitespaces to the left
-  while (pos > 0 && getCharClass(doc[pos - 1]) === "whitespace") {
-    pos -= 1;
-  }
-
-  if (pos > 0) {
-    const cls = getCharClass(doc[pos - 1]);
-    // Step 2: Skip characters of the same class to the left
-    while (pos > 0 && getCharClass(doc[pos - 1]) === cls) {
-      pos -= 1;
-    }
-  }
-
-  let anchor = range.head;
-  if (range.empty) {
-    const isWhitespace = getCharClass(doc[range.head]) === "whitespace";
-    const isStartOfMultiChar = isAtWordStart(doc, range.head) && !isAtWordEnd(doc, range.head);
-    anchor = (isWhitespace || isStartOfMultiChar) ? range.head : range.head + 1;
-  }
-
-  return { anchor: clamp(anchor, 0, doc.length), head: pos };
+  return coreWordBackward(view.state.doc.toString(), { anchor: range.anchor, head: range.head });
 }
 
 function moveWordEndRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
-  const doc = view.state.doc.toString();
-  const len = doc.length;
-  const startPos = range.empty && isAtWordEnd(doc, range.head) ? range.head + 1 : range.head;
-  let pos = clamp(startPos, 0, len);
-
-  // Step 1: Skip initial whitespaces
-  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
-    pos += 1;
-  }
-
-  if (pos < len) {
-    const cls = getCharClass(doc[pos]);
-    // Step 2: Skip characters of the same class (word or punctuation)
-    while (pos < len && getCharClass(doc[pos]) === cls) {
-      pos += 1;
-    }
-  }
-
-  return { anchor: range.head, head: pos };
+  return coreWordEnd(view.state.doc.toString(), { anchor: range.anchor, head: range.head });
 }
 
 function setMode(view: EditorView, mode: KakouneMode, preserveReplaceAnchors: boolean = false): boolean {

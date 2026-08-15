@@ -10,5 +10,9 @@ module.exports = {
   },
   testMatch: ["<rootDir>/test/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
+  moduleNameMapper: {
+    "^kakoune-core$": "<rootDir>/../kakoune-core/src/index.ts"
+  },
+  transformIgnorePatterns: ["/node_modules/(?!kakoune-core/)"],
   clearMocks: true
 };

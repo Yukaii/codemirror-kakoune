@@ -9,8 +9,9 @@ A CodeMirror 6 extension, CodeMirror 5 keymap integration, and Obsidian plugin t
 
 This monorepo contains:
 
-- **[`codemirror-kakoune`](./packages/codemirror-kakoune)**: Core CodeMirror 6 extension.
-- **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)**: CodeMirror 5 keymap integration.
+- **[`kakoune-core`](./packages/kakoune-core)**: Framework-agnostic Kakoune engine (adapter, processor, portable commands).
+- **[`codemirror-kakoune`](./packages/codemirror-kakoune)**: CodeMirror 6 adapter and prompts/rendering.
+- **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)**: CodeMirror 5 adapter.
 - **[`obsidian-kakoune`](./packages/obsidian-kakoune)**: Obsidian community plugin providing native Kakoune modal editing.
 - **[`playground`](./apps/playground)**: CodeMirror 6 interactive playground.
 - **[`playground-cm5`](./apps/playground-cm5)**: CodeMirror 5-specific playground.
