@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune)
 [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune)
 
-A CodeMirror 6 extension and Obsidian plugin that brings Kakoune's selection-first modal editing paradigm into the browser and desktop markdown editors.
+A CodeMirror 6 extension, CodeMirror 5 keymap integration, and Obsidian plugin that bring Kakoune's selection-first modal editing paradigm into the browser and desktop markdown editors.
 
 ## Packages
 
@@ -77,6 +77,14 @@ The CM5 package follows CodeMirror 5's native `keyMap` and command model. Instal
 `codemirror-kakoune-cm5`, then call `kakoune(editor)` after creating a CM5 editor.
 The deployed CM5 playground is available at `/cm5/`.
 
+```typescript
+import CodeMirror from "codemirror";
+import { kakoune } from "codemirror-kakoune-cm5";
+
+const editor = CodeMirror(document.querySelector("#editor"));
+kakoune(editor);
+```
+
 ---
 
 ## Features & Supported Keybindings
@@ -96,7 +104,8 @@ The deployed CM5 playground is available at `/cm5/`.
 
 - `pnpm dev` - run the interactive playground locally
 - `pnpm test` - run unit test suite
-- `pnpm build` - build all packages (`codemirror-kakoune`, `playground`, `obsidian-kakoune`)
+- `pnpm build` - build all packages and both playgrounds
+- `pnpm build:cm5` - build the CM5 package and playground
 - `pnpm typecheck` - typecheck all packages across the workspace
 
 ## References
