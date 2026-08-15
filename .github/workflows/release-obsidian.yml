@@ -7,9 +7,16 @@ on:
       - "obsidian-v*"
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Release tag (e.g. obsidian-v0.1.0 or 0.1.0)"
-        required: false
+      version:
+        description: "Version bump type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - none
 
 permissions:
   contents: write
@@ -20,6 +27,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -27,18 +36,50 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
+
+      - name: Configure Git
+        if: github.event_name == 'workflow_dispatch' && inputs.version != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version & sync Obsidian manifest
+        if: github.event_name == 'workflow_dispatch' && inputs.version != 'none'
+        run: |
+          pnpm --filter obsidian-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
+          node scripts/sync-obsidian-version.mjs
+          VERSION=$(node -p "require('./packages/obsidian-kakoune/package.json').version")
+          git add packages/obsidian-kakoune/package.json packages/obsidian-kakoune/manifest.json packages/obsidian-kakoune/versions.json
+          git commit -m "chore(obsidian): release v$VERSION"
+          git tag -a "obsidian-v$VERSION" -m "obsidian-v$VERSION"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "obsidian-v$VERSION"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Typecheck
+        run: pnpm -r typecheck
+
       - name: Build Obsidian Plugin
         run: pnpm --filter obsidian-kakoune build
+
+      - name: Determine tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION=$(node -p "require('./packages/obsidian-kakoune/package.json').version")
+            TAG="obsidian-v$VERSION"
+          else
+            TAG="$GITHUB_REF_NAME"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "Release tag: $TAG"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ env.TAG }}
           files: |
             packages/obsidian-kakoune/main.js
             packages/obsidian-kakoune/manifest.json

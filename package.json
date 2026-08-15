@@ -14,6 +14,7 @@
     "test:watch": "pnpm --filter codemirror-kakoune test:watch",
     "check:jsr": "pnpm --filter codemirror-kakoune check:jsr",
     "sync:jsr": "node scripts/sync-jsr-version.mjs",
+    "sync:obsidian": "node scripts/sync-obsidian-version.mjs",
     "version": "node scripts/sync-jsr-version.mjs && git add packages/codemirror-kakoune/jsr.json",
     "probe:parity": "pnpm --filter codemirror-kakoune probe:parity",
     "typecheck": "pnpm -r typecheck"
