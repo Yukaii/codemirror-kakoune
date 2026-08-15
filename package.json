@@ -11,7 +11,7 @@
     "build:playground": "pnpm --filter playground build",
     "build:cm5": "pnpm --filter kakoune-core build && pnpm --filter codemirror-kakoune-cm5 build && pnpm --filter playground-cm5 build",
     "build:obsidian": "pnpm --filter obsidian-kakoune build",
-    "test": "pnpm --filter codemirror-kakoune test",
+    "test": "pnpm --filter kakoune-core test && pnpm --filter codemirror-kakoune test",
     "test:watch": "pnpm --filter codemirror-kakoune test:watch",
     "check:jsr": "pnpm --filter codemirror-kakoune check:jsr",
     "sync:jsr": "node scripts/sync-jsr-version.mjs",

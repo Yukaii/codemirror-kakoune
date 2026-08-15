@@ -86,6 +86,7 @@ export class KakouneKeyProcessor<T> {
     }
 
     this.pending = [];
+    this.count = null;
     return false;
   }
 }

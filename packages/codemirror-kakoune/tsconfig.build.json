@@ -3,6 +3,7 @@
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Node",
+    "paths": {},
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,

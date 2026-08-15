@@ -3,10 +3,23 @@ import { redo, undo, isolateHistory } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
 import {
+  enterInsert,
+  enterInsertLineEnd,
+  enterInsertLineStart,
+  moveDown,
+  moveLeft,
+  moveLineEnd,
+  moveLineStart,
+  moveRight,
+  moveUp,
   moveWordBackwardRange as coreWordBackward,
   moveWordEndRange as coreWordEnd,
-  moveWordForwardRange as coreWordForward
+  moveWordForwardRange as coreWordForward,
+  selectWordBackward,
+  selectWordEnd,
+  selectWordForward
 } from "kakoune-core";
+import { withAdapter } from "./adapter";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
@@ -2210,21 +2223,21 @@ function buildSelectBindings(): KakouneBinding[] {
       }
       return true;
     }, description: "Reduce selections to single selection / Cancel prefix" },
-    { keys: ["i"], run: view => setMode(view, "insert"), description: "Insert mode before selections" },
+    { keys: ["i"], run: view => withAdapter(view, editor => enterInsert(editor)), description: "Insert mode before selections" },
     { keys: ["o"], run: (view, _arg, count) => openLine(view, "below", count ?? 1), description: "Insert new line below and enter insert mode" },
     { keys: ["O"], run: (view, _arg, count) => openLine(view, "above", count ?? 1), description: "Insert new line above and enter insert mode" },
-    { keys: ["a"], run: view => moveSelections(view, range => range.empty ? clamp(range.to + 1, 0, view.state.doc.length) : range.to) && setMode(view, "insert"), description: "Insert mode after selections" },
-    { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
-    { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },
-    { keys: ["h"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
-    { keys: ["l"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
-    { keys: ["j"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
-    { keys: ["k"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
-    { keys: ["w"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordForwardRange(view, range), count ?? 1), description: "Move word forward" },
+    { keys: ["a"], run: view => withAdapter(view, editor => enterInsert(editor, true)), description: "Insert mode after selections" },
+    { keys: ["A"], run: view => withAdapter(view, editor => enterInsertLineEnd(editor)), description: "Insert mode at line end" },
+    { keys: ["I"], run: view => withAdapter(view, editor => enterInsertLineStart(editor)), description: "Insert mode at line start" },
+    { keys: ["h"], run: (view, _arg, count) => withAdapter(view, editor => moveLeft(editor, count ?? 1)), description: "Move left" },
+    { keys: ["l"], run: (view, _arg, count) => withAdapter(view, editor => moveRight(editor, count ?? 1)), description: "Move right" },
+    { keys: ["j"], run: (view, _arg, count) => withAdapter(view, editor => moveDown(editor, count ?? 1)), description: "Move down" },
+    { keys: ["k"], run: (view, _arg, count) => withAdapter(view, editor => moveUp(editor, count ?? 1)), description: "Move up" },
+    { keys: ["w"], run: (view, _arg, count) => withAdapter(view, editor => selectWordForward(editor, count ?? 1)), description: "Move word forward" },
     { keys: ["W"], run: (view, _arg, count) => extendSelections(view, range => moveWordForwardRange(view, range).head, count ?? 1), description: "Extend word forward" },
-    { keys: ["b"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordBackwardRange(view, range), count ?? 1), description: "Move word backward" },
+    { keys: ["b"], run: (view, _arg, count) => withAdapter(view, editor => selectWordBackward(editor, count ?? 1)), description: "Move word backward" },
     { keys: ["B"], run: (view, _arg, count) => extendSelections(view, range => moveWordBackwardRange(view, range).head, count ?? 1), description: "Extend word backward" },
-    { keys: ["e"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordEndRange(view, range), count ?? 1), description: "Move to word end" },
+    { keys: ["e"], run: (view, _arg, count) => withAdapter(view, editor => selectWordEnd(editor, count ?? 1)), description: "Move to word end" },
     { keys: ["E"], run: (view, _arg, count) => extendSelections(view, range => moveWordEndRange(view, range).head, count ?? 1), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
     { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
@@ -2244,8 +2257,8 @@ function buildSelectBindings(): KakouneBinding[] {
       if (count !== undefined) return extendToLine(_view, count);
       return false;
     }, description: "Extend to line (with count)" },
-    { keys: ["g", "h"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Move to line begin" },
-    { keys: ["g", "l"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Move to line end" },
+    { keys: ["g", "h"], run: view => withAdapter(view, editor => moveLineStart(editor)), description: "Move to line begin" },
+    { keys: ["g", "l"], run: view => withAdapter(view, editor => moveLineEnd(editor)), description: "Move to line end" },
     { keys: ["<A-h>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Extend to line begin" },
     { keys: ["<A-l>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Extend to line end" },
     { keys: ["H"], run: (view, _arg, count) => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Extend left" },

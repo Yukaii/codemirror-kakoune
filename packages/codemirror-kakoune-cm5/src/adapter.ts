@@ -22,6 +22,10 @@ function offsetToPos(cm: Cm, offset: number): CodeMirror.Position {
   return { line: last, ch: cm.getLine(last).length };
 }
 
+function positionsEqual(left: CodeMirror.Position, right: CodeMirror.Position): boolean {
+  return left.line === right.line && left.ch === right.ch;
+}
+
 export class Cm5Adapter implements EditorHost {
   register = "";
 
@@ -66,11 +70,21 @@ export class Cm5Adapter implements EditorHost {
     }));
   }
 
-  setSelections(ranges: SelectionRange[]): void {
+  setSelections(ranges: SelectionRange[], mainIndex?: number): void {
+    const currentSelections = this.cm.listSelections();
+    const primaryAnchor = this.cm.getCursor("anchor");
+    const primaryHead = this.cm.getCursor("head");
+    const currentMainIndex = currentSelections.findIndex(selection => (
+      positionsEqual(selection.anchor, primaryAnchor) && positionsEqual(selection.head, primaryHead)
+    ));
+    const nextMainIndex = mainIndex ?? Math.min(
+      Math.max(0, currentMainIndex),
+      Math.max(0, ranges.length - 1)
+    );
     this.cm.setSelections(ranges.map(range => ({
       anchor: offsetToPos(this.cm, range.anchor),
       head: offsetToPos(this.cm, range.head)
-    })));
+    })), nextMainIndex);
   }
 
   replaceRange(from: number, to: number, text: string): void {

@@ -86,13 +86,13 @@ export function moveLineEnd(editor: EditorHost): boolean {
 }
 
 export function jumpDocumentStart(editor: EditorHost): boolean {
-  editor.setSelections([{ anchor: 0, head: 0 }]);
+  editor.setSelections([{ anchor: 0, head: 0 }], 0);
   return true;
 }
 
 export function jumpDocumentEnd(editor: EditorHost): boolean {
   const end = editor.getDocLength();
-  editor.setSelections([{ anchor: end, head: end }]);
+  editor.setSelections([{ anchor: end, head: end }], 0);
   return true;
 }
 
@@ -143,7 +143,13 @@ export function redoEdit(editor: EditorHost): boolean {
 
 export function enterInsert(editor: EditorHost, after = false): boolean {
   if (after) {
-    moveRight(editor);
+    const ranges = editor.getSelections().map(range => {
+      const head = isEmptyRange(range)
+        ? clamp(range.head + 1, 0, editor.getDocLength())
+        : rangeTo(range);
+      return { anchor: head, head };
+    });
+    editor.setSelections(ranges);
   }
   return setMode(editor, "insert");
 }
@@ -158,32 +164,37 @@ export function enterInsertLineEnd(editor: EditorHost): boolean {
   return setMode(editor, "insert");
 }
 
-export function openLineBelow(editor: EditorHost): boolean {
-  const ranges = editor.getSelections();
-  for (const range of [...ranges].reverse()) {
+function openLines(editor: EditorHost, direction: "above" | "below"): boolean {
+  const insertions = editor.getSelections().map((range, index) => {
     const line = editor.lineAt(range.head);
-    editor.replaceRange(line.to, line.to, "\n");
+    return { at: direction === "above" ? line.from : line.to, index };
+  });
+
+  for (const insertion of [...insertions].sort((a, b) => b.at - a.at || b.index - a.index)) {
+    editor.replaceRange(insertion.at, insertion.at, "\n");
   }
-  const next = editor.getSelections().map(range => {
-    const line = editor.line(Math.min(editor.getLineCount(), editor.lineAt(range.head).number + 1));
-    return { anchor: line.from, head: line.from };
+
+  const next = insertions.map(insertion => {
+    const insertionsBefore = insertions.filter(candidate => candidate.at < insertion.at).length;
+    const samePositionBefore = insertions.filter(candidate => (
+      candidate.at === insertion.at && candidate.index < insertion.index
+    )).length;
+    const head = insertion.at
+      + insertionsBefore
+      + samePositionBefore
+      + (direction === "below" ? 1 : 0);
+    return { anchor: head, head };
   });
   editor.setSelections(next);
   return setMode(editor, "insert");
 }
 
+export function openLineBelow(editor: EditorHost): boolean {
+  return openLines(editor, "below");
+}
+
 export function openLineAbove(editor: EditorHost): boolean {
-  const ranges = editor.getSelections();
-  for (const range of [...ranges].reverse()) {
-    const line = editor.lineAt(range.head);
-    editor.replaceRange(line.from, line.from, "\n");
-  }
-  const next = editor.getSelections().map(range => {
-    const line = editor.lineAt(range.head);
-    return { anchor: line.from, head: line.from };
-  });
-  editor.setSelections(next);
-  return setMode(editor, "insert");
+  return openLines(editor, "above");
 }
 
 export function changeSelection(editor: EditorHost): boolean {

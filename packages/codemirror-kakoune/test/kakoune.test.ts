@@ -251,6 +251,19 @@ describe("KakouneKeyProcessor", () => {
     expect(view.state.selection.main.head).toBe(view.state.doc.line(view.state.doc.lines).from);
   });
 
+  it("records document jumps so Ctrl-o can return to the previous selection", () => {
+    const view = createView("alpha beta\ngamma delta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.cursor(15) });
+    expect(processor.handle("select", "g", view)).toBe(true);
+    expect(processor.handle("select", "k", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(0);
+
+    expect(processor.handle("select", "<C-o>", view)).toBe(true);
+    expect(view.state.selection.main.head).toBe(15);
+  });
+
   it("supports Kakoune's Alt-h and Alt-l aliases for line begin and end", () => {
     const view = createView("alpha beta\ngamma delta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
@@ -424,6 +437,34 @@ describe("KakouneKeyProcessor", () => {
     expect(processor.handle("select", "(", view)).toBe(true);
     expect(view.state.selection.mainIndex).toBe(0);
     expect(view.state.selection.main.head).toBe(0);
+  });
+
+  it("preserves the main selection when portable motions update multiple selections", () => {
+    const view = createView("alpha beta gamma");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({
+      selection: EditorSelection.create(
+        [EditorSelection.cursor(0), EditorSelection.cursor(6)],
+        1
+      )
+    });
+
+    expect(processor.handle("select", "l", view)).toBe(true);
+    expect(view.state.selection.mainIndex).toBe(1);
+    expect(view.state.selection.main.head).toBe(7);
+  });
+
+  it("enters insert mode at the end of a non-empty selection with a", () => {
+    const view = createView("alpha beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    view.dispatch({ selection: EditorSelection.range(6, 2) });
+
+    expect(processor.handle("select", "a", view)).toBe(true);
+    expect(view.state.selection.main.anchor).toBe(6);
+    expect(view.state.selection.main.head).toBe(6);
+    expect(view.state.field(kakouneStateField).mode).toBe("insert");
   });
 
   it("creates selection on w, b, e motions", () => {

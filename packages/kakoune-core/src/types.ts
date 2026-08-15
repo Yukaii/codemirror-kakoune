@@ -32,6 +32,7 @@ export interface EditorHost {
   lineAt(pos: number): LineInfo;
   line(number: number): LineInfo;
   getSelections(): SelectionRange[];
+  /** Replaces all selections, preserving the current main selection when omitted. */
   setSelections(ranges: SelectionRange[], mainIndex?: number): void;
   replaceRange(from: number, to: number, text: string): void;
   undo(): void;
