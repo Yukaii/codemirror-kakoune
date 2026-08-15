@@ -10,6 +10,8 @@ import {
   setKakouneJumpStateEffect,
   setKakouneSearchPromptEffect,
   setKakouneSearchSelectionEffect,
+  setKakouneSelectPromptEffect,
+  setKakouneSelectSelectionEffect,
   setKakouneSplitPromptEffect,
   setKakouneSplitSelectionEffect,
   setKakouneModeEffect,
@@ -105,51 +107,167 @@ function jumpBackward(view: EditorView, count: number = 1): boolean {
   return true;
 }
 
-function splitSelections(view: EditorView, pattern: string): boolean {
-  let regex: RegExp;
-  try {
-    regex = new RegExp(pattern, "g");
-  } catch {
+function selectMatchesInSelections(view: EditorView, pattern: string): boolean {
+  const state = view.state;
+  const effectivePattern = pattern || getSearchQuery(state).search;
+  if (!effectivePattern) {
     return false;
   }
 
-  const state = view.state;
+  let regex: RegExp;
+  try {
+    regex = new RegExp(effectivePattern, "gu");
+  } catch {
+    try {
+      regex = new RegExp(effectivePattern, "g");
+    } catch {
+      setCommandError(view, `'select': invalid regex "${effectivePattern}"`);
+      return false;
+    }
+  }
+
   const ranges: SelectionRange[] = [];
 
   for (const range of state.selection.ranges) {
     const from = Math.min(range.from, range.to);
     const to = Math.max(range.from, range.to);
+    const isForward = range.anchor <= range.head;
+    const text = state.doc.sliceString(from, to);
+    regex.lastIndex = 0;
+
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      const matchStart = from + match.index;
+      const matchEnd = matchStart + match[0].length;
+      ranges.push(
+        isForward
+          ? EditorSelection.range(matchStart, matchEnd)
+          : EditorSelection.range(matchEnd, matchStart)
+      );
+      if (match[0].length === 0) {
+        regex.lastIndex += 1;
+      }
+      if (regex.lastIndex > text.length) {
+        break;
+      }
+    }
+  }
+
+  if (ranges.length === 0) {
+    setCommandError(view, "'select': nothing selected");
+    return false;
+  }
+
+  ranges.sort((a, b) => a.from - b.from || a.to - b.to);
+
+  const jumpState = pushCurrentJump(view);
+  let query: SearchQuery;
+  try {
+    query = new SearchQuery({ search: effectivePattern, literal: false });
+  } catch {
+    query = new SearchQuery({ search: effectivePattern, literal: true });
+  }
+
+  view.dispatch({
+    selection: EditorSelection.create(ranges, 0),
+    annotations: isolateHistory.of("full"),
+    effects: [
+      setKakouneJumpStateEffect.of(jumpState),
+      setSearchQuery.of(query)
+    ],
+    userEvent: "select.regex"
+  });
+  setCommandError(view, null);
+  return true;
+}
+
+function splitSelections(view: EditorView, pattern: string): boolean {
+  const state = view.state;
+  const effectivePattern = pattern || getSearchQuery(state).search;
+  if (!effectivePattern) {
+    return false;
+  }
+
+  let regex: RegExp;
+  try {
+    regex = new RegExp(effectivePattern, "gu");
+  } catch {
+    try {
+      regex = new RegExp(effectivePattern, "g");
+    } catch {
+      setCommandError(view, `'split': invalid regex "${effectivePattern}"`);
+      return false;
+    }
+  }
+
+  const ranges: SelectionRange[] = [];
+
+  for (const range of state.selection.ranges) {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const isForward = range.anchor <= range.head;
     const text = state.doc.sliceString(from, to);
     let begin = 0;
     regex.lastIndex = 0;
 
-    for (;;) {
-      const match = regex.exec(text);
-      if (!match) {
-        break;
-      }
-
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
       const matchStart = match.index;
       const matchEnd = match.index + match[0].length;
       if (matchStart > begin) {
-        ranges.push(EditorSelection.range(from + begin, from + matchStart));
+        const startPos = from + begin;
+        const endPos = from + matchStart;
+        ranges.push(
+          isForward
+            ? EditorSelection.range(startPos, endPos)
+            : EditorSelection.range(endPos, startPos)
+        );
       }
       begin = matchEnd;
       if (match[0].length === 0) {
         regex.lastIndex += 1;
       }
+      if (regex.lastIndex > text.length) {
+        break;
+      }
     }
 
-    if (begin <= text.length) {
-      ranges.push(EditorSelection.range(from + begin, from + text.length));
+    if (begin < text.length) {
+      const startPos = from + begin;
+      const endPos = from + text.length;
+      ranges.push(
+        isForward
+          ? EditorSelection.range(startPos, endPos)
+          : EditorSelection.range(endPos, startPos)
+      );
     }
   }
 
   if (ranges.length === 0) {
+    setCommandError(view, "'split': nothing selected");
     return false;
   }
 
-  view.dispatch({ selection: EditorSelection.create(ranges, 0) });
+  ranges.sort((a, b) => a.from - b.from || a.to - b.to);
+
+  const jumpState = pushCurrentJump(view);
+  let query: SearchQuery;
+  try {
+    query = new SearchQuery({ search: effectivePattern, literal: false });
+  } catch {
+    query = new SearchQuery({ search: effectivePattern, literal: true });
+  }
+
+  view.dispatch({
+    selection: EditorSelection.create(ranges, 0),
+    annotations: isolateHistory.of("full"),
+    effects: [
+      setKakouneJumpStateEffect.of(jumpState),
+      setSearchQuery.of(query)
+    ],
+    userEvent: "select.split"
+  });
+  setCommandError(view, null);
   return true;
 }
 
@@ -1610,6 +1728,20 @@ function setSearchPrompt(view: EditorView, prompt: string | null): boolean {
   return true;
 }
 
+function setSelectPrompt(view: EditorView, prompt: string | null): boolean {
+  const selectionSnapshot = prompt === null
+    ? null
+    : view.state.selection.ranges.map(range => ({ anchor: range.anchor, head: range.head }));
+
+  view.dispatch({
+    effects: [
+      setKakouneSelectPromptEffect.of(prompt),
+      setKakouneSelectSelectionEffect.of(selectionSnapshot)
+    ]
+  });
+  return true;
+}
+
 function setSplitPrompt(view: EditorView, prompt: string | null): boolean {
   const selectionSnapshot = prompt === null
     ? null
@@ -1643,6 +1775,16 @@ export function deleteSearchPromptChar(view: EditorView): boolean {
   return setSearchPrompt(view, prompt.slice(0, -1));
 }
 
+/** Deletes the last character from the active select prompt. */
+export function deleteSelectPromptChar(view: EditorView): boolean {
+  const prompt = view.state.field(kakouneStateField).selectPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  return setSelectPrompt(view, prompt.slice(0, -1));
+}
+
 /** Deletes the last character from the active split prompt. */
 export function deleteSplitPromptChar(view: EditorView): boolean {
   const prompt = view.state.field(kakouneStateField).splitPrompt;
@@ -1667,6 +1809,23 @@ export function cancelSearchPrompt(view: EditorView): boolean {
     effects: [
       setKakouneSearchPromptEffect.of(null),
       setKakouneSearchSelectionEffect.of(null)
+    ]
+  });
+  return true;
+}
+
+/** Cancels the active select prompt and restores the original selection. */
+export function cancelSelectPrompt(view: EditorView): boolean {
+  const snapshot = view.state.field(kakouneStateField).selectSelection;
+  const selection = snapshot
+    ? EditorSelection.create(snapshot.map(range => EditorSelection.range(range.anchor, range.head)))
+    : view.state.selection;
+
+  view.dispatch({
+    selection,
+    effects: [
+      setKakouneSelectPromptEffect.of(null),
+      setKakouneSelectSelectionEffect.of(null)
     ]
   });
   return true;
@@ -1699,10 +1858,30 @@ export function commitSearchPrompt(view: EditorView): boolean {
     return false;
   }
 
-  const query = new SearchQuery({
-    search: prompt,
-    literal: true
-  });
+  const effectivePrompt = prompt || getSearchQuery(view.state).search;
+  if (!effectivePrompt) {
+    view.dispatch({
+      effects: [
+        setKakouneSearchPromptEffect.of(null),
+        setKakouneSearchSelectionEffect.of(null)
+      ]
+    });
+    return false;
+  }
+
+  let query: SearchQuery;
+  try {
+    query = new SearchQuery({
+      search: effectivePrompt,
+      literal: false
+    });
+  } catch {
+    query = new SearchQuery({
+      search: effectivePrompt,
+      literal: true
+    });
+  }
+
   const from = view.state.selection.main.to;
   const search = query.getCursor(view.state, from, view.state.doc.length);
   const first = search.next();
@@ -1727,6 +1906,40 @@ export function commitSearchPrompt(view: EditorView): boolean {
     userEvent: "select.search"
   });
   return true;
+}
+
+/** Commits the select prompt and selects all regex matches in current selections. */
+export function commitSelectPrompt(view: EditorView): boolean {
+  const prompt = view.state.field(kakouneStateField).selectPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  const success = selectMatchesInSelections(view, prompt);
+  view.dispatch({
+    effects: [
+      setKakouneSelectPromptEffect.of(null),
+      setKakouneSelectSelectionEffect.of(null)
+    ]
+  });
+  return success;
+}
+
+/** Commits the split prompt and splits selections on regex matches. */
+export function commitSplitPrompt(view: EditorView): boolean {
+  const prompt = view.state.field(kakouneStateField).splitPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  const success = splitSelections(view, prompt);
+  view.dispatch({
+    effects: [
+      setKakouneSplitPromptEffect.of(null),
+      setKakouneSplitSelectionEffect.of(null)
+    ]
+  });
+  return success;
 }
 
 function jumpToNextSearch(view: EditorView): boolean {
@@ -1789,6 +2002,36 @@ export function handleSearchPromptKey(view: EditorView, key: string): boolean {
   return true;
 }
 
+/** Handles a key event while the select prompt is active. */
+export function handleSelectPromptKey(view: EditorView, key: string): boolean {
+  const prompt = view.state.field(kakouneStateField).selectPrompt;
+  if (prompt === null) {
+    return false;
+  }
+
+  if (key === "<Esc>") {
+    return cancelSelectPrompt(view);
+  }
+
+  if (key === "<Enter>") {
+    return commitSelectPrompt(view);
+  }
+
+  if (key === "<Backspace>") {
+    return deleteSelectPromptChar(view);
+  }
+
+  if (key === "<Space>") {
+    return setSelectPrompt(view, prompt + " ");
+  }
+
+  if (key.length === 1) {
+    return setSelectPrompt(view, prompt + key);
+  }
+
+  return true;
+}
+
 /** Handles a key event while the split prompt is active. */
 export function handleSplitPromptKey(view: EditorView, key: string): boolean {
   const prompt = view.state.field(kakouneStateField).splitPrompt;
@@ -1801,7 +2044,7 @@ export function handleSplitPromptKey(view: EditorView, key: string): boolean {
   }
 
   if (key === "<Enter>") {
-    return splitSelections(view, prompt) && setSplitPrompt(view, null);
+    return commitSplitPrompt(view);
   }
 
   if (key === "<Backspace>") {
@@ -2136,7 +2379,7 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["<C-i>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
     { keys: ["<C-Tab>"], run: (view, _arg, count) => jumpForward(view, count ?? 1), description: "Jump forward in history" },
     { keys: ["*"], run: view => setSearchFromSelection(view), description: "Search selection" },
-    { keys: ["s"], run: view => setSearchPrompt(view, ""), description: "Select matches" },
+    { keys: ["s"], run: view => setSelectPrompt(view, ""), description: "Select matches" },
     { keys: ["/"], run: view => setSearchPrompt(view, ""), description: "Search forward" },
     { keys: ["n"], run: view => jumpToNextSearch(view), description: "Jump to next search match" },
     { keys: ["<A-n>"], run: view => jumpToPreviousSearch(view), description: "Jump to previous search match" },

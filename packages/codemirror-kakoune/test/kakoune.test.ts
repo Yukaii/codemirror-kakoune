@@ -8,7 +8,7 @@ import {
 } from "../src";
 import { getSearchQuery } from "@codemirror/search";
 import { KakouneKeyProcessor } from "../src/keys";
-import { handleSearchPromptKey } from "../src/commands";
+import { handleSearchPromptKey, handleSelectPromptKey, handleSplitPromptKey } from "../src/commands";
 
 function createView(doc: string): EditorView {
   const parent = document.createElement("div");
@@ -329,7 +329,7 @@ describe("KakouneKeyProcessor", () => {
     expect(processor.handle("select", "*", view)).toBe(true);
     expect(getSearchQuery(view.state).search).toBe("beta");
 
-    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(processor.handle("select", "/", view)).toBe(true);
     expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
     for (const key of "beta") {
       expect(handleSearchPromptKey(view, key)).toBe(true);
@@ -497,12 +497,12 @@ describe("kakoune extension", () => {
     view.destroy();
   });
 
-  it("accepts a search prompt on s and keeps n/Alt-n navigation working", () => {
+  it("accepts a search prompt on / and keeps n/Alt-n navigation working", () => {
     const view = createView("alpha beta gamma beta");
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.cursor(0) });
-    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(processor.handle("select", "/", view)).toBe(true);
     expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
 
     for (const key of "beta") {
@@ -536,7 +536,7 @@ describe("kakoune extension", () => {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.cursor(0) });
-    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(processor.handle("select", "/", view)).toBe(true);
     expect(view.state.field(kakouneStateField).searchPrompt).toBe("");
 
     for (const key of "beta") {
@@ -558,7 +558,7 @@ describe("kakoune extension", () => {
     const processor = new KakouneKeyProcessor(buildKakouneCommands());
 
     view.dispatch({ selection: EditorSelection.cursor(0) });
-    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(processor.handle("select", "/", view)).toBe(true);
 
     for (const key of "beta") {
       expect(handleSearchPromptKey(view, key)).toBe(true);
@@ -570,6 +570,94 @@ describe("kakoune extension", () => {
 
     expect(view.state.field(kakouneStateField).searchPrompt).toBeNull();
     expect(view.state.doc.toString()).toBe("alpha beta gamma beta");
+
+    view.destroy();
+  });
+
+  it("selects regex matches within selection using s", () => {
+    const view = createView("alpha beta gamma beta");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Select entire buffer
+    expect(processor.handle("select", "%", view)).toBe(true);
+    expect(processor.handle("select", "s", view)).toBe(true);
+    expect(view.state.field(kakouneStateField).selectPrompt).toBe("");
+
+    for (const key of "beta") {
+      expect(handleSelectPromptKey(view, key)).toBe(true);
+    }
+    expect(view.state.field(kakouneStateField).selectPrompt).toBe("beta");
+
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
+
+    expect(view.state.field(kakouneStateField).selectPrompt).toBeNull();
+    expect(view.state.selection.ranges).toHaveLength(2);
+    expect(view.state.selection.ranges[0].from).toBe(6);
+    expect(view.state.selection.ranges[0].to).toBe(10);
+    expect(view.state.selection.ranges[1].from).toBe(17);
+    expect(view.state.selection.ranges[1].to).toBe(21);
+
+    view.destroy();
+  });
+
+  it("splits selection on regex matches using S", () => {
+    const view = createView("foo bar baz");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    // Select all
+    expect(processor.handle("select", "%", view)).toBe(true);
+    expect(processor.handle("select", "S", view)).toBe(true);
+    expect(view.state.field(kakouneStateField).splitPrompt).toBe("");
+
+    for (const key of "\\s+") {
+      expect(handleSplitPromptKey(view, key)).toBe(true);
+    }
+    expect(view.state.field(kakouneStateField).splitPrompt).toBe("\\s+");
+
+    expect(
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+      )
+    ).toBe(false);
+
+    expect(view.state.field(kakouneStateField).splitPrompt).toBeNull();
+    expect(view.state.selection.ranges).toHaveLength(3);
+    expect(view.state.sliceDoc(view.state.selection.ranges[0].from, view.state.selection.ranges[0].to)).toBe("foo");
+    expect(view.state.sliceDoc(view.state.selection.ranges[1].from, view.state.selection.ranges[1].to)).toBe("bar");
+    expect(view.state.sliceDoc(view.state.selection.ranges[2].from, view.state.selection.ranges[2].to)).toBe("baz");
+
+    view.destroy();
+  });
+
+  it("handles backspace and cancel on select and split prompts", () => {
+    const view = createView("alpha beta gamma");
+    const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+    expect(processor.handle("select", "s", view)).toBe(true);
+    handleSelectPromptKey(view, "a");
+    handleSelectPromptKey(view, "b");
+    expect(view.state.field(kakouneStateField).selectPrompt).toBe("ab");
+
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
+    expect(view.state.field(kakouneStateField).selectPrompt).toBe("a");
+
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(view.state.field(kakouneStateField).selectPrompt).toBeNull();
+
+    expect(processor.handle("select", "S", view)).toBe(true);
+    handleSplitPromptKey(view, "x");
+    handleSplitPromptKey(view, "y");
+    expect(view.state.field(kakouneStateField).splitPrompt).toBe("xy");
+
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
+    expect(view.state.field(kakouneStateField).splitPrompt).toBe("x");
+
+    view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(view.state.field(kakouneStateField).splitPrompt).toBeNull();
 
     view.destroy();
   });
