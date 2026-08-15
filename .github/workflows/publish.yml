@@ -18,26 +18,24 @@ on:
 
 permissions:
   id-token: write # OIDC for npm trusted publishing and JSR
-  contents: write # draft / pre-releases via gh, pushing version tags and commits
+  contents: write # draft / releases via gh, pushing version tags and commits
 
 jobs:
   publish:
     name: Release & Publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
@@ -53,13 +51,20 @@ jobs:
           pnpm --filter codemirror-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
           node scripts/sync-jsr-version.mjs
           VERSION=$(node -p "require('./packages/codemirror-kakoune/package.json').version")
-          git add packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json
+          git add package.json packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json
           git commit -m "chore(release): v$VERSION"
-          git tag "v$VERSION"
-          git push origin HEAD:${{ github.ref_name }} --follow-tags
+          git tag -a "v$VERSION" -m "v$VERSION"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "v$VERSION"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run typecheck
+        run: pnpm typecheck
 
       - name: Build
         run: pnpm run build
@@ -86,10 +91,10 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "Extracted version: $VERSION, tag: $TAG"
 
-      - name: Create draft release
+      - name: Create release with generated release notes
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$TAG" \
             --title "Release v${VERSION}" \
-            --draft
+            --generate-notes
