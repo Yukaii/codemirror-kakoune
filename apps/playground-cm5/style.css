@@ -10,6 +10,9 @@
   line-height: 1.6;
 }
 
+/* iOS Safari zooms focused text inputs below 16px. */
+.CodeMirror textarea { font-size: 16px !important; }
+
 .CodeMirror-gutters {
   background: var(--panel);
   border-right: 1px solid var(--panel-border);
@@ -21,5 +24,5 @@
 .CodeMirror-selected { background: var(--selection); }
 
 @media (max-width: 768px) {
-  .CodeMirror { font-size: 13px; }
+  .CodeMirror { font-size: 16px; }
 }

@@ -55,7 +55,7 @@ function applyFontFamily(family: string): void {
 
 const savedTheme = window.localStorage.getItem("codemirror-kakoune.cm5.theme") ?? "night";
 const savedFontFamily = window.localStorage.getItem("codemirror-kakoune.cm5.fontFamily") ?? "mono";
-const savedFontSize = window.localStorage.getItem("codemirror-kakoune.cm5.fontSize") ?? "15";
+const savedFontSize = window.localStorage.getItem("codemirror-kakoune.cm5.fontSize") ?? "17";
 if (themeSelect) {
   themeSelect.value = savedTheme;
   themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));

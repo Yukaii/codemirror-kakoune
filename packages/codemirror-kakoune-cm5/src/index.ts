@@ -101,6 +101,10 @@ export const kakouneKeyMap = {
   W: selectCommands.w, B: selectCommands.b, X: selectCommands.x, D: selectCommands.d,
   I: (editor: Cm) => enterInsert(editor), A: (editor: Cm) => enterInsert(editor, true),
   U: selectCommands.u, "Shift-U": selectCommands.U,
+  h: selectCommands.h, j: selectCommands.j, k: selectCommands.k, l: selectCommands.l,
+  w: selectCommands.w, b: selectCommands.b, x: selectCommands.x, d: selectCommands.d,
+  i: (editor: Cm) => enterInsert(editor), a: (editor: Cm) => enterInsert(editor, true),
+  u: selectCommands.u,
   Esc: (editor: Cm) => setMode(editor, "select"),
   nofallthrough: true
 } as unknown as CodeMirror.KeyMap;
