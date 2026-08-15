@@ -225,6 +225,82 @@ function tokenizeSimpleKeys(text: string): string[] {
 }
 
 /**
+ * Converts a CodeMirror 5 key name to the key notation used by Kakoune
+ * bindings. This is useful when sharing a keymap between CM5 and CM6.
+ *
+ * CM5 uses names such as `Ctrl-X`, `Cmd-X`, `Alt-X`, `Esc`, and `Space`,
+ * whereas Kakoune bindings use `<C-x>`, `<M-x>`, `<A-x>`, and so on.
+ */
+export function normalizeCm5Key(key: string): string {
+  const parts = key.split("-");
+  const base = parts.pop() ?? "";
+  const modifiers: string[] = [];
+
+  for (const modifier of parts) {
+    switch (modifier.toLowerCase()) {
+      case "ctrl":
+      case "control":
+        modifiers.push("C");
+        break;
+      case "alt":
+        modifiers.push("A");
+        break;
+      case "shift":
+        modifiers.push("S");
+        break;
+      case "cmd":
+      case "meta":
+        modifiers.push("M");
+        break;
+      default:
+        return key;
+    }
+  }
+
+  const names: Record<string, string> = {
+    esc: "<Esc>",
+    escape: "<Esc>",
+    enter: "<Enter>",
+    return: "<Enter>",
+    tab: "<Tab>",
+    backspace: "<Backspace>",
+    delete: "<Delete>",
+    space: "<Space>",
+    left: "<Left>",
+    right: "<Right>",
+    up: "<Up>",
+    down: "<Down>",
+    home: "<Home>",
+    end: "<End>",
+    pageup: "<PageUp>",
+    pagedown: "<PageDown>"
+  };
+  const named = names[base.toLowerCase()];
+  const normalizedBase = named
+    ? named.slice(1, -1)
+    : base.length === 1
+      ? base.toLowerCase()
+      : base;
+
+  if (modifiers.length === 0) {
+    return named ?? (base.length === 1 ? base : `<${normalizedBase}>`);
+  }
+
+  // CM5's Ctrl-[ is the same escape chord used by Kakoune.
+  if (modifiers.length === 1 && modifiers[0] === "C" && base === "[") {
+    return "<Esc>";
+  }
+  return `<${modifiers.join("-")}-${normalizedBase}>`;
+}
+
+/** Converts a CM5 key sequence such as `Ctrl-X Ctrl-S` to Kakoune keys. */
+export function normalizeCm5Keys(keys: string | string[]): string[] {
+  return (Array.isArray(keys) ? keys : keys.trim().split(/\s+/))
+    .filter(key => key.length > 0)
+    .map(normalizeCm5Key);
+}
+
+/**
  * Processes keyboard events against Kakoune-style key bindings.
  *
  * Handles multi-key sequences, numeric counts, and character arguments

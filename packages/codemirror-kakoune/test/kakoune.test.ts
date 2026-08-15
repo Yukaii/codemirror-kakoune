@@ -4,7 +4,9 @@ import {
   buildKakouneCommands,
   kakoune,
   kakouneStateField,
-  normalizeKeyStroke
+  normalizeKeyStroke,
+  normalizeCm5Key,
+  normalizeCm5Keys
 } from "../src";
 import { getSearchQuery } from "@codemirror/search";
 import { KakouneKeyProcessor } from "../src/keys";
@@ -81,6 +83,21 @@ describe("normalizeKeyStroke", () => {
       ctrlKey: true
     });
     expect(normalizeKeyStroke(event)).toBe("<C-Tab>");
+  });
+});
+
+describe("normalizeCm5Key", () => {
+  it("converts CM5 modifier and named-key notation", () => {
+    expect(normalizeCm5Key("Ctrl-X")).toBe("<C-x>");
+    expect(normalizeCm5Key("Cmd-S")).toBe("<M-s>");
+    expect(normalizeCm5Key("Alt-Shift-F")).toBe("<A-S-f>");
+    expect(normalizeCm5Key("Space")).toBe("<Space>");
+    expect(normalizeCm5Key("Ctrl-[")).toBe("<Esc>");
+  });
+
+  it("converts CM5 sequences", () => {
+    expect(normalizeCm5Keys("g g")).toEqual(["g", "g"]);
+    expect(normalizeCm5Keys(["Ctrl-X", "Ctrl-S"])).toEqual(["<C-x>", "<C-s>"]);
   });
 });
 

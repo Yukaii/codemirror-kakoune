@@ -1,0 +1,19 @@
+{
+  "name": "playground-cm5",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "codemirror": "^5.65.20",
+    "codemirror-kakoune-cm5": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/codemirror": "^5.60.16",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}

@@ -94,6 +94,24 @@ body {
   white-space: nowrap;
 }
 
+.playground-nav {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.playground-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.playground-nav a:hover,
+.playground-nav a[aria-current="page"] {
+  color: var(--accent);
+}
+
 .github-link,
 .package-link {
   color: var(--muted);
