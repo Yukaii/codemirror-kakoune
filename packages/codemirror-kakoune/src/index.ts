@@ -1,5 +1,5 @@
-import { EditorView } from "@codemirror/view";
-import { EditorState, type Extension } from "@codemirror/state";
+import { Decoration, drawSelection, EditorView } from "@codemirror/view";
+import { EditorState, type Extension, type Range } from "@codemirror/state";
 import { Prec } from "@codemirror/state";
 import { keymap, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { history } from "@codemirror/commands";
@@ -200,7 +200,9 @@ const kakouneLineCursor = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate): void {
-      if (update.selectionSet || update.docChanged) {
+      const selectionTypeChanged = update.startState.field(kakouneSelectionTypeField) !==
+        update.state.field(kakouneSelectionTypeField);
+      if (update.selectionSet || update.docChanged || selectionTypeChanged) {
         this.updateCursor(update.view);
       }
     }
@@ -219,6 +221,23 @@ const kakouneLineCursor = ViewPlugin.fromClass(
   }
 );
 
+const kakouneSelectionMark = Decoration.mark({
+  class: "cm-selectionBackground cm-kakoune-selection"
+});
+
+const kakouneSelectionDecorations = EditorView.decorations.compute(
+  ["selection"],
+  state => {
+    const decorations: Range<Decoration>[] = [];
+    for (const selection of state.selection.ranges) {
+      if (!selection.empty) {
+        decorations.push(kakouneSelectionMark.range(selection.from, selection.to));
+      }
+    }
+    return Decoration.set(decorations);
+  }
+);
+
 const kakouneBaseTheme = EditorView.baseTheme({
   "&[data-kakoune-mode='select'] .cm-cursor, &[data-kakoune-mode='select'] .cm-cursor-primary, &[data-kakoune-mode='select'] .cm-cursor-secondary": {
     borderLeft: "1ch solid var(--color-accent, var(--caret-color, currentColor)) !important",
@@ -227,6 +246,9 @@ const kakouneBaseTheme = EditorView.baseTheme({
   },
   "&[data-kakoune-mode='insert'] .cm-cursor, &[data-kakoune-mode='insert'] .cm-cursor-primary": {
     borderLeft: "1.5px solid var(--caret-color, currentColor) !important"
+  },
+  "& .cm-selectionLayer > .cm-selectionBackground": {
+    display: "none !important"
   }
 });
 
@@ -260,8 +282,10 @@ export function kakoune(options: KakouneOptions = {}): Extension {
     kakouneSelectionTypeField,
     EditorState.allowMultipleSelections.of(true),
     history(),
+    drawSelection(),
     kakouneEditorAttributes,
     kakouneLineCursor,
+    kakouneSelectionDecorations,
     kakouneBaseTheme,
     Prec.highest(
       keymap.of([
