@@ -90,5 +90,5 @@ The compiled output `main.js`, along with `manifest.json` and `styles.css`, is i
 
 ## License
 
-MIT © [YUKAI](https://github.com/Yukaii)
+MIT © [Yukai Huang](https://github.com/Yukaii)
 
