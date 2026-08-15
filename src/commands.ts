@@ -20,18 +20,14 @@ import {
   setKakouneSelectionLinewiseEffect,
   setKakouneSelectionTypeEffect,
   setKakouneSelectionHistoryEffect,
+  setKakouneLastSelectEffect,
   setKakounePipePromptEffect,
+  type KakouneFindKind,
   type KakouneJumpEntry,
   type KakouneJumpState,
+  type KakouneLastSelect,
   type KakouneMode
 } from "./state";
-
-/**
- * Direction kind for the find-to-character commands.
- * - `"f"` / `"F"` — inclusive forward / backward
- * - `"t"` / `"T"` — exclusive forward / backward
- */
-export type KakouneFindKind = "f" | "t" | "F" | "T";
 
 function snapshotJumpEntry(selection: EditorView["state"]["selection"]): KakouneJumpEntry {
   return {
@@ -385,30 +381,122 @@ function extendSelections(view: EditorView, mapper: (range: SelectionRange) => n
   return true;
 }
 
-function moveToFind(view: EditorView, kind: KakouneFindKind, key: string): boolean {
-  const backwards = kind === "F" || kind === "T";
-  const inclusive = kind === "f" || kind === "F";
+function moveToFind(view: EditorView, kind: KakouneFindKind, key: string, count: number = 1): boolean {
+  if (key === "<esc>" || key === "<Esc>") {
+    return true;
+  }
+
+  let targetChar = key;
+  if (key === "<Enter>" || key === "<ret>" || key === "<ret\b>") {
+    targetChar = "\n";
+  } else if (key === "<Space>") {
+    targetChar = " ";
+  } else if (key === "<Tab>") {
+    targetChar = "\t";
+  } else if (key === "<lt>") {
+    targetChar = "<";
+  } else if (key === "<gt>") {
+    targetChar = ">";
+  }
+
+  const backwards =
+    kind === "<A-f>" ||
+    kind === "<a-f>" ||
+    kind === "<A-t>" ||
+    kind === "<a-t>" ||
+    kind === "<A-F>" ||
+    kind === "<a-F>" ||
+    kind === "<A-T>" ||
+    kind === "<a-T>";
+
+  const inclusive =
+    kind === "f" ||
+    kind === "F" ||
+    kind === "<A-f>" ||
+    kind === "<a-f>" ||
+    kind === "<A-F>" ||
+    kind === "<a-F>";
+
+  const extend =
+    kind === "F" ||
+    kind === "T" ||
+    kind === "<A-F>" ||
+    kind === "<a-F>" ||
+    kind === "<A-T>" ||
+    kind === "<a-T>";
+
+  const doc = view.state.doc.toString();
   const result = view.state.changeByRange(range => {
-    const line = view.state.doc.lineAt(range.head);
-    const text = view.state.doc.sliceString(line.from, line.to);
-    const relativeStart = range.head - line.from;
-    const found = backwards
-      ? text.slice(0, relativeStart).lastIndexOf(key)
-      : text.indexOf(key, relativeStart + (range.empty ? 1 : 0));
+    let searchPos = backwards ? range.head - 1 : range.head + 1;
+    let found = -1;
+
+    for (let c = 0; c < count; c++) {
+      if (backwards) {
+        if (searchPos < 0) {
+          found = -1;
+          break;
+        }
+        found = doc.lastIndexOf(targetChar, searchPos);
+        if (found < 0) break;
+        searchPos = found - 1;
+      } else {
+        if (searchPos >= doc.length) {
+          found = -1;
+          break;
+        }
+        found = doc.indexOf(targetChar, searchPos);
+        if (found < 0) break;
+        searchPos = found + 1;
+      }
+    }
 
     if (found < 0) {
       return { range };
     }
 
-    const offset = inclusive ? found : found + (backwards ? 1 : -1);
-    const next = line.from + Math.max(0, offset);
+    const targetIndex = inclusive
+      ? found
+      : backwards
+        ? Math.min(doc.length, found + 1)
+        : Math.max(0, found - 1);
+
+    const anchor = extend ? range.anchor : range.head;
     return {
-      range: EditorSelection.cursor(next)
+      range: EditorSelection.range(anchor, targetIndex)
     };
   });
 
-  view.dispatch(result);
+  view.dispatch({
+    ...result,
+    effects: [
+      setKakouneLastSelectEffect.of({
+        type: "find",
+        kind,
+        key,
+        count
+      })
+    ]
+  });
   return true;
+}
+
+function repeatLastSelect(view: EditorView, count?: number): boolean {
+  const kakoune = view.state.field(kakouneStateField);
+  const last = kakoune.lastSelect;
+  if (!last) {
+    return true;
+  }
+
+  switch (last.type) {
+    case "find":
+      return moveToFind(view, last.kind, last.key, count ?? last.count);
+    case "object":
+      return moveToSurroundingObject(view, last.objectKey, last.extend, last.direction, last.inner, count ?? last.count);
+    case "surroundingObject":
+      return selectSurroundingObject(view, last.objectKey, last.inner);
+    default:
+      return true;
+  }
 }
 
 function rotateSelections(view: EditorView, reverse: boolean): boolean {
@@ -1310,7 +1398,8 @@ function moveToSurroundingObject(
   objectKey: string,
   extend: boolean,
   direction: "start" | "end",
-  inner: boolean = false
+  inner: boolean = false,
+  count: number = 1
 ): boolean {
   const doc = view.state.doc.toString();
   const mapper = (range: SelectionRange): number => {
@@ -1340,10 +1429,23 @@ function moveToSurroundingObject(
     }
   };
 
+  view.dispatch({
+    effects: [
+      setKakouneLastSelectEffect.of({
+        type: "object",
+        objectKey,
+        direction,
+        extend,
+        inner,
+        count
+      })
+    ]
+  });
+
   if (extend) {
-    return extendSelections(view, mapper);
+    return extendSelections(view, mapper, count);
   } else {
-    return moveSelections(view, mapper);
+    return moveSelections(view, mapper, count);
   }
 }
 
@@ -1383,7 +1485,14 @@ function selectSurroundingObject(
   });
 
   view.dispatch({
-    selection: EditorSelection.create(ranges, state.selection.mainIndex)
+    selection: EditorSelection.create(ranges, state.selection.mainIndex),
+    effects: [
+      setKakouneLastSelectEffect.of({
+        type: "surroundingObject",
+        objectKey,
+        inner
+      })
+    ]
   });
   return true;
 }
@@ -2039,22 +2148,56 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["&"], run: view => alignSelections(view), description: "Align selections" },
     { keys: ["@"], run: view => convertTabsSpaces(view, false), description: "Convert tabs to spaces" },
     { keys: ["<A-@>"], run: view => convertTabsSpaces(view, true), description: "Convert spaces to tabs" },
-    { keys: ["f"], run: (view, arg) => {
+    { keys: ["f"], run: (view, arg, count) => {
       if (arg === undefined) return false;
-      return moveToFind(view, "f", arg);
-    }, description: "Select to character" },
-    { keys: ["t"], run: (view, arg) => {
+      return moveToFind(view, "f", arg, count);
+    }, description: "Select to next character" },
+    { keys: ["t"], run: (view, arg, count) => {
       if (arg === undefined) return false;
-      return moveToFind(view, "t", arg);
-    }, description: "Select until character" },
-    { keys: ["F"], run: (view, arg) => {
+      return moveToFind(view, "t", arg, count);
+    }, description: "Select until next character" },
+    { keys: ["F"], run: (view, arg, count) => {
       if (arg === undefined) return false;
-      return moveToFind(view, "F", arg);
-    }, description: "Select backward to character" },
-    { keys: ["T"], run: (view, arg) => {
+      return moveToFind(view, "F", arg, count);
+    }, description: "Extend to next character" },
+    { keys: ["T"], run: (view, arg, count) => {
       if (arg === undefined) return false;
-      return moveToFind(view, "T", arg);
-    }, description: "Select backward until character" },
+      return moveToFind(view, "T", arg, count);
+    }, description: "Extend until next character" },
+    { keys: ["<A-f>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-f>", arg, count);
+    }, description: "Select to previous character" },
+    { keys: ["<a-f>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-f>", arg, count);
+    }, description: "Select to previous character" },
+    { keys: ["<A-t>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-t>", arg, count);
+    }, description: "Select until previous character" },
+    { keys: ["<a-t>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-t>", arg, count);
+    }, description: "Select until previous character" },
+    { keys: ["<A-F>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-F>", arg, count);
+    }, description: "Extend to previous character" },
+    { keys: ["<a-F>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-F>", arg, count);
+    }, description: "Extend to previous character" },
+    { keys: ["<A-T>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-T>", arg, count);
+    }, description: "Extend until previous character" },
+    { keys: ["<a-T>"], run: (view, arg, count) => {
+      if (arg === undefined) return false;
+      return moveToFind(view, "<A-T>", arg, count);
+    }, description: "Extend until previous character" },
+    { keys: ["<A-.>"], run: (view, _arg, count) => repeatLastSelect(view, count), description: "Repeat last select/find" },
+    { keys: ["<a-.>"], run: (view, _arg, count) => repeatLastSelect(view, count), description: "Repeat last select/find" },
     { keys: ["r"], run: view => {
       // replace char handled by key processor or command
       return true;

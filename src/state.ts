@@ -20,6 +20,33 @@ export interface KakouneJumpSelection {
   head: number;
 }
 
+/**
+ * Direction kind for the find-to-character commands.
+ * - `"f"` / `"F"` — inclusive forward / extend forward
+ * - `"t"` / `"T"` — exclusive forward / extend forward
+ * - `"<A-f>"` / `"<A-F>"` — inclusive backward / extend backward
+ * - `"<A-t>"` / `"<A-T>"` — exclusive backward / extend backward
+ */
+export type KakouneFindKind =
+  | "f"
+  | "t"
+  | "F"
+  | "T"
+  | "<A-f>"
+  | "<A-t>"
+  | "<A-F>"
+  | "<A-T>"
+  | "<a-f>"
+  | "<a-t>"
+  | "<a-F>"
+  | "<a-T>";
+
+/** An action stored for repeating with `<a-.>`. */
+export type KakouneLastSelect =
+  | { type: "find"; kind: KakouneFindKind; key: string; count?: number }
+  | { type: "object"; objectKey: string; direction: "start" | "end"; extend: boolean; inner: boolean; count?: number }
+  | { type: "surroundingObject"; objectKey: string; inner: boolean; count?: number };
+
 /** A full selection snapshot stored in the Kakoune jump list. */
 export interface KakouneJumpEntry {
   ranges: KakouneJumpSelection[];
@@ -79,6 +106,8 @@ export interface KakouneState {
   /** Selection history for selection undo/redo (`<a-u>` / `<a-U>`). */
   selectionHistory: Array<Array<{ anchor: number; head: number }>>;
   selectionHistoryIndex: number;
+  /** Last object selection or character find action for `<a-.>` repeat. */
+  lastSelect: KakouneLastSelect | null;
   /** Kakoune jump list state. */
   jumpState: KakouneJumpState;
 }
@@ -157,6 +186,8 @@ export const setKakouneRecordedMacroKeysEffect: StateEffectType<string[]> = Stat
 export const setKakouneNamedRegistersEffect: StateEffectType<Map<string, string>> = StateEffect.define<Map<string, string>>();
 /** State effect that updates selection history and index. */
 export const setKakouneSelectionHistoryEffect: StateEffectType<{ history: Array<Array<{ anchor: number; head: number }>>; index: number }> = StateEffect.define<{ history: Array<Array<{ anchor: number; head: number }>>; index: number }>();
+/** State effect that updates the last object selection or character find action. */
+export const setKakouneLastSelectEffect: StateEffectType<KakouneLastSelect | null> = StateEffect.define<KakouneLastSelect | null>();
 
 /** State effect that sets the selection type (char-wise or line-wise). */
 export const setKakouneSelectionTypeEffect = StateEffect.define<KakouneSelectionType>();
@@ -205,6 +236,7 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       namedRegisters: new Map(),
       selectionHistory: [],
       selectionHistoryIndex: 0,
+      lastSelect: null,
       jumpState: { entries: [], currentIndex: 0 }
     };
   },
@@ -281,6 +313,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
           selectionHistory: effect.value.history,
           selectionHistoryIndex: effect.value.index
         };
+      } else if (effect.is(setKakouneLastSelectEffect)) {
+        next = { ...next, lastSelect: effect.value };
       }
     }
 

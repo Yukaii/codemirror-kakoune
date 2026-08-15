@@ -1048,4 +1048,139 @@ describe("kakoune extension", () => {
 
     view.destroy();
   });
+
+  describe("character find motions and repeat (f/t/F/T and <A-.>)", () => {
+    it("selects to next character with f (inclusive)", () => {
+      const view = createView("hello world");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      view.dispatch({ selection: EditorSelection.cursor(0) });
+      expect(processor.handle("select", "f", view)).toBe(true);
+      expect(processor.isWaitingForChar()).toBe(true);
+      expect(processor.handle("select", "o", view)).toBe(true);
+
+      // 'o' is at pos 4, anchor = 0
+      expect(view.state.selection.main.anchor).toBe(0);
+      expect(view.state.selection.main.head).toBe(4);
+
+      view.destroy();
+    });
+
+    it("selects until next character with t (exclusive)", () => {
+      const view = createView("hello world");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      view.dispatch({ selection: EditorSelection.cursor(0) });
+      expect(processor.handle("select", "t", view)).toBe(true);
+      expect(processor.handle("select", "o", view)).toBe(true);
+
+      // Character before 'o' is second 'l' at pos 3
+      expect(view.state.selection.main.anchor).toBe(0);
+      expect(view.state.selection.main.head).toBe(3);
+
+      view.destroy();
+    });
+
+    it("extends to next character with F and T", () => {
+      const view = createView("alpha beta gamma");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      // Initial selection covering "alpha" (0..5)
+      view.dispatch({ selection: EditorSelection.range(0, 5) });
+
+      // Extend to 'g' of gamma (pos 11)
+      expect(processor.handle("select", "F", view)).toBe(true);
+      expect(processor.handle("select", "g", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(0);
+      expect(view.state.selection.main.head).toBe(11);
+
+      // Extend until 'm' of gamma (pos 12)
+      expect(processor.handle("select", "T", view)).toBe(true);
+      expect(processor.handle("select", "m", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(0);
+      expect(view.state.selection.main.head).toBe(12);
+
+      view.destroy();
+    });
+
+    it("supports backward character find with <A-f> and <A-t>", () => {
+      const view = createView("alpha beta gamma");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      // Cursor at pos 11 ('g')
+      view.dispatch({ selection: EditorSelection.cursor(11) });
+
+      // Select backward to 'b' of beta (pos 6)
+      expect(processor.handle("select", "<A-f>", view)).toBe(true);
+      expect(processor.handle("select", "b", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(11);
+      expect(view.state.selection.main.head).toBe(6);
+
+      // Select backward until 'a' at end of alpha (pos 4), so target is pos 5 (space)
+      expect(processor.handle("select", "<A-t>", view)).toBe(true);
+      expect(processor.handle("select", "a", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(6);
+      expect(view.state.selection.main.head).toBe(5);
+
+      view.destroy();
+    });
+
+    it("supports count prefix with character find", () => {
+      const view = createView("banana");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      view.dispatch({ selection: EditorSelection.cursor(0) });
+      // 2fa -> find 2nd 'a' (pos 3)
+      expect(processor.handle("select", "2", view)).toBe(true);
+      expect(processor.handle("select", "f", view)).toBe(true);
+      expect(processor.handle("select", "a", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(0);
+      expect(view.state.selection.main.head).toBe(3);
+
+      view.destroy();
+    });
+
+    it("repeats last character find with <A-.>", () => {
+      const view = createView("one two three two one");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      view.dispatch({ selection: EditorSelection.cursor(0) });
+
+      // Find first 't' (pos 4)
+      expect(processor.handle("select", "f", view)).toBe(true);
+      expect(processor.handle("select", "t", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(0);
+      expect(view.state.selection.main.head).toBe(4);
+
+      // Repeat with <A-.> -> find next 't' (pos 8 in "three")
+      expect(processor.handle("select", "<A-.>", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(4);
+      expect(view.state.selection.main.head).toBe(8);
+
+      // Repeat with <A-.> again -> find next 't' (pos 14 in second "two")
+      expect(processor.handle("select", "<A-.>", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(8);
+      expect(view.state.selection.main.head).toBe(14);
+
+      view.destroy();
+    });
+
+    it("repeats last object selection with <A-.>", () => {
+      const view = createView("para one\n\npara two\n\npara three");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      view.dispatch({ selection: EditorSelection.cursor(0) });
+
+      // Move to end of first paragraph (pos 8)
+      expect(processor.handle("select", "]", view)).toBe(true);
+      expect(processor.handle("select", "p", view)).toBe(true);
+      expect(view.state.selection.main.head).toBe(8);
+
+      // Repeat with <A-.> -> move to end of second paragraph (pos 18)
+      expect(processor.handle("select", "<A-.>", view)).toBe(true);
+      expect(view.state.selection.main.head).toBe(18);
+
+      view.destroy();
+    });
+  });
 });

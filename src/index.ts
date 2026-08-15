@@ -11,6 +11,9 @@ import {
   kakouneWhichKeyFacet,
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect,
+  setKakouneLastSelectEffect,
+  type KakouneFindKind,
+  type KakouneLastSelect,
   type KakouneMode,
   type KakouneOptions,
   type KakouneState,
@@ -27,13 +30,14 @@ import {
   handleSplitPromptKey
 } from "./commands";
 
-export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem } from "./state";
+export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem, KakouneFindKind, KakouneLastSelect } from "./state";
 export {
   kakouneStateField,
   kakouneInitialModeFacet,
   setKakouneModeEffect,
   setKakouneNamedRegistersEffect,
   setKakouneSelectionHistoryEffect,
+  setKakouneLastSelectEffect,
   kakouneWhichKeyFacet,
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect

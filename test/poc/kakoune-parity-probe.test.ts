@@ -295,4 +295,72 @@ describe("kakoune parity probe helpers", () => {
     expect(singleLine.doc).toBe("");
   });
 
+  it("supports character find and extend motions (f, t, F, T, <a-f>, <a-t>, <a-F>, <a-T>)", () => {
+    // f - inclusive forward select
+    const fRes = runKakouneFixture({
+      in: "hello world",
+      cmd: "foidone<esc>"
+    });
+    expect(fRes.doc).toBe("helldoneo world");
+
+    // t - exclusive forward select (stops before 'o', at second 'l')
+    const tRes = runKakouneFixture({
+      in: "hello world",
+      cmd: "toidone<esc>"
+    });
+    expect(tRes.doc).toBe("heldonelo world");
+
+    // F - inclusive forward extend
+    const fExtend = runKakouneFixture({
+      in: "abc def ghi",
+      cmd: "wFi"
+    });
+    expect(fExtend.selectionRanges).toEqual([{ anchor: 0, head: 10 }]);
+
+    // T - exclusive forward extend
+    const tExtend = runKakouneFixture({
+      in: "abc def ghi",
+      cmd: "wTh"
+    });
+    expect(tExtend.selectionRanges).toEqual([{ anchor: 0, head: 8 }]);
+
+    // <a-f> - inclusive backward select
+    const afRes = runKakouneFixture({
+      in: "hello world",
+      cmd: "ll<a-f>e"
+    });
+    expect(afRes.selectionRanges).toEqual([{ anchor: 2, head: 1 }]);
+
+    // <a-t> - exclusive backward select
+    const atRes = runKakouneFixture({
+      in: "hello world",
+      cmd: "lll<a-t>h"
+    });
+    expect(atRes.selectionRanges).toEqual([{ anchor: 3, head: 1 }]);
+
+    // <a-F> - inclusive backward extend
+    const afExtend = runKakouneFixture({
+      in: "hello world",
+      cmd: "lll<a-F>h"
+    });
+    expect(afExtend.selectionRanges).toEqual([{ anchor: 3, head: 0 }]);
+  });
+
+  it("repeats last character find and object select via <a-.>", () => {
+    // Repeat find character across lines (matching Kakoune repeat-find-char fixture)
+    const findRepeat = runKakouneFixture({
+      in: "this is the first line\nthis is the second line",
+      cmd: "fl<a-.>"
+    });
+    // First 'l' is at 18 (1.19), second 'l' is at 42 (2.20)
+    expect(findRepeat.selectionRanges).toEqual([{ anchor: 18, head: 42 }]);
+
+    // Repeat paragraph selection (matching Kakoune repeat-end-paragraph fixture)
+    const paraRepeat = runKakouneFixture({
+      in: "this is\nthe first\nparagraph\n\nthis is the\nsecond one",
+      cmd: "]p<a-.>"
+    });
+    expect(paraRepeat.selectionRanges).toEqual([{ anchor: 51, head: 51 }]);
+  });
+
 });
