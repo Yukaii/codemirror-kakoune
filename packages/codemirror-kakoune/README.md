@@ -50,6 +50,15 @@ kakoune({
 })
 ```
 
+CM5 key names can be converted when sharing bindings with a CodeMirror 5
+keymap:
+
+```ts
+import { normalizeCm5Keys } from "codemirror-kakoune";
+
+const keys = normalizeCm5Keys("Ctrl-X Ctrl-S"); // ["<C-x>", "<C-s>"]
+```
+
 ## Current status
 
 The first cut focuses on the core editing loop:

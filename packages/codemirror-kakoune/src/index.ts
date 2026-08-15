@@ -63,7 +63,7 @@ export {
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect
 } from "./state";
-export { normalizeKeyStroke, KakouneKeyProcessor } from "./keys";
+export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys, KakouneKeyProcessor } from "./keys";
 export {
   buildKakouneCommands,
   commitSearchPrompt,
