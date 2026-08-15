@@ -30,6 +30,36 @@ function vertical(direction: -1 | 1): Command {
   return cm => move(cm, (cursor, editor) => editor.findPosV(cursor, direction, "line"));
 }
 
+function enterInsert(cm: Cm, after = false): void {
+  if (after) {
+    move(cm, (cursor, editor) => editor.findPosH(cursor, 1, "char", false));
+  }
+  setMode(cm, "insert");
+}
+
+function selectLine(cm: Cm): void {
+  cm.setSelections(cm.listSelections().map(selection => {
+    const from = { line: selection.head.line, ch: 0 };
+    const line = cm.getLine(selection.head.line);
+    const to = { line: selection.head.line, ch: line.length };
+    return { anchor: from, head: to };
+  }));
+}
+
+function deleteSelection(cm: Cm): void {
+  const ranges = cm.listSelections().map(selection => {
+    if (!selection.empty()) return { from: selection.from(), to: selection.to() };
+    const line = cm.getLine(selection.head.line);
+    return {
+      from: selection.head,
+      to: { line: selection.head.line, ch: Math.min(line.length, selection.head.ch + 1) }
+    };
+  });
+  for (const range of ranges.reverse()) {
+    cm.replaceRange("", range.from, range.to);
+  }
+}
+
 const selectCommands: Record<string, Command> = {
   h: horizontal(-1),
   l: horizontal(1),
@@ -39,10 +69,10 @@ const selectCommands: Record<string, Command> = {
   "$": cm => cm.execCommand("goLineEnd"),
   w: cm => cm.execCommand("goWordRight"),
   b: cm => cm.execCommand("goGroupLeft"),
-  x: cm => cm.execCommand("selectLine"),
+  x: selectLine,
   u: cm => cm.undo(),
   U: cm => cm.redo(),
-  d: cm => cm.replaceSelections(cm.getSelections().map(() => "")),
+  d: deleteSelection,
   y: cm => cm.execCommand("copy")
 };
 
@@ -53,7 +83,8 @@ function installCommands(cm: Cm): void {
   for (const [key, command] of Object.entries(selectCommands)) {
     commands[`kakoune_${key}`] = command;
   }
-  commands.kakouneEnterInsert = editor => setMode(editor, "insert");
+  commands.kakouneEnterInsert = editor => enterInsert(editor);
+  commands.kakouneAppend = editor => enterInsert(editor, true);
   commands.kakouneEnterSelect = editor => setMode(editor, "select");
   commands.kakouneDelete = editor => editor.replaceSelections(editor.getSelections().map(() => ""));
   setMode(cm, "select");
@@ -62,7 +93,7 @@ function installCommands(cm: Cm): void {
 export const kakouneKeyMap = {
   h: "kakoune_h", j: "kakoune_j", k: "kakoune_k", l: "kakoune_l",
   w: "kakoune_w", b: "kakoune_b", x: "kakoune_x", d: "kakouneDelete",
-  i: "kakouneEnterInsert", a: "kakouneEnterInsert", u: "kakoune_u", U: "kakoune_U",
+  i: "kakouneEnterInsert", a: "kakouneAppend", u: "kakoune_u", U: "kakoune_U",
   Esc: "kakouneEnterSelect",
   nofallthrough: true
 } as unknown as CodeMirror.KeyMap & { nofallthrough: boolean };
