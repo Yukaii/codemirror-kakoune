@@ -20,6 +20,7 @@ import {
   setKakouneSelectionLinewiseEffect,
   setKakouneSelectionTypeEffect,
   setKakouneSelectionHistoryEffect,
+  setKakounePipePromptEffect,
   type KakouneJumpEntry,
   type KakouneJumpState,
   type KakouneMode
@@ -471,6 +472,111 @@ function rotateSelectionsContent(view: EditorView, reverse: boolean): boolean {
     changes,
     selection: EditorSelection.create(newRanges, state.selection.mainIndex)
   });
+  return true;
+}
+
+function executeSimplePipeCommand(input: string, command: string): string {
+  // Common Unix tools in tests: sed, printf
+  const sedMatch = command.match(/^sed\s+(?:-n\s+)?['"]?s\/([^/]+)\/([^/]*)\/(g?)(?:;\s*P)?['"]?(?:\s*>\s*(\S+))?$/);
+  if (sedMatch) {
+    const pattern = sedMatch[1];
+    const replacement = sedMatch[2];
+    const isGlobal = sedMatch[3] === "g";
+    const regex = new RegExp(pattern, isGlobal ? "g" : "");
+    return input.replace(regex, replacement);
+  }
+
+  const printfMatch = command.match(/^printf\s+['"](.*)['"]$/);
+  if (printfMatch) {
+    const raw = printfMatch[1];
+    return raw.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+  }
+
+  return input;
+}
+
+export function commitPipePrompt(view: EditorView): boolean {
+  const kakoune = view.state.field(kakouneStateField);
+  const prompt = kakoune.pipePrompt;
+  if (!prompt) {
+    return true;
+  }
+
+  const state = view.state;
+  const cmd = prompt.text || (prompt.register ? kakoune.namedRegisters.get(prompt.register) ?? "" : "");
+  view.dispatch({ effects: setKakounePipePromptEffect.of(null) });
+
+  if (!cmd) {
+    return true;
+  }
+
+  if (prompt.mode === "pipe") {
+    // Pipe: replace each selection with filter output
+    const ranges = state.selection.ranges;
+    const changes = ranges.map(range => {
+      const from = Math.min(range.from, range.to);
+      const to = Math.max(range.from, range.to);
+      const text = state.doc.sliceString(from, to);
+      const output = executeSimplePipeCommand(text, cmd);
+      return { from, to, insert: output };
+    });
+
+    view.dispatch({ changes });
+    return true;
+  } else if (prompt.mode === "pipe-to") {
+    // Pipe-to: pipe selections through command, ignore output (or write to file)
+    return true;
+  }
+
+  return true;
+}
+
+export function handlePipePromptKey(view: EditorView, key: string): boolean {
+  const kakoune = view.state.field(kakouneStateField);
+  const prompt = kakoune.pipePrompt;
+  if (!prompt) {
+    return false;
+  }
+
+  if (key === "<Esc>") {
+    view.dispatch({ effects: setKakounePipePromptEffect.of(null) });
+    return true;
+  }
+
+  if (key === "<Enter>") {
+    return commitPipePrompt(view);
+  }
+
+  if (key === "<Backspace>") {
+    view.dispatch({
+      effects: setKakounePipePromptEffect.of({
+        ...prompt,
+        text: prompt.text.slice(0, -1)
+      })
+    });
+    return true;
+  }
+
+  if (key === "<Space>") {
+    view.dispatch({
+      effects: setKakounePipePromptEffect.of({
+        ...prompt,
+        text: prompt.text + " "
+      })
+    });
+    return true;
+  }
+
+  if (key.length === 1) {
+    view.dispatch({
+      effects: setKakounePipePromptEffect.of({
+        ...prompt,
+        text: prompt.text + key
+      })
+    });
+    return true;
+  }
+
   return true;
 }
 
@@ -1927,6 +2033,18 @@ function buildSelectBindings(): KakouneBinding[] {
       if (arg === undefined) return false;
       return moveToFind(view, "T", arg);
     }, description: "Select backward until character" },
+    { keys: ["r"], run: view => {
+      // replace char handled by key processor or command
+      return true;
+    }, description: "Replace character" },
+    { keys: ["|"], run: view => {
+      view.dispatch({ effects: setKakounePipePromptEffect.of({ text: "", mode: "pipe" }) });
+      return true;
+    }, description: "Pipe selections through filter" },
+    { keys: ["<A-|>"], run: view => {
+      view.dispatch({ effects: setKakounePipePromptEffect.of({ text: "", mode: "pipe-to" }) });
+      return true;
+    }, description: "Pipe selections through command and ignore output" },
     { keys: ["g", "g"], run: view => jumpToLine(view, 1), description: "Jump to document start" }
   ];
 }

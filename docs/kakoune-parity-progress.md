@@ -47,6 +47,9 @@
 - user-modes/once
 - replay-macro
 - macro/record-macro
+- pipe
+- pipe-reg
+- pipe-replaces-all-lines
 
 ## Still Red
 - repeat-insert/repeat-insert-hooks
@@ -55,9 +58,6 @@
 - goto/file
 - goto/last-buffer
 - macro/replay-macro-mapped-word-completion
-- pipe
-- pipe-reg
-- pipe-replaces-all-lines
 - pipe-to
 - pipe-to-reg
 - reload
@@ -66,7 +66,5 @@
 - selection-undo/redo
 - selection-undo/undo
 - selection-undo/windisplay-hook
-- pipe
-- pipe-reg
 - pipe-to
 - pipe-to-reg

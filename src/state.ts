@@ -66,6 +66,8 @@ export interface KakouneState {
   splitPrompt: string | null;
   /** Snapshot of selections before opening the split prompt, or `null`. */
   splitSelection: Array<{ anchor: number; head: number }> | null;
+  /** Active prompt for pipe commands (| or <a-|>), or `null`. */
+  pipePrompt: { text: string; mode: "pipe" | "pipe-to"; register?: string } | null;
   /** Last command error message, or `null` if none. */
   commandError: string | null;
   /** Active macro recording register name, or `null` if not recording. */
@@ -143,6 +145,8 @@ export const setKakouneJumpStateEffect: StateEffectType<KakouneJumpState> = Stat
 export const setKakouneSelectionRepeatCountEffect: StateEffectType<number> = StateEffect.define<number>();
 /** State effect that stores replace-mode insert anchors after `c`. */
 export const setKakouneReplaceInsertAnchorsEffect: StateEffectType<number[] | null> = StateEffect.define<number[] | null>();
+/** State effect that sets or clears the pipe prompt. */
+export const setKakounePipePromptEffect: StateEffectType<{ text: string; mode: "pipe" | "pipe-to"; register?: string } | null> = StateEffect.define<{ text: string; mode: "pipe" | "pipe-to"; register?: string } | null>();
 /** State effect that sets or clears the last command error. */
 export const setKakouneCommandErrorEffect: StateEffectType<string | null> = StateEffect.define<string | null>();
 /** State effect that sets the recording macro register or null. */
@@ -194,6 +198,7 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
       searchSelection: null,
       splitPrompt: null,
       splitSelection: null,
+      pipePrompt: null,
       commandError: null,
       recordingMacroRegister: null,
       recordedMacroKeys: [],
@@ -240,6 +245,8 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
         next = { ...next, splitPrompt: effect.value };
       } else if (effect.is(setKakouneSplitSelectionEffect)) {
         next = { ...next, splitSelection: effect.value };
+      } else if (effect.is(setKakounePipePromptEffect)) {
+        next = { ...next, pipePrompt: effect.value };
       } else if (effect.is(setKakouneJumpStateEffect)) {
         next = { ...next, jumpState: effect.value };
       } else if (effect.is(setKakouneSelectionRepeatCountEffect)) {

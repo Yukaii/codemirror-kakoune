@@ -3,6 +3,7 @@ import type { EditorView } from "@codemirror/view";
 import {
   kakouneStateField,
   setKakouneNamedRegistersEffect,
+  setKakounePipePromptEffect,
   setKakouneReplaceInsertAnchorsEffect,
   setKakouneSelectionRepeatCountEffect,
   type KakouneMode,
@@ -233,6 +234,7 @@ export class KakouneKeyProcessor {
   private insertMappings = new Map<string, string[]>();
   private userModes = new Map<string, Map<string, string[]>>();
   private activeUserMode: { name: string; lock: boolean } | null = null;
+  private pendingRegister: string | null = null;
 
   private normalMappings = new Map<string, string[]>();
 
@@ -538,7 +540,19 @@ export class KakouneKeyProcessor {
       return this.enterCommandPrompt();
     }
 
-    if (effectiveMode === "select" && key === "r") {
+    if (effectiveMode === "select" && key === '"' && this.pending.length === 0) {
+      this.pendingCharBinding = {
+        keys: ['"'],
+        run: (_currentView, arg) => {
+          if (!arg) return false;
+          this.pendingRegister = arg;
+          return true;
+        }
+      };
+      return true;
+    }
+
+    if (effectiveMode === "select" && key === "r" && this.pending.length === 0) {
       this.pendingCharBinding = {
         keys: ["r"],
         run: (currentView, arg) => {
@@ -663,6 +677,15 @@ export class KakouneKeyProcessor {
       if (exact.keys.length === 1 && ["f", "t", "F", "T"].includes(exact.keys[0])) {
         this.pending = [];
         this.pendingCharBinding = exact;
+        return true;
+      }
+
+      if (exact.keys.length === 1 && (exact.keys[0] === "|" || exact.keys[0] === "<A-|>")) {
+        const reg = this.pendingRegister;
+        this.pendingRegister = null;
+        const mode = exact.keys[0] === "|" ? "pipe" : "pipe-to";
+        view.dispatch({ effects: setKakounePipePromptEffect.of({ text: "", mode, register: reg ?? undefined }) });
+        this.pending = [];
         return true;
       }
 

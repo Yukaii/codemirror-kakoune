@@ -234,4 +234,25 @@ describe("kakoune parity probe helpers", () => {
     expect(replayed.doc).toBe("mawww");
   });
 
+  it("pipes selection through external commands and registers", () => {
+    const piped = runKakouneFixture({
+      in: "%(foo)",
+      cmd: "|sed s/foo/bar/<ret>"
+    });
+    expect(piped.doc).toBe("bar");
+
+    const pipedReg = runKakouneFixture({
+      in: "%(foo)",
+      rc: "set-register a 'sed s/foo/bar/'",
+      cmd: '"a|<ret>'
+    });
+    expect(pipedReg.doc).toBe("bar");
+
+    const replacesLines = runKakouneFixture({
+      in: "a\nb",
+      cmd: "%|printf '\\n\\n'<ret>"
+    });
+    expect(replacesLines.doc).toBe("\n\n");
+  });
+
 });

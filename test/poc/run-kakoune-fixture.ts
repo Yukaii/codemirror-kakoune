@@ -2,7 +2,12 @@ import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { kakoune, getKakouneState, setKakouneNamedRegistersEffect } from "../../src";
 import { KakouneKeyProcessor } from "../../src/keys";
-import { buildKakouneCommands, handleSearchPromptKey, handleSplitPromptKey } from "../../src/commands";
+import {
+  buildKakouneCommands,
+  handleSearchPromptKey,
+  handleSplitPromptKey,
+  handlePipePromptKey
+} from "../../src/commands";
 
 export interface KakouneFixtureInput {
   in?: string;
@@ -209,6 +214,11 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
 
       if (state.splitPrompt !== null) {
         handleSplitPromptKey(view, token);
+        continue;
+      }
+
+      if (state.pipePrompt !== null) {
+        handlePipePromptKey(view, token);
         continue;
       }
 
