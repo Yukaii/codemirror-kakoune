@@ -1,0 +1,47 @@
+name: Release Obsidian Plugin
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "obsidian-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. 0.1.0)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Obsidian Plugin
+        run: pnpm --filter obsidian-kakoune build
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            packages/obsidian-kakoune/main.js
+            packages/obsidian-kakoune/manifest.json
+            packages/obsidian-kakoune/styles.css
+          generate_release_notes: true

@@ -3,9 +3,19 @@
 [![npm version](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune)
 [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune)
 
-A CodeMirror 6 extension that brings Kakoune-style modal editing into the browser.
+A CodeMirror 6 extension and Obsidian plugin that brings Kakoune's selection-first modal editing paradigm into the browser and desktop markdown editors.
 
-## Installation
+## Packages
+
+This monorepo contains:
+
+- **[`codemirror-kakoune`](./packages/codemirror-kakoune)**: Core CodeMirror 6 extension.
+- **[`obsidian-kakoune`](./packages/obsidian-kakoune)**: Obsidian community plugin providing native Kakoune modal editing.
+- **`playground`**: Interactive web playground for testing and demonstrating keybindings.
+
+---
+
+## Core Library Installation
 
 Install the package via `npm`, `pnpm`, or `yarn`:
 
@@ -19,7 +29,7 @@ Or via [JSR](https://jsr.io/@ykmade/codemirror-kakoune):
 npx jsr add @ykmade/codemirror-kakoune
 ```
 
-## Usage
+## Quick Start (CodeMirror 6)
 
 Simply import and add the `kakoune` extension to your CodeMirror 6 configuration:
 
@@ -42,37 +52,49 @@ const view = new EditorView({
 
 ### Configuration Options
 
-You can customize the initial mode using the options object:
+You can customize the initial mode and callbacks using the options object:
 
 ```typescript
 kakoune({
-  initialMode: "insert" // "select" (default) or "insert"
+  initialMode: "select", // "select" (default) or "insert"
+  onWhichKey: (pending, items, isWaitingForChar) => {
+    // Optional hook for key prompts and which-key UI
+  }
 })
 ```
 
-## Scripts
+---
 
-- `pnpm dev` - run the playground
-- `pnpm test` - run unit tests
-- `pnpm build` - build the library and playground
-- `pnpm typecheck` - run the TypeScript compiler without emitting files
+## Obsidian Plugin
 
-## Current status
+Looking for Kakoune modal editing inside Obsidian? Check out [`packages/obsidian-kakoune`](./packages/obsidian-kakoune) for full instructions, settings, and features.
 
-The first cut focuses on the core editing loop:
+---
 
-- mode switching
-- motion keys
-- line selection
-- yank/delete/paste
-- a small key sequence processor with pending-prefix support
+## Features & Supported Keybindings
 
-The keymap will expand from there as the Kakoune behavior is filled in.
+- **Selection-first editing**: All motions update or extend active selections (`h`, `j`, `k`, `l`, `w`, `e`, `b`, `x`, etc.).
+- **Insert modes**: `i`, `a`, `I`, `A`, `o`, `O`.
+- **Search & Regex**: `/` (search forward), `?` (search backward), `n`/`N` (next/prev match), `s` (filter selections by regex), `S` (split selections by regex).
+- **Goto & View modes**: `g` / `G` (`gh`, `gl`, `gk`, `gj`, `ge`, `gt`, `gb`), `v` / `V` (view centering/locking).
+- **Yank, Delete, Paste & Replace**: `y`, `d`, `c`, `p`, `P`, `r`.
+- **Delimiters & Matching**: `m`, `M`, `[` / `]` object selections.
+- **Undo / Redo**: `u`, `U`.
+- **Multiple selections**: Kakoune multiple cursor & selection manipulation.
+
+---
+
+## Development Scripts
+
+- `pnpm dev` - run the interactive playground locally
+- `pnpm test` - run unit test suite
+- `pnpm build` - build all packages (`codemirror-kakoune`, `playground`, `obsidian-kakoune`)
+- `pnpm typecheck` - typecheck all packages across the workspace
 
 ## References
 
-This repo starts from three references:
+This project builds upon ideas and patterns from:
 
+- [`mawww/kakoune`](https://github.com/mawww/kakoune)
 - [`replit/codemirror-vim`](https://github.com/replit/codemirror-vim)
 - [`71/dance`](https://github.com/71/dance)
-- [`mawww/kakoune`](https://github.com/mawww/kakoune)
