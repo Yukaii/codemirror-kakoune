@@ -269,9 +269,20 @@ export class KakouneKeyProcessor {
 
   private insertText(view: EditorView, text: string, preserveReplaceAnchors = false): boolean {
     const kakoune = view.state.field(kakouneStateField);
-    const anchors = kakoune.replaceInsertAnchors ?? view.state.selection.ranges.map(range => range.head);
-    const insertions = anchors.map(() => text);
-    return applySequentialInserts(view, anchors, insertions, preserveReplaceAnchors);
+    if (kakoune.replaceInsertAnchors) {
+      const anchors = kakoune.replaceInsertAnchors;
+      const insertions = anchors.map(() => text);
+      return applySequentialInserts(view, anchors, insertions, preserveReplaceAnchors);
+    }
+
+    const repeatCount = Math.max(1, kakoune.selectionRepeatCount);
+    const insertText = text.repeat(repeatCount);
+    const result = view.state.changeByRange(range => ({
+      changes: { from: range.head, insert: insertText },
+      range: EditorSelection.cursor(range.head + insertText.length)
+    }));
+    view.dispatch(result);
+    return true;
   }
 
   private enterCommandPrompt(): boolean {
@@ -524,9 +535,7 @@ export class KakouneKeyProcessor {
     }
 
     if (effectiveMode === "insert" && key.length === 1 && !key.startsWith("<")) {
-      const kakoune = view.state.field(kakouneStateField);
-      const inserted = key.repeat(Math.max(1, kakoune.selectionRepeatCount));
-      this.insertText(view, inserted, false);
+      this.insertText(view, key, true);
       this.clearTemporaryNormalIfDone();
       return true;
     }

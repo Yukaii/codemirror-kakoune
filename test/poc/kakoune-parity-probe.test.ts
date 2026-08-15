@@ -156,4 +156,10 @@ describe("kakoune parity probe helpers", () => {
     expect(result.doc).toBe("this was word1 this was word2 this was word3 this was word4 ");
   });
 
+  it("handles single selection change without reversing typed text", () => {
+    const result = runKakouneFixture({ in: "c’est %(difficile).", cmd: "cfacile" });
+
+    expect(result.doc).toBe("c’est facile.");
+  });
+
 });
