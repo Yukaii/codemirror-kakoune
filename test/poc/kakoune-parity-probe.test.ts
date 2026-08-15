@@ -281,6 +281,18 @@ describe("kakoune parity probe helpers", () => {
       cmd: "jxd"
     });
     expect(middle.doc).toBe("line 1\nline 3");
+
+    const last = runKakouneFixture({
+      in: "line 1\nline 2\nline 3",
+      cmd: "jjxd"
+    });
+    expect(last.doc).toBe("line 1\nline 2");
+
+    const singleLine = runKakouneFixture({
+      in: "only line",
+      cmd: "xd"
+    });
+    expect(singleLine.doc).toBe("");
   });
 
 });

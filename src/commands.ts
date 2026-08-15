@@ -1780,8 +1780,14 @@ function deleteSelection(view: EditorView): boolean {
   const selectionStarts = state.selection.ranges.map(range => Math.min(range.from, range.to));
 
   const result = state.changeByRange(range => {
-    const from = Math.min(range.from, range.to);
-    const to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
+    let from = Math.min(range.from, range.to);
+    let to = range.empty ? Math.min(state.doc.length, from + 1) : Math.max(range.from, range.to);
+
+    // If deleting a line-wise selection at the end of document where there's no trailing newline,
+    // also remove the preceding newline to completely delete the line (reducing total line count).
+    if ((isLine || sourceLinewise) && to >= state.doc.length && from > 0 && state.doc.sliceString(from - 1, from) === "\n") {
+      from -= 1;
+    }
 
     if (to <= from) {
       return {
