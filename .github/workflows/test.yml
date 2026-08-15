@@ -35,5 +35,8 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Check JSR
+        run: pnpm check:jsr
+
       - name: Test
         run: pnpm test -- --runInBand
