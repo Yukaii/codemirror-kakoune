@@ -1,7 +1,7 @@
 {
   "id": "kakoune",
   "name": "Kakoune",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "0.15.0",
   "description": "Selection-first modal editing keybindings inspired by Kakoune.",
   "author": "Yukai Huang",
