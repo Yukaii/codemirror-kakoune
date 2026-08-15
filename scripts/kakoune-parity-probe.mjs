@@ -9,10 +9,13 @@ import {
   selectNextProbeFixture
 } from "./kakoune-parity-probe-helpers.cjs";
 
-const ROOT = resolve(process.cwd(), "test/kakoune/test/normal");
+const ROOT = resolve(process.cwd(), "test/kakoune/test");
 const DOC_PATH = resolve(process.cwd(), "docs/kakoune-parity-progress.md");
 function readFixture(name) {
-  const dir = join(ROOT, name);
+  let dir = join(ROOT, name);
+  if (!existsSync(dir)) {
+    dir = join(ROOT, "normal", name);
+  }
   const cmdFile = join(dir, "cmd");
   const scriptFile = join(dir, "script");
   let cmd = "";
@@ -21,16 +24,12 @@ function readFixture(name) {
     cmd = readFileSync(cmdFile, "utf8");
   }
 
-  if (!cmd && existsSync(scriptFile)) {
+  if (existsSync(scriptFile)) {
     const script = readFileSync(scriptFile, "utf8");
     const match = script.match(/"params":\s*\[\s*"([^"]+)"\s*\]/);
     if (match) {
       cmd = match[1];
     }
-  }
-
-  if (!cmd && !existsSync(cmdFile) && !existsSync(scriptFile)) {
-    return null;
   }
 
   return {
@@ -57,14 +56,17 @@ function buildProbeTest(candidateName) {
     `const ROOT = ${JSON.stringify(ROOT)};`,
     '',
     'function readFixture(name) {',
-    '  const dir = join(ROOT, name);',
+    '  let dir = join(ROOT, name);',
+    '  if (!existsSync(dir)) {',
+    '    dir = join(ROOT, "normal", name);',
+    '  }',
     '  const cmdFile = join(dir, "cmd");',
     '  const scriptFile = join(dir, "script");',
     '  let cmd = "";',
     '  if (existsSync(cmdFile)) {',
     '    cmd = readFileSync(cmdFile, "utf8");',
     '  }',
-    '  if (!cmd && existsSync(scriptFile)) {',
+    '  if (existsSync(scriptFile)) {',
     '    const script = readFileSync(scriptFile, "utf8");',
     '    const match = script.match(/"params":\\s*\\[\\s*"([^"]+)"\\s*\\]/);',
     '    if (match) {',

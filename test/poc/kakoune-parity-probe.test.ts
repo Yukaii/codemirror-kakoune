@@ -255,4 +255,18 @@ describe("kakoune parity probe helpers", () => {
     expect(replacesLines.doc).toBe("\n\n");
   });
 
+  it("handles selection undo and redo (<a-u> / <a-U>)", () => {
+    const undoRes = runKakouneFixture({
+      in: "1\n2\n3\n4",
+      cmd: "j2j<a-u><a-u>ihere<esc>"
+    });
+    expect(undoRes.doc).toBe("here1\n2\n3\n4");
+
+    const redoRes = runKakouneFixture({
+      in: "1\n2\n3\n4",
+      cmd: "2jj<a-u><a-u><a-U>ihere<esc>"
+    });
+    expect(redoRes.doc).toBe("1\n2\nhere3\n4");
+  });
+
 });

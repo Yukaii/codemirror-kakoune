@@ -213,16 +213,26 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
 
     if (transaction.selection && !transaction.effects.some(e => e.is(setKakouneSelectionHistoryEffect))) {
       const curRanges = transaction.selection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
-      const prev = next.selectionHistory[next.selectionHistoryIndex];
-      const isSame = prev && prev.length === curRanges.length && prev.every((r, i) => r.anchor === curRanges[i].anchor && r.head === curRanges[i].head);
-      if (!isSame) {
-        const truncated = next.selectionHistory.slice(0, next.selectionHistoryIndex + 1);
-        truncated.push(curRanges);
+      if (next.selectionHistory.length === 0) {
+        // Seed initial position
+        const initRanges = transaction.startState.selection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
         next = {
           ...next,
-          selectionHistory: truncated,
-          selectionHistoryIndex: truncated.length - 1
+          selectionHistory: [initRanges, curRanges],
+          selectionHistoryIndex: 1
         };
+      } else {
+        const prev = next.selectionHistory[next.selectionHistoryIndex];
+        const isSame = prev && prev.length === curRanges.length && prev.every((r, i) => r.anchor === curRanges[i].anchor && r.head === curRanges[i].head);
+        if (!isSame) {
+          const truncated = next.selectionHistory.slice(0, next.selectionHistoryIndex + 1);
+          truncated.push(curRanges);
+          next = {
+            ...next,
+            selectionHistory: truncated,
+            selectionHistoryIndex: truncated.length - 1
+          };
+        }
       }
     }
 

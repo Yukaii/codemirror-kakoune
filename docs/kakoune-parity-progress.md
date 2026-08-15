@@ -50,6 +50,8 @@
 - pipe
 - pipe-reg
 - pipe-replaces-all-lines
+- selection-undo/redo
+- selection-undo/undo
 
 ## Still Red
 - repeat-insert/repeat-insert-hooks
@@ -63,8 +65,6 @@
 - reload
 - replay-complex-insert
 - selection-undo/fold-redundant-entries
-- selection-undo/redo
-- selection-undo/undo
 - selection-undo/windisplay-hook
 - pipe-to
 - pipe-to-reg

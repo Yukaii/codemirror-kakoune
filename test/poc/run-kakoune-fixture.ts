@@ -1,6 +1,6 @@
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { kakoune, getKakouneState, setKakouneNamedRegistersEffect } from "../../src";
+import { kakoune, getKakouneState, setKakouneNamedRegistersEffect, setKakouneSelectionHistoryEffect } from "../../src";
 import { KakouneKeyProcessor } from "../../src/keys";
 import {
   buildKakouneCommands,
@@ -192,13 +192,23 @@ export function runKakouneFixture(input: KakouneFixtureInput): KakouneFixtureRes
     processor.setNormalMappings(normalMappings);
     processor.setUserModes(userModes);
     const parsed = parseSelectionMarkers(input.in ?? "");
+    const doc = parsed.text;
+    const initialSelection = EditorSelection.create(parsed.selection.map(range => EditorSelection.range(range.anchor, range.head)), 0);
     const view = new EditorView({
       state: EditorState.create({
-        doc: parsed.text,
-        selection: EditorSelection.create(parsed.selection.map(range => EditorSelection.range(range.anchor, range.head)), 0),
+        doc,
+        selection: initialSelection,
         extensions: [kakoune()]
       }),
       parent
+    });
+
+    const initRanges = initialSelection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
+    view.dispatch({
+      effects: setKakouneSelectionHistoryEffect.of({
+        history: [initRanges],
+        index: 0
+      })
     });
 
     if (namedRegisters.size > 0) {
