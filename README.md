@@ -10,8 +10,10 @@ A CodeMirror 6 extension and Obsidian plugin that brings Kakoune's selection-fir
 This monorepo contains:
 
 - **[`codemirror-kakoune`](./packages/codemirror-kakoune)**: Core CodeMirror 6 extension.
+- **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)**: CodeMirror 5 keymap integration.
 - **[`obsidian-kakoune`](./packages/obsidian-kakoune)**: Obsidian community plugin providing native Kakoune modal editing.
-- **`playground`**: Interactive web playground for testing and demonstrating keybindings.
+- **[`playground`](./apps/playground)**: CodeMirror 6 interactive playground.
+- **[`playground-cm5`](./apps/playground-cm5)**: CodeMirror 5-specific playground.
 
 ---
 
@@ -68,6 +70,12 @@ kakoune({
 ## Obsidian Plugin
 
 Looking for Kakoune modal editing inside Obsidian? Check out [`packages/obsidian-kakoune`](./packages/obsidian-kakoune) for full instructions, settings, and features.
+
+## CodeMirror 5
+
+The CM5 package follows CodeMirror 5's native `keyMap` and command model. Install
+`codemirror-kakoune-cm5`, then call `kakoune(editor)` after creating a CM5 editor.
+The deployed CM5 playground is available at `/cm5/`.
 
 ---
 

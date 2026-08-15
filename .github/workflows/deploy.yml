@@ -38,7 +38,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Playground
-        run: pnpm build:playground
+        run: pnpm build:playground && pnpm build:cm5 && mkdir -p apps/playground/dist/cm5 && cp -R apps/playground-cm5/dist/. apps/playground/dist/cm5/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
