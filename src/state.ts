@@ -211,28 +211,32 @@ export const kakouneStateField: StateField<KakouneState> = StateField.define<Kak
   update(value, transaction) {
     let next = value;
 
+    if (transaction.docChanged && next.selectionHistory.length > 0) {
+      // Map existing selection history through document changes
+      const mappedHistory = next.selectionHistory.map(entry =>
+        entry.map(r => ({
+          anchor: transaction.changes.mapPos(r.anchor),
+          head: transaction.changes.mapPos(r.head)
+        }))
+      );
+      next = {
+        ...next,
+        selectionHistory: mappedHistory
+      };
+    }
+
     if (transaction.selection && !transaction.effects.some(e => e.is(setKakouneSelectionHistoryEffect))) {
       const curRanges = transaction.selection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
-      if (next.selectionHistory.length === 0) {
-        // Seed initial position
-        const initRanges = transaction.startState.selection.ranges.map(r => ({ anchor: r.anchor, head: r.head }));
+      const prev = next.selectionHistory[next.selectionHistoryIndex];
+      const isSame = prev && prev.length === curRanges.length && prev.every((r, i) => r.anchor === curRanges[i].anchor && r.head === curRanges[i].head);
+      if (!isSame) {
+        const truncated = next.selectionHistory.slice(0, next.selectionHistoryIndex + 1);
+        truncated.push(curRanges);
         next = {
           ...next,
-          selectionHistory: [initRanges, curRanges],
-          selectionHistoryIndex: 1
+          selectionHistory: truncated,
+          selectionHistoryIndex: truncated.length - 1
         };
-      } else {
-        const prev = next.selectionHistory[next.selectionHistoryIndex];
-        const isSame = prev && prev.length === curRanges.length && prev.every((r, i) => r.anchor === curRanges[i].anchor && r.head === curRanges[i].head);
-        if (!isSame) {
-          const truncated = next.selectionHistory.slice(0, next.selectionHistoryIndex + 1);
-          truncated.push(curRanges);
-          next = {
-            ...next,
-            selectionHistory: truncated,
-            selectionHistoryIndex: truncated.length - 1
-          };
-        }
       }
     }
 

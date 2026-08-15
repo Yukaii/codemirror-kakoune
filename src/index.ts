@@ -33,6 +33,7 @@ export {
   kakouneInitialModeFacet,
   setKakouneModeEffect,
   setKakouneNamedRegistersEffect,
+  setKakouneSelectionHistoryEffect,
   kakouneWhichKeyFacet,
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect

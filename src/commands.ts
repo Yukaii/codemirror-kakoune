@@ -1898,8 +1898,11 @@ function pasteAllRegister(view: EditorView, mode: "before" | "after" | "replace"
 
     let insertText = all;
     if (kakoune.registerLinewise && mode === "after") {
+      if (!insertText.endsWith("\n")) {
+        insertText = insertText + "\n";
+      }
       if (insertAt === state.doc.length && !state.doc.sliceString(0, insertAt).endsWith("\n")) {
-        insertText = "\n" + (insertText.endsWith("\n") ? insertText : insertText + "\n");
+        insertText = "\n" + insertText;
       }
     }
 
