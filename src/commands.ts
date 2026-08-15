@@ -1742,8 +1742,21 @@ function selectLine(view: EditorView): boolean {
   const ranges = state.selection.ranges.map(range => {
     const isForward = range.anchor <= range.head;
     const fromLine = state.doc.lineAt(Math.min(range.from, range.to));
-    const toLine = state.doc.lineAt(Math.max(range.from, range.to));
-    const end = toLine.to;
+    const toPos = Math.max(range.from, range.to);
+    const toLine = state.doc.lineAt(toPos);
+
+    // If already selecting the full line (including newline at toLine.to + 1), expand to include next line
+    const isAlreadyFullLine = range.from === fromLine.from && (
+      (toLine.number < state.doc.lines && toPos === toLine.to + 1) ||
+      (toLine.number === state.doc.lines && toPos === toLine.to)
+    );
+
+    let endLine = toLine;
+    if (isAlreadyFullLine && toLine.number < state.doc.lines) {
+      endLine = state.doc.line(toLine.number + 1);
+    }
+
+    const end = endLine.number < state.doc.lines ? endLine.to + 1 : endLine.to;
     return isForward
       ? EditorSelection.range(fromLine.from, end)
       : EditorSelection.range(end, fromLine.from);

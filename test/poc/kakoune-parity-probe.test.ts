@@ -269,4 +269,18 @@ describe("kakoune parity probe helpers", () => {
     expect(redoRes.doc).toBe("1\n2\nhere3\n4");
   });
 
+  it("deletes full lines including newline with xd", () => {
+    const res = runKakouneFixture({
+      in: "line 1\nline 2\nline 3",
+      cmd: "xd"
+    });
+    expect(res.doc).toBe("line 2\nline 3");
+
+    const middle = runKakouneFixture({
+      in: "line 1\nline 2\nline 3",
+      cmd: "jxd"
+    });
+    expect(middle.doc).toBe("line 1\nline 3");
+  });
+
 });

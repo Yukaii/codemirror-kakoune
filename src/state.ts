@@ -176,7 +176,7 @@ export const kakouneSelectionTypeField: StateField<KakouneSelectionType> = State
       const main = tr.selection.ranges[tr.selection.mainIndex];
       const fromLine = tr.newDoc.lineAt(main.from);
       const toLine = tr.newDoc.lineAt(main.to);
-      const isFullLine = main.from === fromLine.from && main.to === toLine.to;
+      const isFullLine = main.from === fromLine.from && (main.to === toLine.to || (toLine.number < tr.newDoc.lines && main.to === toLine.to + 1));
       if (!isFullLine) next = "char";
     }
     return next;
