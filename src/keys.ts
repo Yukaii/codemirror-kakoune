@@ -185,6 +185,16 @@ export function normalizeKeyStroke(event: KeyboardEvent): string | null {
   }
 }
 
+function isFindToCharKey(key: string): boolean {
+  return (
+    key === "f" ||
+    key === "t" ||
+    key === "F" ||
+    key === "T" ||
+    /^<a-[ft]>$/i.test(key)
+  );
+}
+
 function sequenceKey(sequence: string[]): string {
   return sequence.join("\u0001");
 }
@@ -674,7 +684,7 @@ export class KakouneKeyProcessor {
     const hasLongerPrefix = bindings.some(binding => isPrefix(nextSequence, binding.keys) && binding.keys.length > nextSequence.length);
 
     if (exact && (this.count !== null || !hasLongerPrefix)) {
-      if (exact.keys.length === 1 && ["f", "t", "F", "T"].includes(exact.keys[0])) {
+      if (exact.keys.length === 1 && isFindToCharKey(exact.keys[0])) {
         this.pending = [];
         this.pendingCharBinding = exact;
         return true;
@@ -731,7 +741,7 @@ export class KakouneKeyProcessor {
     if (single) {
       const hasLongerPrefixForSingle = bindings.some(binding => isPrefix([key], binding.keys) && binding.keys.length > 1);
       if (this.count !== null || !hasLongerPrefixForSingle) {
-        if (["f", "t", "F", "T"].includes(single.keys[0])) {
+        if (isFindToCharKey(single.keys[0])) {
           this.pendingCharBinding = single;
           return true;
         }
