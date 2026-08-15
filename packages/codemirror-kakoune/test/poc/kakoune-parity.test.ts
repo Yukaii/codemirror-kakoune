@@ -5,6 +5,7 @@ import { EditorView } from "@codemirror/view";
 import { kakoune, getKakouneState } from "../../src";
 import { KakouneKeyProcessor } from "../../src/keys";
 import { buildKakouneCommands } from "../../src/commands";
+import { resolveKakouneRoot } from "./kakoune-fixtures";
 
 interface KakouneParityFixture {
   name: string;
@@ -24,9 +25,7 @@ interface ParityCase {
   reason: string;
 }
 
-const KAKOUNE_BASE = existsSync(join(process.cwd(), "test/kakoune"))
-  ? join(process.cwd(), "test/kakoune")
-  : join(__dirname, "../../../../test/kakoune");
+const KAKOUNE_BASE = resolveKakouneRoot();
 const ROOT = join(KAKOUNE_BASE, "test/normal");
 
 function readFixture(name: string): KakouneParityFixture {
@@ -264,6 +263,9 @@ const parityCases: ParityCase[] = [
 const parityCasesByName = new Map(parityCases.map(entry => [entry.name, entry]));
 
 function countCorpusOutFixtures(rootDir: string): number {
+  if (!existsSync(rootDir)) {
+    return 0;
+  }
   let total = 0;
 
   for (const entry of readdirSync(rootDir)) {
@@ -293,7 +295,10 @@ function getParityCoverageSummary(): { supported: number; total: number; percent
   };
 }
 
-describe("kakoune parity sample", () => {
+const hasCorpus = existsSync(ROOT);
+const describeOrSkip = hasCorpus ? describe : describe.skip;
+
+describeOrSkip("kakoune parity sample", () => {
   it("prints coverage summary", () => {
     const summary = getParityCoverageSummary();
     expect(summary).toMatchObject({ supported: 12, total: 280, percentage: "4.29" });
@@ -302,7 +307,9 @@ describe("kakoune parity sample", () => {
     );
   });
 
-  const fixtures: KakouneParityFixture[] = parityCases.map(entry => readFixture(entry.name));
+  const fixtures: KakouneParityFixture[] = hasCorpus
+    ? parityCases.map(entry => readFixture(entry.name))
+    : [];
 
   for (const fixture of fixtures) {
     const testCase = parityCasesByName.get(fixture.name);
@@ -313,10 +320,10 @@ describe("kakoune parity sample", () => {
         throw new Error(testCase?.reason ?? `unsupported fixture: ${fixture.name}`);
       }
 
-    const parsedOut = parseSelectionMarkers(fixture.out);
-    const actual = runFixture(fixture);
+      const parsedOut = parseSelectionMarkers(fixture.out);
+      const actual = runFixture(fixture);
 
-    assertParityMatch(fixture, parsedOut.text, actual);
-  });
+      assertParityMatch(fixture, parsedOut.text, actual);
+    });
   }
 });
