@@ -24,7 +24,10 @@ interface ParityCase {
   reason: string;
 }
 
-const ROOT = join(process.cwd(), "test/kakoune/test/normal");
+const KAKOUNE_BASE = existsSync(join(process.cwd(), "test/kakoune"))
+  ? join(process.cwd(), "test/kakoune")
+  : join(__dirname, "../../../../test/kakoune");
+const ROOT = join(KAKOUNE_BASE, "test/normal");
 
 function readFixture(name: string): KakouneParityFixture {
   const inPath = join(ROOT, name, "in");
@@ -282,7 +285,7 @@ function countCorpusOutFixtures(rootDir: string): number {
 
 function getParityCoverageSummary(): { supported: number; total: number; percentage: string } {
   const supported = parityCases.filter(entry => entry.supported).length;
-  const total = countCorpusOutFixtures(join(process.cwd(), "test/kakoune/test"));
+  const total = countCorpusOutFixtures(join(KAKOUNE_BASE, "test"));
   return {
     supported,
     total,

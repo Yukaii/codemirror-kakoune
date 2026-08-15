@@ -1,52 +1,22 @@
 {
-  "name": "codemirror-kakoune",
+  "name": "codemirror-kakoune-monorepo",
   "version": "0.3.1",
-  "description": "A CodeMirror 6 extension that brings Kakoune-style modal editing to the browser.",
+  "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "!dist/playground"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Yukaii/codemirror-kakoune.git"
-  },
   "scripts": {
-    "dev": "vite",
-    "build": "pnpm build:lib && pnpm build:playground",
-    "build:lib": "tsc -p tsconfig.build.json",
-    "build:playground": "vite build",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "check:jsr": "npx jsr publish --dry-run",
-    "version": "node scripts/sync-jsr-version.mjs && git add jsr.json",
-    "probe:parity": "node scripts/kakoune-parity-probe.mjs",
-    "typecheck": "tsc -p tsconfig.json"
-  },
-  "dependencies": {
-    "@codemirror/commands": "^6.10.3",
-    "@codemirror/search": "^6.7.0",
-    "@codemirror/state": "^6.6.0",
-    "@codemirror/view": "^6.43.0"
+    "dev": "pnpm --filter playground dev",
+    "build": "pnpm --filter codemirror-kakoune build && pnpm --filter playground build",
+    "build:lib": "pnpm --filter codemirror-kakoune build",
+    "build:playground": "pnpm --filter playground build",
+    "test": "pnpm --filter codemirror-kakoune test",
+    "test:watch": "pnpm --filter codemirror-kakoune test:watch",
+    "check:jsr": "pnpm --filter codemirror-kakoune check:jsr",
+    "sync:jsr": "node scripts/sync-jsr-version.mjs",
+    "version": "node scripts/sync-jsr-version.mjs && git add packages/codemirror-kakoune/jsr.json",
+    "probe:parity": "pnpm --filter codemirror-kakoune probe:parity",
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
-    "@codemirror/autocomplete": "^6.20.2",
-    "@codemirror/lang-javascript": "^6.2.5",
-    "@codemirror/language": "^6.12.3",
-    "@codemirror/lint": "^6.9.6",
-    "@lezer/highlight": "^1.2.3",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^25.9.1",
-    "codemirror": "^6.0.2",
-    "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
-    "jsdom": "^29.1.1",
-    "ts-jest": "^29.4.11",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.14"
+    "typescript": "^6.0.3"
   }
 }

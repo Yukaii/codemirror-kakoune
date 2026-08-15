@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadKakouneFixtures, resolveKakouneRoot } from "./kakoune-fixtures";
@@ -63,7 +63,8 @@ describe("loadKakouneFixtures", () => {
   });
 
   it("resolves the repo-relative Kakoune root by default", () => {
-    expect(resolveKakouneRoot()).toBe(join(process.cwd(), "test/kakoune"));
+    expect(existsSync(resolveKakouneRoot())).toBe(true);
+    expect(resolveKakouneRoot()).toMatch(/test\/kakoune$/);
   });
 
   it("allows an explicit override for the Kakoune root", () => {

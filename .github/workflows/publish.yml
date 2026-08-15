@@ -50,7 +50,12 @@ jobs:
       - name: Bump version & sync JSR
         if: github.event_name == 'workflow_dispatch'
         run: |
-          npm version ${{ inputs.version }} -m "chore(release): v%s"
+          pnpm --filter codemirror-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
+          node scripts/sync-jsr-version.mjs
+          VERSION=$(node -p "require('./packages/codemirror-kakoune/package.json').version")
+          git add packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json
+          git commit -m "chore(release): v$VERSION"
+          git tag "v$VERSION"
           git push origin HEAD:${{ github.ref_name }} --follow-tags
 
       - name: Install dependencies
@@ -60,17 +65,18 @@ jobs:
         run: pnpm run build
 
       - name: Publish to NPM
-        run: pnpm publish --access public --no-git-checks
+        run: pnpm --filter codemirror-kakoune publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to JSR
         run: npx jsr publish
+        working-directory: packages/codemirror-kakoune
 
       - name: Extract version and tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION=$(node -p "require('./package.json').version")
+            VERSION=$(node -p "require('./packages/codemirror-kakoune/package.json').version")
             TAG="v$VERSION"
           else
             VERSION=${GITHUB_REF#refs/tags/v}
