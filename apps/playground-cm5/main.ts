@@ -2,6 +2,7 @@ import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/markdown/markdown";
 import { kakoune } from "codemirror-kakoune-cm5";
+import { attachVirtualKeyboard } from "./virtual-keyboard";
 import "./style.css";
 
 const textarea = document.querySelector<HTMLTextAreaElement>("#editor-input");
@@ -13,6 +14,7 @@ const editor = CodeMirror.fromTextArea(textarea, {
   lineWrapping: true,
   viewportMargin: Infinity
 });
+let promptActive = false;
 kakoune(editor, {
   onWhichKey(pending, items) {
     if (!hud || !hudItems) return;
@@ -22,7 +24,23 @@ kakoune(editor, {
       element.innerHTML = `<span class="hud-key">${item.keys.join(" ")}</span>${item.description ? `<span class="hud-desc">${item.description}</span>` : ""}`;
       return element;
     }));
-    hud.classList.toggle("hidden", pending.length === 0);
+    hud.classList.toggle("hidden", pending.length === 0 && !promptActive);
+  },
+  onPrompt(prompt) {
+    if (!hud || !hudTitle || !hudPrompt || !hudItems) return;
+    promptActive = prompt !== null;
+    hudTitle.textContent = prompt?.kind ?? "which-key";
+    hudPrompt.textContent = prompt ? `${prompt.kind}: ${prompt.text}` : "";
+    hudPrompt.classList.toggle("hidden", prompt === null);
+    if (prompt) hudItems.replaceChildren();
+    hud.classList.toggle("hidden", prompt === null);
+  },
+  onPromptError(message) {
+    if (!message || !hud || !hudTitle || !hudPrompt) return;
+    hudTitle.textContent = "error";
+    hudPrompt.textContent = message;
+    hudPrompt.classList.remove("hidden");
+    hud.classList.remove("hidden");
   }
 });
 
@@ -39,6 +57,8 @@ const layoutSelect = document.querySelector<HTMLSelectElement>("#layout-select")
 const vk = document.querySelector<HTMLElement>("#vk");
 const hud = document.querySelector<HTMLDivElement>("#which-key-hud");
 const hudItems = document.querySelector<HTMLDivElement>("#which-key-hud .hud-items");
+const hudTitle = document.querySelector<HTMLElement>("#hud-title");
+const hudPrompt = document.querySelector<HTMLElement>("#hud-prompt");
 
 if (hud) {
   hud.dataset.layout = layoutSelect?.value ?? "vertical";
@@ -119,33 +139,4 @@ observer.observe(wrapper, { attributes: true, attributeFilter: ["data-kakoune-mo
 editor.on("cursorActivity", updateStatus);
 updateStatus();
 
-if (vk) {
-  let pendingCtrl = false;
-  let pendingAlt = false;
-  const updateModifiers = () => {
-    vk.querySelector("[data-mod='ctrl']")?.classList.toggle("active", pendingCtrl);
-    vk.querySelector("[data-mod='alt']")?.classList.toggle("active", pendingAlt);
-  };
-  vk.addEventListener("pointerdown", event => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".vk-key");
-    if (!button) return;
-    event.preventDefault();
-    button.classList.add("pressed");
-    const mod = button.dataset.mod;
-    if (mod === "ctrl") pendingCtrl = !pendingCtrl;
-    else if (mod === "alt") pendingAlt = !pendingAlt;
-    else {
-      const key = button.dataset.key ?? "";
-      const code = button.dataset.code ?? "";
-      editor.getInputField().dispatchEvent(new KeyboardEvent("keydown", {
-        key, code, ctrlKey: pendingCtrl, altKey: pendingAlt, bubbles: true, cancelable: true
-      }));
-      pendingCtrl = false;
-      pendingAlt = false;
-    }
-    updateModifiers();
-  });
-  document.addEventListener("pointerup", () => {
-    vk.querySelectorAll(".vk-key.pressed").forEach(button => button.classList.remove("pressed"));
-  });
-}
+if (vk) attachVirtualKeyboard(vk, editor);

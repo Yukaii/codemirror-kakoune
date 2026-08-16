@@ -166,21 +166,47 @@ export function jumpDocumentEnd(editor: EditorHost): boolean {
   return true;
 }
 
+export function selectAll(editor: EditorHost): boolean {
+  editor.setSelections([{ anchor: 0, head: editor.getDocLength() }], 0);
+  return true;
+}
+
 export function selectLine(editor: EditorHost): boolean {
   const ranges = editor.getSelections().map(range => {
-    const line = editor.lineAt(range.head);
-    return { anchor: line.from, head: line.to };
+    const isForward = range.anchor <= range.head;
+    const fromLine = editor.lineAt(rangeFrom(range));
+    const toPosition = rangeTo(range);
+    const toLine = editor.lineAt(toPosition);
+    const isAlreadyFullLine = rangeFrom(range) === fromLine.from && (
+      (toLine.number < editor.getLineCount() && toPosition === toLine.to + 1) ||
+      (toLine.number === editor.getLineCount() && toPosition === toLine.to)
+    );
+    const endLine = isAlreadyFullLine && toLine.number < editor.getLineCount()
+      ? editor.line(toLine.number + 1)
+      : toLine;
+    const end = endLine.number < editor.getLineCount() ? endLine.to + 1 : endLine.to;
+    return isForward
+      ? { anchor: fromLine.from, head: end, linewise: true }
+      : { anchor: end, head: fromLine.from, linewise: true };
   });
   editor.setSelections(ranges);
   return true;
 }
 
 export function deleteSelection(editor: EditorHost): boolean {
+  const doc = editor.getDoc();
+  const docLength = doc.length;
   const ranges = editor.getSelections()
     .map(range => {
-      if (!isEmptyRange(range)) return { from: rangeFrom(range), to: rangeTo(range) };
-      const from = range.head;
-      return { from, to: Math.min(editor.getDocLength(), from + 1) };
+      let from = rangeFrom(range);
+      const to = isEmptyRange(range) ? Math.min(docLength, from + 1) : rangeTo(range);
+
+      // A final line has no following newline for `x` to include. Its linewise
+      // marker lets deletion consume the preceding separator instead.
+      if (range.linewise && to >= docLength && from > 0 && doc[from - 1] === "\n") {
+        from -= 1;
+      }
+      return { from, to };
     })
     .sort((a, b) => b.from - a.from);
 
@@ -297,6 +323,7 @@ export const portableCommands = {
   extendDocumentEnd,
   jumpDocumentStart,
   jumpDocumentEnd,
+  selectAll,
   selectLine,
   deleteSelection,
   yankSelection,

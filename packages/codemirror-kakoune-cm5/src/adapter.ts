@@ -28,6 +28,7 @@ function positionsEqual(left: CodeMirror.Position, right: CodeMirror.Position): 
 
 export class Cm5Adapter implements EditorHost {
   register = "";
+  private linewiseSelectionSignature: string | null = null;
 
   constructor(private readonly cm: Cm) {}
 
@@ -64,10 +65,12 @@ export class Cm5Adapter implements EditorHost {
   }
 
   getSelections(): SelectionRange[] {
-    return this.cm.listSelections().map(selection => ({
+    const ranges = this.cm.listSelections().map(selection => ({
       anchor: posToOffset(this.cm, selection.anchor),
       head: posToOffset(this.cm, selection.head)
     }));
+    const isLinewise = this.linewiseSelectionSignature === this.selectionSignature(ranges);
+    return ranges.map(range => isLinewise ? { ...range, linewise: true } : range);
   }
 
   setSelections(ranges: SelectionRange[], mainIndex?: number): void {
@@ -85,6 +88,12 @@ export class Cm5Adapter implements EditorHost {
       anchor: offsetToPos(this.cm, range.anchor),
       head: offsetToPos(this.cm, range.head)
     })), nextMainIndex);
+    this.linewiseSelectionSignature = ranges.length > 0 && ranges.every(range => range.linewise)
+      ? this.selectionSignature(this.cm.listSelections().map(selection => ({
+        anchor: posToOffset(this.cm, selection.anchor),
+        head: posToOffset(this.cm, selection.head)
+      })))
+      : null;
   }
 
   replaceRange(from: number, to: number, text: string): void {
@@ -105,5 +114,9 @@ export class Cm5Adapter implements EditorHost {
 
   setRegister(text: string): void {
     this.register = text;
+  }
+
+  private selectionSignature(ranges: Array<Pick<SelectionRange, "anchor" | "head">>): string {
+    return ranges.map(range => `${range.anchor}:${range.head}`).join("|");
   }
 }

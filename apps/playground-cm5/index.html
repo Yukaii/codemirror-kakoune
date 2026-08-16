@@ -48,15 +48,15 @@
 Move with **h**, **j**, **k**, **l**, and extend with **H**, **J**, **K**, **L**. Word motions use **w**, **b**, **e** and **W**, **B**, **E**. Capital **G** starts document/line extension commands. Press **x** to select a line, **d** to delete, **i** or **a** to insert, and **Esc** to return to normal mode.
 
 This playground uses the CodeMirror 5 adapter over the shared `kakoune-core` engine.</textarea>
-        <div id="which-key-hud" class="hidden"><div class="hud-header"><span class="hud-title">which-key</span></div><div class="hud-items"></div></div>
+        <div id="which-key-hud" class="hidden"><div class="hud-header"><span id="hud-title" class="hud-title">which-key</span><span id="hud-prompt" class="hud-prompt hidden"></span></div><div class="hud-items"></div></div>
       </div>
 
-      <div class="hint">Normal mode: <strong>h j k l</strong> move, <strong>H J K L</strong> extend, <strong>x</strong> selects a line, <strong>d</strong> deletes. Insert mode: <strong>i</strong> or <strong>a</strong>, then <strong>Esc</strong>.</div>
+      <div class="hint">Normal mode: <strong>h j k l</strong> move, <strong>H J K L</strong> extend, <strong>s</strong> selects matches, <strong>S</strong> splits. Insert mode: <strong>i</strong> or <strong>a</strong>, then <strong>Esc</strong>.</div>
       <footer class="footer"><span>inspired by <a href="https://kakoune.org" target="_blank" rel="noopener noreferrer">kakoune</a>, built on <a href="https://codemirror.net/5/" target="_blank" rel="noopener noreferrer">CodeMirror 5</a></span></footer>
     </main>
     <nav id="vk" class="vk" aria-label="Virtual keyboard">
       <div class="vk-row"><button class="vk-key vk-key-esc" data-key="Escape" data-code="Escape" type="button">Esc</button><button class="vk-key vk-key-ctrl" data-mod="ctrl" type="button">Ctrl</button><button class="vk-key vk-key-alt" data-mod="alt" type="button">Alt</button><button class="vk-key" data-key="Backspace" data-code="Backspace" type="button">⌫</button></div>
-      <div class="vk-row"><button class="vk-key" data-key="i" data-code="KeyI" type="button">i</button><button class="vk-key" data-key="h" data-code="KeyH" type="button">h</button><button class="vk-key" data-key=" " data-code="Space" type="button">Space</button><button class="vk-key" data-key="Enter" data-code="Enter" type="button">⏎</button></div>
+      <div class="vk-row"><button class="vk-key" data-key="s" data-code="KeyS" type="button">s</button><button class="vk-key" data-key="S" data-code="KeyS" data-shift="true" type="button">S</button><button class="vk-key" data-key=" " data-code="Space" type="button">Space</button><button class="vk-key" data-key="Enter" data-code="Enter" type="button">⏎</button></div>
     </nav>
     <script type="module" src="./main.ts"></script>
   </body>

@@ -222,6 +222,77 @@ describe("CM5 G-prefix motions", () => {
   });
 });
 
+describe("CM5 select and split prompts", () => {
+  it("selects regex matches with % s and Enter", () => {
+    const states: Array<{ kind: string; text: string } | null> = [];
+    const editor = createEditor("alpha beta gamma beta", {
+      onPrompt(prompt) {
+        states.push(prompt ? { ...prompt } : null);
+      }
+    });
+
+    dispatchKey(editor, "%");
+    dispatchKey(editor, "s");
+    expect(states.at(-1)).toEqual({ kind: "select", text: "" });
+    for (const key of "betax") dispatchKey(editor, key);
+    dispatchKey(editor, "Backspace");
+    expect(states.at(-1)).toEqual({ kind: "select", text: "beta" });
+    dispatchKey(editor, "Enter");
+
+    expect(states.at(-1)).toBeNull();
+    expect(editor.listSelections().map(selection => editor.getRange(selection.from(), selection.to())))
+      .toEqual(["beta", "beta"]);
+  });
+
+  it("splits the current selection with S", () => {
+    const editor = createEditor("foo bar baz");
+    dispatchKey(editor, "%");
+    dispatchKey(editor, "S");
+    for (const key of "\\s+") dispatchKey(editor, key);
+    dispatchKey(editor, "Enter");
+
+    expect(editor.listSelections().map(selection => editor.getRange(selection.from(), selection.to())))
+      .toEqual(["foo", "bar", "baz"]);
+  });
+
+  it("cancels a prompt with Escape and restores its selection snapshot", () => {
+    const editor = createEditor("alpha beta");
+    const original = { anchor: { line: 0, ch: 2 }, head: { line: 0, ch: 8 } };
+    editor.setSelection(original.anchor, original.head);
+
+    dispatchKey(editor, "s");
+    dispatchKey(editor, "a");
+    editor.setCursor({ line: 0, ch: 0 });
+    dispatchKey(editor, "Escape");
+
+    const selection = editor.listSelections()[0];
+    expect(selection.anchor).toEqual(original.anchor);
+    expect(selection.head).toEqual(original.head);
+  });
+
+  it("reports invalid and empty prompt results without changing selections", () => {
+    const errors: Array<string | null> = [];
+    const editor = createEditor("alpha", {
+      onPromptError(message) {
+        errors.push(message);
+      }
+    });
+    dispatchKey(editor, "%");
+    const original = editor.listSelections()[0];
+
+    dispatchKey(editor, "s");
+    dispatchKey(editor, "[");
+    dispatchKey(editor, "Enter");
+    expect(errors.at(-1)).toBe("'select': invalid regex \"[\"");
+    expect(editor.listSelections()[0].anchor).toEqual(original.anchor);
+    expect(editor.listSelections()[0].head).toEqual(original.head);
+
+    dispatchKey(editor, "S");
+    dispatchKey(editor, "Enter");
+    expect(errors.at(-1)).toBe("'split': empty regex");
+  });
+});
+
 describe("CM5 advertised key audit", () => {
   it.each([
     ["h", { line: 0, ch: 2 }, { line: 0, ch: 1 }],
@@ -319,14 +390,35 @@ describe("CM5 advertised key audit", () => {
     const editor = createEditor("alpha\nbeta");
 
     dispatchKey(editor, "x");
-    expect(editor.getSelection()).toBe("alpha");
+    expect(editor.getSelection()).toBe("alpha\n");
     dispatchKey(editor, "d");
-    expect(editor.getValue()).toBe("\nbeta");
+    expect(editor.getValue()).toBe("beta");
 
-    editor.setSelection({ line: 1, ch: 0 }, { line: 1, ch: 1 });
+    editor.setSelection({ line: 0, ch: 0 }, { line: 0, ch: 1 });
     dispatchKey(editor, "c");
-    expect(editor.getValue()).toBe("\neta");
+    expect(editor.getValue()).toBe("eta");
     expect(editor.getWrapperElement().dataset.kakouneMode).toBe("insert");
+  });
+
+  it("removes the final line completely with xd", () => {
+    const editor = createEditor("alpha\nbeta");
+    editor.setCursor({ line: 1, ch: 2 });
+
+    dispatchKey(editor, "x");
+    expect(editor.getSelection()).toBe("beta");
+    dispatchKey(editor, "d");
+
+    expect(editor.getValue()).toBe("alpha");
+  });
+
+  it("removes a final empty line completely with xd", () => {
+    const editor = createEditor("alpha\n");
+    editor.setCursor({ line: 1, ch: 0 });
+
+    dispatchKey(editor, "x");
+    dispatchKey(editor, "d");
+
+    expect(editor.getValue()).toBe("alpha");
   });
 
   it("yanks without editing and supports u/U history", () => {

@@ -3,6 +3,8 @@ export type KakouneMode = "select" | "insert";
 export interface SelectionRange {
   anchor: number;
   head: number;
+  /** Marks a range produced by a whole-line selection command. */
+  linewise?: boolean;
 }
 
 export interface LineInfo {
@@ -32,7 +34,7 @@ export interface EditorHost {
   lineAt(pos: number): LineInfo;
   line(number: number): LineInfo;
   getSelections(): SelectionRange[];
-  /** Replaces all selections, preserving the current main selection when omitted. */
+  /** Replaces all selections, preserving the current main selection when omitted and linewise metadata when supplied. */
   setSelections(ranges: SelectionRange[], mainIndex?: number): void;
   replaceRange(from: number, to: number, text: string): void;
   undo(): void;

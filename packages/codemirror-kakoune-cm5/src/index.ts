@@ -1,6 +1,7 @@
 import type CodeMirror from "codemirror";
 import {
   KakouneKeyProcessor,
+  KakounePromptController,
   changeSelection,
   deleteSelection,
   enterInsert,
@@ -30,6 +31,7 @@ import {
   openLineAbove,
   openLineBelow,
   redoEdit,
+  selectAll,
   selectLine,
   selectWordBackward,
   selectWordEnd,
@@ -38,7 +40,8 @@ import {
   undoEdit,
   yankSelection,
   type KakouneBinding,
-  type KakouneMode
+  type KakouneMode,
+  type KakounePromptState
 } from "kakoune-core";
 import { Cm5Adapter } from "./adapter";
 
@@ -47,6 +50,8 @@ export type { KakouneMode as KakouneCm5Mode };
 export interface KakouneCm5Options {
   initialMode?: KakouneMode;
   onWhichKey?: (pending: string[], items: Array<{ keys: string[]; description?: string }>) => void;
+  onPrompt?: (prompt: KakounePromptState | null) => void;
+  onPromptError?: (message: string | null) => void;
 }
 
 type Cm = CodeMirror.Editor;
@@ -57,7 +62,7 @@ function bind(keys: string[], run: KakouneBinding<Cm5Adapter>["run"], descriptio
   return { keys, run, description };
 }
 
-function buildBindings(): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
+function buildBindings(prompts: KakounePromptController): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
   return {
     select: [
       bind(["h"], (editor, _arg, count) => moveLeft(editor, count ?? 1), "Move left"),
@@ -75,6 +80,9 @@ function buildBindings(): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
       bind(["B"], (editor, _arg, count) => extendWordBackward(editor, count ?? 1), "Extend word backward"),
       bind(["E"], (editor, _arg, count) => extendWordEnd(editor, count ?? 1), "Extend to word end"),
       bind(["x"], editor => selectLine(editor), "Select line"),
+      bind(["%"], editor => selectAll(editor), "Select all"),
+      bind(["s"], editor => prompts.open("select", editor), "Select regex matches"),
+      bind(["S"], editor => prompts.open("split", editor), "Split selection on regex matches"),
       bind(["d"], editor => deleteSelection(editor), "Delete selection"),
       bind(["c"], editor => changeSelection(editor), "Change selection"),
       bind(["y"], editor => yankSelection(editor), "Yank selection"),
@@ -116,7 +124,8 @@ function buildBindings(): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
 
 export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
   const adapter = new Cm5Adapter(cm);
-  const processor = new KakouneKeyProcessor(buildBindings());
+  const prompts = new KakounePromptController();
+  const processor = new KakouneKeyProcessor(buildBindings(prompts));
   adapter.setMode(options.initialMode ?? "select");
 
   cm.on("beforeChange", (_instance, change) => {
@@ -133,11 +142,28 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
     const key = normalizeKeyStroke(event);
     if (!key) return;
 
+    if (prompts.isActive()) {
+      const handled = prompts.handleKey(adapter, key);
+      options.onPrompt?.(prompts.getState());
+      options.onPromptError?.(prompts.getError());
+      if (handled) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      return;
+    }
+
+    options.onPromptError?.(null);
     const mode = adapter.getMode();
     if (mode === "insert" && key !== "<Esc>") return;
 
     const handled = processor.handle(mode, key, adapter);
     options.onWhichKey?.(processor.getPending(), processor.getPendingItems(adapter.getMode()));
+    if (prompts.isActive()) {
+      options.onWhichKey?.([], []);
+      options.onPrompt?.(prompts.getState());
+      options.onPromptError?.(null);
+    }
     if (handled) {
       event.preventDefault();
       event.stopPropagation();

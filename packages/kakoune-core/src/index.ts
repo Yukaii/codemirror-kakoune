@@ -46,6 +46,7 @@ export {
   extendDocumentEnd,
   jumpDocumentStart,
   jumpDocumentEnd,
+  selectAll,
   selectLine,
   deleteSelection,
   yankSelection,
@@ -58,3 +59,10 @@ export {
   openLineAbove,
   changeSelection
 } from "./commands";
+export {
+  KakounePromptController,
+  selectRegexMatches,
+  splitSelectionsByRegex,
+  type KakounePromptKind,
+  type KakounePromptState
+} from "./prompt";
