@@ -4,6 +4,7 @@
     { "path": "./packages/kakoune-core" },
     { "path": "./packages/codemirror-kakoune" },
     { "path": "./apps/playground" },
+    { "path": "./apps/browser-extension" },
     { "path": "./packages/obsidian-kakoune" }
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["chrome", "node"],
+    "paths": {
+      "codemirror-kakoune": ["../../packages/codemirror-kakoune/src/index.ts"],
+      "codemirror-kakoune-cm5": ["../../packages/codemirror-kakoune-cm5/src/index.ts"],
+      "kakoune-core-js": ["../../packages/kakoune-core/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "popup/**/*.ts",
+    "options/**/*.ts",
+    "demo/**/*.ts",
+    "vite-env.d.ts"
+  ]
+}

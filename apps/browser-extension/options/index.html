@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kakoune Extension Settings</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">KAK</div>
+        <div>
+          <h2>Kakoune</h2>
+          <span class="version">v0.4.4</span>
+        </div>
+      </div>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="general">⚙ General</button>
+        <button class="nav-item" data-tab="targets">🎯 Target Engines</button>
+        <button class="nav-item" data-tab="appearance">🎨 Appearance</button>
+        <button class="nav-item" data-tab="domains">🌐 Domain Rules</button>
+        <button class="nav-item" data-tab="keybindings">⌨ Key Reference</button>
+        <button class="nav-item" data-tab="playground">🎮 Live Playground</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="btn-save-all" class="btn-primary">Save Changes</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Panels -->
+    <main class="main-content">
+      <!-- General Section -->
+      <section id="tab-general" class="tab-panel active">
+        <div class="panel-header">
+          <h2>General Settings</h2>
+          <p>Configure general behavior for modal Kakoune editing across the web.</p>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Master Enable</div>
+              <div class="setting-desc">Enable Kakoune key interception globally</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enabled" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Default Focus Mode</div>
+              <div class="setting-desc">The mode activated whenever a field or editor is focused</div>
+            </div>
+            <select id="opt-default-mode" class="select-box">
+              <option value="select">Select (Normal Mode)</option>
+              <option value="insert">Insert (Typing Mode)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Activation Keyboard Shortcut</div>
+              <div class="setting-desc">Shortcut to toggle Kakoune on the active element</div>
+            </div>
+            <span class="badge-kbd">Alt + Shift + K</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Target Engines Section -->
+      <section id="tab-targets" class="tab-panel">
+        <div class="panel-header">
+          <h2>Target Engines</h2>
+          <p>Enable or disable support for specific editing components.</p>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Standard Textareas & Text Inputs</div>
+              <div class="setting-desc">Multi-line textareas and single-line form inputs</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enable-textareas" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">CodeMirror 5 Editors</div>
+              <div class="setting-desc">Websites powered by CodeMirror 5 (e.g. legacy GitHub, online REPLs)</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enable-cm5" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">CodeMirror 6 Editors</div>
+              <div class="setting-desc">Websites powered by modern CodeMirror 6</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enable-cm6" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Appearance Section -->
+      <section id="tab-appearance" class="tab-panel">
+        <div class="panel-header">
+          <h2>Appearance & Overlays</h2>
+          <p>Customize the look and feel of the in-page mode badge, which-key hints, and regex prompts.</p>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Show Floating Mode Badge</div>
+              <div class="setting-desc">Display active mode badge in the corner of the active editor</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-show-badge" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Badge Position</div>
+              <div class="setting-desc">Screen position for floating overlays</div>
+            </div>
+            <select id="opt-badge-position" class="select-box">
+              <option value="bottom-right">Bottom Right</option>
+              <option value="top-right">Top Right</option>
+              <option value="bottom-left">Bottom Left</option>
+              <option value="top-left">Top Left</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Show Which-Key Helper</div>
+              <div class="setting-desc">Show popup menu of available keys when a prefix (g, G) is pressed</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-show-whichkey" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Visual Theme</div>
+              <div class="setting-desc">Color palette for overlays</div>
+            </div>
+            <select id="opt-theme" class="select-box">
+              <option value="kakoune">Kakoune Rose Pine</option>
+              <option value="dark">Dark Charcoal</option>
+              <option value="nord">Nord Arctic</option>
+              <option value="gruvbox">Gruvbox Warm</option>
+              <option value="light">Light Crisp</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Domain Rules Section -->
+      <section id="tab-domains" class="tab-panel">
+        <div class="panel-header">
+          <h2>Domain Rules</h2>
+          <p>Blacklist or whitelist specific websites. Use wildcards like <code>*.example.com</code>.</p>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div class="setting-label">Blacklisted Domains (Never enable Kakoune on these)</div>
+            <textarea id="opt-blacklist" class="textarea-box" rows="4" placeholder="e.g.&#10;docs.google.com&#10;*.banking.com"></textarea>
+          </div>
+
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div class="setting-label">Whitelisted Domains (If non-empty, only enable on these)</div>
+            <textarea id="opt-whitelist" class="textarea-box" rows="4" placeholder="e.g.&#10;github.com&#10;gitlab.com&#10;leetcode.com"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Key Reference Section -->
+      <section id="tab-keybindings" class="tab-panel">
+        <div class="panel-header">
+          <h2>Kakoune Keybindings Reference</h2>
+          <p>Selection-first modal editing shortcuts supported by this extension.</p>
+        </div>
+
+        <div class="table-container">
+          <table class="key-table">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Action</th>
+                <th>Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>h / j / k / l</code></td><td>Move cursor left / down / up / right</td><td>Motions</td></tr>
+              <tr><td><code>H / J / K / L</code></td><td>Extend selection left / down / up / right</td><td>Motions</td></tr>
+              <tr><td><code>w / b / e</code></td><td>Select word forward / backward / to word end</td><td>Motions</td></tr>
+              <tr><td><code>W / B / E</code></td><td>Extend word forward / backward / to word end</td><td>Motions</td></tr>
+              <tr><td><code>0 / $</code></td><td>Move to line start / line end</td><td>Line Motions</td></tr>
+              <tr><td><code>g h / g l</code></td><td>Go to line start / line end</td><td>Line Motions</td></tr>
+              <tr><td><code>g k / g j / g g</code></td><td>Go to document start / document end</td><td>Jumps</td></tr>
+              <tr><td><code>&lt;A-h&gt; / &lt;A-l&gt;</code></td><td>Extend to line start / line end</td><td>Extensions</td></tr>
+              <tr><td><code>G h / G l</code></td><td>Extend to line start / line end</td><td>Extensions</td></tr>
+              <tr><td><code>G k / G j / G g</code></td><td>Extend to document start / document end</td><td>Extensions</td></tr>
+              <tr><td><code>x</code></td><td>Select whole line</td><td>Selection</td></tr>
+              <tr><td><code>%</code></td><td>Select all document text</td><td>Selection</td></tr>
+              <tr><td><code>s</code></td><td>Select regex matches within selection</td><td>Regex / Search</td></tr>
+              <tr><td><code>S</code></td><td>Split selection on regex matches</td><td>Regex / Search</td></tr>
+              <tr><td><code>i / a</code></td><td>Enter insert mode before / after selection</td><td>Editing</td></tr>
+              <tr><td><code>I / A</code></td><td>Enter insert mode at line start / line end</td><td>Editing</td></tr>
+              <tr><td><code>o / O</code></td><td>Open line below / above and enter insert</td><td>Editing</td></tr>
+              <tr><td><code>d / c</code></td><td>Delete selection / Change selection</td><td>Editing</td></tr>
+              <tr><td><code>y / p / P</code></td><td>Yank selection / Paste after / Paste before</td><td>Registers</td></tr>
+              <tr><td><code>u / U</code></td><td>Undo / Redo edit</td><td>History</td></tr>
+              <tr><td><code>&lt;Esc&gt;</code></td><td>Return to normal (select) mode</td><td>Mode</td></tr>
+              <tr><td><code>Alt + Shift + K</code></td><td>Toggle Kakoune on/off on active element</td><td>Extension</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Live Playground Section -->
+      <section id="tab-playground" class="tab-panel">
+        <div class="panel-header">
+          <h2>Interactive Playground</h2>
+          <p>Test Kakoune keybindings on live Textarea and CodeMirror instances right here.</p>
+        </div>
+
+        <div class="playground-grid">
+          <div class="playground-card">
+            <h3>Standard HTML Textarea</h3>
+            <textarea id="play-textarea" class="play-editor" rows="8">def quicksort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)</textarea>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="save-toast" class="toast">Settings saved successfully!</div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

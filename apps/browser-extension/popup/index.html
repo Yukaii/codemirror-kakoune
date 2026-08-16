@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kakoune Editor Extension</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <header class="header">
+      <div class="header-brand">
+        <div class="logo-badge">KAK</div>
+        <div class="header-titles">
+          <h1 class="title">Kakoune</h1>
+          <span class="subtitle">Modal Editing for the Web</span>
+        </div>
+      </div>
+      <div class="status-indicator" id="global-status">ACTIVE</div>
+    </header>
+
+    <main class="content">
+      <!-- Master Switch -->
+      <div class="card toggle-card">
+        <div class="toggle-info">
+          <span class="toggle-title">Extension Status</span>
+          <span class="toggle-desc">Enable modal keybindings everywhere</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-global" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Current Site Override -->
+      <div class="card toggle-card site-card" id="site-card">
+        <div class="toggle-info">
+          <span class="toggle-title" id="site-name">Current Site</span>
+          <span class="toggle-desc" id="site-status">Enabled on this domain</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-site" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Quick Options -->
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label for="select-default-mode">Default Mode</label>
+          <select id="select-default-mode" class="select-input">
+            <option value="select">Select (Normal)</option>
+            <option value="insert">Insert (Typing)</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label for="select-theme">Theme</label>
+          <select id="select-theme" class="select-input">
+            <option value="kakoune">Kakoune Rose Pine</option>
+            <option value="dark">Dark Charcoal</option>
+            <option value="nord">Nord Arctic</option>
+            <option value="gruvbox">Gruvbox Warm</option>
+            <option value="light">Light Crisp</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Feature Toggles -->
+      <div class="feature-toggles">
+        <label class="checkbox-label">
+          <input type="checkbox" id="toggle-textareas" checked />
+          <span>Textareas & Inputs</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="toggle-cm5" checked />
+          <span>CodeMirror 5</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="toggle-cm6" checked />
+          <span>CodeMirror 6</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="toggle-whichkey" checked />
+          <span>Which-Key Hints</span>
+        </label>
+      </div>
+
+      <!-- Live Scratchpad -->
+      <div class="scratchpad-section">
+        <div class="scratchpad-header">
+          <span>Quick Scratchpad</span>
+          <span class="scratchpad-mode-badge" id="scratch-mode">SELECT</span>
+        </div>
+        <textarea id="scratchpad" class="scratchpad-area" rows="3" placeholder="Try Kakoune keys here (w, b, e, x, d, c, i, y, p...)">Welcome to Kakoune!
+Press w/b to jump words, x to select line, i to insert, Esc for normal mode.</textarea>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <button class="footer-btn" id="btn-open-options">⚙ Settings & Keys</button>
+      <button class="footer-btn" id="btn-open-demo">🎮 Full Demo</button>
+    </footer>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
