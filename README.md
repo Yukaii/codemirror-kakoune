@@ -3,38 +3,31 @@
 [![npm version](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune)
 [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune)
 
-A CodeMirror 6 extension, CodeMirror 5 keymap integration, and Obsidian plugin that bring Kakoune's selection-first modal editing paradigm into the browser and desktop markdown editors.
-
-## Packages
-
-This monorepo contains:
-
-- **[`kakoune-core-js`](./packages/kakoune-core)** [![npm](https://img.shields.io/npm/v/kakoune-core-js)](https://www.npmjs.com/package/kakoune-core-js) [![JSR](https://jsr.io/badges/@ykmade/kakoune-core-js)](https://jsr.io/@ykmade/kakoune-core-js): Framework-agnostic Kakoune engine (adapter, processor, portable commands).
-- **[`codemirror-kakoune`](./packages/codemirror-kakoune)** [![npm](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune) [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune): CodeMirror 6 adapter and prompts/rendering.
-- **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)** [![npm](https://img.shields.io/npm/v/codemirror-kakoune-cm5)](https://www.npmjs.com/package/codemirror-kakoune-cm5) [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune-cm5)](https://jsr.io/@ykmade/codemirror-kakoune-cm5): CodeMirror 5 adapter.
-- **[`obsidian-kakoune`](./packages/obsidian-kakoune)**: Obsidian community plugin providing native Kakoune modal editing.
-- **[`playground`](./apps/playground)**: CodeMirror 6 interactive playground.
-- **[`playground-cm5`](./apps/playground-cm5)**: CodeMirror 5-specific playground.
+A modular suite bringing Kakoune's selection-first modal editing paradigm to CodeMirror 6, CodeMirror 5, Obsidian, and web browsers.
 
 ---
 
-## Core Library Installation
+## Ecosystem & Packages
 
-Install the package via `npm`, `pnpm`, or `yarn`:
+| Package / App | Version / Target | Description | Links |
+| :--- | :--- | :--- | :--- |
+| **[`kakoune-core-js`](./packages/kakoune-core)** | [![npm](https://img.shields.io/npm/v/kakoune-core-js)](https://www.npmjs.com/package/kakoune-core-js) | Framework-agnostic Kakoune engine (`EditorHost`, `KakouneKeyProcessor`, `parseKakrc`, portable commands) | [npm](https://www.npmjs.com/package/kakoune-core-js) · [JSR](https://jsr.io/@ykmade/kakoune-core-js) |
+| **[`codemirror-kakoune`](./packages/codemirror-kakoune)** | [![npm](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune) | CodeMirror 6 extension with modal editing, prompt controllers, and multiple selection rendering | [npm](https://www.npmjs.com/package/codemirror-kakoune) · [JSR](https://jsr.io/@ykmade/codemirror-kakoune) |
+| **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)** | [![npm](https://img.shields.io/npm/v/codemirror-kakoune-cm5)](https://www.npmjs.com/package/codemirror-kakoune-cm5) | CodeMirror 5 adapter adhering to CM5's native `keyMap` architecture | [npm](https://www.npmjs.com/package/codemirror-kakoune-cm5) · [JSR](https://jsr.io/@ykmade/codemirror-kakoune-cm5) |
+| **[`obsidian-kakoune`](./packages/obsidian-kakoune)** | Obsidian Plugin | Desktop Obsidian plugin providing native modal editing for markdown notes | [README](./packages/obsidian-kakoune) |
+| **[`browser-kakoune`](./apps/browser-extension)** | Browser Extension (MV3) | WebExtension (Chrome, Firefox, Edge, Brave) bringing Kakoune modal editing to `<textarea>`, CM5, and CM6 | [README](./apps/browser-extension) |
+| **[`playground`](./apps/playground)** | Vite App (CM6) | Interactive web playground testing CodeMirror 6 with Kakoune bindings | [Live Demo](https://yukaii.github.io/codemirror-kakoune/) |
+| **[`playground-cm5`](./apps/playground-cm5)** | Vite App (CM5) | Interactive web playground testing CodeMirror 5 with Kakoune bindings | [Live Demo](https://yukaii.github.io/codemirror-kakoune/cm5/) |
+
+---
+
+## Quick Start
+
+### CodeMirror 6
 
 ```bash
-npm install codemirror-kakoune
+npm install codemirror-kakoune @codemirror/state @codemirror/view
 ```
-
-Or via [JSR](https://jsr.io/@ykmade/codemirror-kakoune):
-
-```bash
-npx jsr add @ykmade/codemirror-kakoune
-```
-
-## Quick Start (CodeMirror 6)
-
-Simply import and add the `kakoune` extension to your CodeMirror 6 configuration:
 
 ```typescript
 import { basicSetup, EditorView } from "codemirror";
@@ -46,37 +39,23 @@ const view = new EditorView({
     doc: "Hello, Kakoune!",
     extensions: [
       basicSetup,
-      kakoune() // Enables Kakoune modal editing!
+      kakoune({
+        initialMode: "select", // "select" (normal) or "insert"
+        onWhichKey: (pending, items) => {
+          // Optional hook for which-key UI
+        }
+      })
     ]
   }),
   parent: document.querySelector("#editor")
 });
 ```
 
-### Configuration Options
+### CodeMirror 5
 
-You can customize the initial mode and callbacks using the options object:
-
-```typescript
-kakoune({
-  initialMode: "select", // "select" (default) or "insert"
-  onWhichKey: (pending, items, isWaitingForChar) => {
-    // Optional hook for key prompts and which-key UI
-  }
-})
+```bash
+npm install codemirror-kakoune-cm5 codemirror@^5.65.0
 ```
-
----
-
-## Obsidian Plugin
-
-Looking for Kakoune modal editing inside Obsidian? Check out [`packages/obsidian-kakoune`](./packages/obsidian-kakoune) for full instructions, settings, and features.
-
-## CodeMirror 5
-
-The CM5 package follows CodeMirror 5's native `keyMap` and command model. Install
-`codemirror-kakoune-cm5`, then call `kakoune(editor)` after creating a CM5 editor.
-The deployed CM5 playground is available at `/cm5/`.
 
 ```typescript
 import CodeMirror from "codemirror";
@@ -86,33 +65,114 @@ const editor = CodeMirror(document.querySelector("#editor"));
 kakoune(editor);
 ```
 
----
+### Browser Extension (`browser-kakoune`)
 
-## Features & Supported Keybindings
+Build and load the extension into any Chromium or Firefox browser:
 
-- **Selection-first editing**: All motions update or extend active selections (`h`, `j`, `k`, `l`, `w`, `e`, `b`, `x`, etc.).
-- **Insert modes**: `i`, `a`, `I`, `A`, `o`, `O`.
-- **Search & Regex**: `/` (search forward), `?` (search backward), `n`/`N` (next/prev match), `s` (filter selections by regex), `S` (split selections by regex).
-- **Goto & View modes**: `g` / `G` (`gh`, `gl`, `gk`, `gj`, `ge`, `gt`, `gb`), `v` / `V` (view centering/locking).
-- **Yank, Delete, Paste & Replace**: `y`, `d`, `c`, `p`, `P`, `r`.
-- **Delimiters & Matching**: `m`, `M`, `[` / `]` object selections.
-- **Undo / Redo**: `u`, `U`.
-- **Multiple selections**: Kakoune multiple cursor & selection manipulation.
+```bash
+pnpm --filter browser-kakoune build
+# Load unpacked from apps/browser-extension/dist
+```
 
 ---
 
-## Development Scripts
+## Keybindings Specification Reference
 
-- `pnpm dev` - run the interactive playground locally
-- `pnpm test` - run unit test suite
-- `pnpm build` - build all packages and both playgrounds
-- `pnpm build:cm5` - build the CM5 package and playground
-- `pnpm typecheck` - typecheck all packages across the workspace
+| Category | Keys | Action Description |
+| :--- | :--- | :--- |
+| **Motions** | `h` / `j` / `k` / `l` | Move cursor left / down / up / right |
+| | `H` / `J` / `K` / `L` | Extend selection left / down / up / right |
+| | `w` / `b` / `e` | Select word forward / backward / to word end |
+| | `W` / `B` / `E` | Extend word forward / backward / to word end |
+| | `0` / `$` | Move to line start / line end |
+| | `g h` / `g l` | Move to line start / line end |
+| | `<A-h>` / `<A-l>` | Extend selection to line start / line end |
+| | `g k` / `g j` / `g g` | Jump to document start / document end |
+| | `G` / `G h` / `G l` ... | Extend to line (with count) / document bounds |
+| **Multi-Selection** | `C` / `<A-C>` | Duplicate selection on line below / above (multi-cursor) |
+| | `<A-s>` | Split active selections on newlines |
+| | `<Space>` | Keep only primary selection (clear secondary) |
+| | `<A-Space>` | Remove primary selection, keep secondary |
+| | `)` / `(` | Cycle primary selection forward / backward |
+| | `<A-)>` / `<A-(>` | Rotate selections text content forward / backward |
+| **Lines & Selections** | `x` | Select whole line (including newline) |
+| | `%` | Select entire buffer |
+| | `<A-j>` | Join selected lines (replaces newline/indent with space) |
+| | `<A-J>` | Join selected lines and select inserted spaces |
+| | `_` | Trim whitespace from selection boundaries |
+| | `;` | Reduce selections to cursor (anchor = head) |
+| | `<A-;>` | Flip selection direction (swap anchor and head) |
+| | `<A-:>` | Ensure selection is forward direction (`anchor <= head`) |
+| **Editing** | `i` / `a` | Enter insert mode before / after selections |
+| | `I` / `A` | Enter insert mode at line start / line end |
+| | `o` / `O` | Open line below / above and enter insert mode |
+| | `<A-o>` / `<A-O>` | Insert empty line below / above without entering insert |
+| | `d` / `c` | Delete selection / Change selection |
+| | `~` / ``` ` ``` / `<A-`>` | Convert uppercase / lowercase / swap case |
+| | `r` | Replace character under selections with next keystroke |
+| **Registers & History** | `y` | Yank selections into register |
+| | `p` / `P` | Paste register after / before selections |
+| | `u` / `U` | Undo / Redo last edit change |
+| | `<A-u>` / `<A-U>` | Undo / Redo selection history change |
+| | `"` | Select named register for next command |
+| | `q` / `Q` | Play macro / Record macro |
+| **Search & Regex** | `/` / `?` | Search forward / backward |
+| | `n` / `N` | Next / previous search match |
+| | `*` | Set search pattern from current selection |
+| | `s` | Open prompt to select regex matches within selection |
+| | `S` | Open prompt to split selections on regex matches |
 
-## References
+---
+
+## Custom `kakrc` Scripting Support
+
+`kakoune-core-js` includes a built-in `kakrc` parser (`parseKakrc`) and key processor remapping engine supporting:
+
+```kak
+# Custom key mappings
+map global normal <space> ,
+map global insert jk <esc>
+
+# User-defined modes
+declare-user-mode mytools
+map global normal <a-m> ':enter-user-mode mytools<ret>'
+map global mytools d 'xyd'
+
+# Registers & options
+set-register a 'custom macro'
+set-option global tabstop 4
+```
+
+---
+
+## Development & Monorepo Workflows
+
+```bash
+# Install all dependencies
+pnpm install
+
+# Run tests across all packages
+pnpm test
+
+# Typecheck workspace
+pnpm typecheck
+
+# Build all libraries and apps
+pnpm build
+
+# Run interactive CM6 playground dev server
+pnpm dev
+
+# Build browser extension
+pnpm build:extension
+```
+
+---
+
+## References & Credits
 
 This project builds upon ideas and patterns from:
 
-- [`mawww/kakoune`](https://github.com/mawww/kakoune)
-- [`replit/codemirror-vim`](https://github.com/replit/codemirror-vim)
-- [`71/dance`](https://github.com/71/dance)
+- [`mawww/kakoune`](https://github.com/mawww/kakoune) - The Kakoune editor by Maxime Coste
+- [`replit/codemirror-vim`](https://github.com/replit/codemirror-vim) - CodeMirror Vim keymap
+- [`71/dance`](https://github.com/71/dance) - Kakoune-inspired modal editing for VS Code
