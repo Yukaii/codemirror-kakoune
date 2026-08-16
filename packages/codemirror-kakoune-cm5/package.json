@@ -1,6 +1,6 @@
 {
   "name": "codemirror-kakoune-cm5",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Kakoune-style modal editing for CodeMirror 5.",
   "type": "module",
   "main": "./dist/index.js",
