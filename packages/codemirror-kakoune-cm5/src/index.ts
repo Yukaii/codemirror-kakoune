@@ -42,7 +42,7 @@ import {
   type KakouneBinding,
   type KakouneMode,
   type KakounePromptState
-} from "kakoune-core";
+} from "kakoune-core-js";
 import { Cm5Adapter } from "./adapter";
 
 export type { KakouneMode as KakouneCm5Mode };
@@ -181,4 +181,4 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
 }
 
 export { Cm5Adapter };
-export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys, KakouneKeyProcessor } from "kakoune-core";
+export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys, KakouneKeyProcessor } from "kakoune-core-js";

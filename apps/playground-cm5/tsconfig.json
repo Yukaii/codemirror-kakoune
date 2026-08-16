@@ -5,7 +5,7 @@
     "baseUrl": ".",
     "paths": {
       "codemirror-kakoune-cm5": ["../../packages/codemirror-kakoune-cm5/src"],
-      "kakoune-core": ["../../packages/kakoune-core/src"]
+      "kakoune-core-js": ["../../packages/kakoune-core/src"]
     }
   },
   "include": ["main.ts", "global.d.ts", "vite-env.d.ts"]

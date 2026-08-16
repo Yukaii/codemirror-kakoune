@@ -19,7 +19,7 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/test/setup.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
   moduleNameMapper: {
-    "^kakoune-core$": "<rootDir>/../kakoune-core/src/index.ts"
+    "^kakoune-core-js$": "<rootDir>/../kakoune-core/src/index.ts"
   },
   clearMocks: true
 };

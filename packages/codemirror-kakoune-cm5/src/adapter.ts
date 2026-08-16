@@ -1,4 +1,4 @@
-import type { EditorHost, KakouneMode, LineInfo, SelectionRange } from "kakoune-core";
+import type { EditorHost, KakouneMode, LineInfo, SelectionRange } from "kakoune-core-js";
 import type CodeMirror from "codemirror";
 
 type Cm = CodeMirror.Editor;

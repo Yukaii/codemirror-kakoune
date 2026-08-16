@@ -1,6 +1,6 @@
 # CodeMirror Kakoune CM5
 
-CodeMirror 5 adapter over the shared `kakoune-core` engine.
+CodeMirror 5 adapter over the shared [`kakoune-core-js`](https://github.com/Yukaii/codemirror-kakoune/tree/main/packages/kakoune-core) engine.
 
 ```ts
 import CodeMirror from "codemirror";

@@ -34,7 +34,7 @@ export interface KeyProcessorBindings {
   insert: KakouneBinding[];
 }
 
-export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys } from "kakoune-core";
+export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys } from "kakoune-core-js";
 
 function isFindToCharKey(key: string): boolean {
   return key === "f" || key === "t" || key === "F" || key === "T" || /^<a-[ft]>$/i.test(key);
