@@ -9,34 +9,20 @@
 <body>
   <div class="popup-container">
     <header class="header">
-      <div class="header-brand">
-        <div class="logo-badge">KAK</div>
-        <div class="header-titles">
-          <h1 class="title">browser-kakoune</h1>
-          <span class="subtitle">Modal Web Editing</span>
-        </div>
+      <div class="brand">
+        <span class="brand-tag">KAK</span>
+        <span class="brand-title">browser-kakoune</span>
+        <span class="brand-ver">v0.4.4</span>
       </div>
-      <div class="status-indicator" id="global-status">ACTIVE</div>
+      <div class="status-pill" id="global-status">ON</div>
     </header>
 
     <main class="content">
-      <!-- Master Switch -->
-      <div class="card toggle-card">
-        <div class="toggle-info">
-          <span class="toggle-title">Extension Status</span>
-          <span class="toggle-desc">Enable modal keybindings everywhere</span>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="toggle-global" checked />
-          <span class="slider"></span>
-        </label>
-      </div>
-
-      <!-- Current Site Override -->
-      <div class="card toggle-card site-card" id="site-card">
-        <div class="toggle-info">
-          <span class="toggle-title" id="site-name">Current Site</span>
-          <span class="toggle-desc" id="site-status">Enabled on this domain</span>
+      <!-- Site Status Row -->
+      <div class="row-box" id="site-card">
+        <div class="row-text">
+          <span class="row-primary" id="site-name">Current Site</span>
+          <span class="row-secondary" id="site-status">Enabled</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="toggle-site" checked />
@@ -44,61 +30,61 @@
         </label>
       </div>
 
-      <!-- Quick Options -->
-      <div class="settings-grid">
-        <div class="setting-item">
-          <label for="select-default-mode">Default Mode</label>
-          <select id="select-default-mode" class="select-input">
+      <!-- Controls Grid -->
+      <div class="controls-grid">
+        <div class="control-item">
+          <label for="select-default-mode">Focus Mode</label>
+          <select id="select-default-mode" class="select-box">
             <option value="select">Select (Normal)</option>
-            <option value="insert">Insert (Typing)</option>
+            <option value="insert">Insert</option>
           </select>
         </div>
-        <div class="setting-item">
+        <div class="control-item">
           <label for="select-theme">Theme</label>
-          <select id="select-theme" class="select-input">
-            <option value="kakoune">Kakoune Rose Pine</option>
-            <option value="dark">Dark Charcoal</option>
-            <option value="nord">Nord Arctic</option>
-            <option value="gruvbox">Gruvbox Warm</option>
-            <option value="light">Light Crisp</option>
+          <select id="select-theme" class="select-box">
+            <option value="kakoune">Kakoune</option>
+            <option value="dark">Dark</option>
+            <option value="nord">Nord</option>
+            <option value="gruvbox">Gruvbox</option>
+            <option value="light">Light</option>
           </select>
         </div>
       </div>
 
-      <!-- Feature Toggles -->
-      <div class="feature-toggles">
-        <label class="checkbox-label">
+      <!-- Engine Toggles -->
+      <div class="toggles-panel">
+        <label class="toggle-check">
           <input type="checkbox" id="toggle-textareas" checked />
-          <span>Textareas & Inputs</span>
+          <span>Textarea Overlay</span>
         </label>
-        <label class="checkbox-label">
+        <label class="toggle-check">
           <input type="checkbox" id="toggle-cm5" checked />
           <span>CodeMirror 5</span>
         </label>
-        <label class="checkbox-label">
+        <label class="toggle-check">
           <input type="checkbox" id="toggle-cm6" checked />
           <span>CodeMirror 6</span>
         </label>
-        <label class="checkbox-label">
+        <label class="toggle-check">
           <input type="checkbox" id="toggle-whichkey" checked />
-          <span>Which-Key Hints</span>
+          <span>Which-Key</span>
         </label>
       </div>
 
-      <!-- Live Scratchpad -->
-      <div class="scratchpad-section">
-        <div class="scratchpad-header">
-          <span>Quick Scratchpad</span>
-          <span class="scratchpad-mode-badge" id="scratch-mode">SELECT</span>
+      <!-- Scratchpad -->
+      <div class="scratchpad-box">
+        <div class="scratchpad-bar">
+          <span class="scratchpad-label">Scratchpad</span>
+          <span class="scratchpad-mode" id="scratch-mode">SELECT</span>
         </div>
-        <textarea id="scratchpad" class="scratchpad-area" rows="3" placeholder="Try Kakoune keys here (w, b, e, x, d, c, i, y, p...)">Welcome to Kakoune!
-Press w/b to jump words, x to select line, i to insert, Esc for normal mode.</textarea>
+        <textarea id="scratchpad" class="scratchpad-input" rows="3" spellcheck="false">Welcome to browser-kakoune.
+Press w/b to move by word, x to select line, i to insert.</textarea>
       </div>
     </main>
 
     <footer class="footer">
-      <button class="footer-btn" id="btn-open-options">⚙ Settings & Keys</button>
-      <button class="footer-btn" id="btn-open-demo">🎮 Full Demo</button>
+      <button class="action-btn" id="btn-open-options">Settings</button>
+      <button class="action-btn" id="btn-open-demo">Demo</button>
     </footer>
   </div>
 

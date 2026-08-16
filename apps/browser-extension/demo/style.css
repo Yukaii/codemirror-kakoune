@@ -1,15 +1,15 @@
 :root {
-  --bg-dark: #191724;
-  --bg-card: #21202e;
-  --bg-input: #26233a;
+  --bg-main: #0f0e15;
+  --bg-surface: #191724;
+  --bg-input: #1f1d2e;
+  --bg-hover: #26233a;
   --fg-main: #e0def4;
-  --fg-muted: #908caa;
+  --fg-muted: #88869e;
   --accent: #eb6f92;
   --accent-blue: #9ccfd8;
   --accent-gold: #f6c177;
-  --border: #393552;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --border: #26233a;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 * {
@@ -19,12 +19,12 @@
 }
 
 body {
-  background-color: var(--bg-dark);
+  background-color: var(--bg-main);
   color: var(--fg-main);
-  font-family: var(--font);
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   line-height: 1.5;
-  padding: 24px;
+  padding: 24px 32px;
   min-height: 100vh;
 }
 
@@ -33,7 +33,7 @@ body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .demo-header {
@@ -41,43 +41,43 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 16px;
+  padding-bottom: 14px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .logo {
   background: var(--accent);
-  color: var(--bg-dark);
+  color: var(--bg-main);
   font-weight: 800;
-  font-size: 16px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 2px;
 }
 
 .demo-header h1 {
-  font-size: 20px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .demo-header p {
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .link-btn {
-  background: var(--bg-card);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   color: var(--fg-main);
   text-decoration: none;
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 5px 10px;
+  border-radius: 2px;
+  font-size: 11px;
   font-weight: 600;
-  font-size: 12px;
-  transition: all 0.15s ease;
 }
 
 .link-btn:hover {
@@ -88,7 +88,7 @@ body {
 .editors-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 @media (max-width: 900px) {
@@ -98,13 +98,13 @@ body {
 }
 
 .editor-card {
-  background: var(--bg-card);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 2px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .editor-card-header {
@@ -113,35 +113,35 @@ body {
   align-items: center;
 }
 
-.title-with-badge {
+.title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .editor-card-header h2 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .engine-badge {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 .badge-textarea { background: #31748f; color: #fff; }
-.badge-cm6 { background: #eb6f92; color: #191724; }
-.badge-cm5 { background: #f6c177; color: #191724; }
-.badge-input { background: #9ccfd8; color: #191724; }
+.badge-cm6 { background: #eb6f92; color: #0f0e15; }
+.badge-cm5 { background: #f6c177; color: #0f0e15; }
+.badge-input { background: #9ccfd8; color: #0f0e15; }
 
 .mode-pill {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: inherit;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 1px 6px;
+  border-radius: 2px;
   background: rgba(235, 111, 146, 0.2);
   color: var(--accent);
   border: 1px solid var(--accent);
@@ -157,10 +157,10 @@ body {
   background: var(--bg-input);
   color: var(--fg-main);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px;
-  font-family: var(--mono);
-  font-size: 13px;
+  border-radius: 2px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 11px;
   outline: none;
   width: 100%;
 }
@@ -171,24 +171,24 @@ body {
 
 .cm-host {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   overflow: hidden;
-  min-height: 180px;
+  min-height: 160px;
 }
 
 .cm-editor {
-  height: 180px;
-  font-family: var(--mono);
-  font-size: 13px;
+  height: 160px;
+  font-family: inherit;
+  font-size: 11px;
 }
 
-/* CodeMirror 5 styles inside card */
+/* CodeMirror 5 */
 .CodeMirror {
-  height: 180px;
+  height: 160px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: var(--mono);
-  font-size: 13px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 11px;
   background: var(--bg-input) !important;
   color: var(--fg-main) !important;
 }
@@ -198,13 +198,13 @@ body {
 }
 
 .log-card {
-  background: var(--bg-card);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 2px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .log-header {
@@ -214,17 +214,19 @@ body {
 }
 
 .log-header h3 {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--fg-muted);
+  text-transform: uppercase;
 }
 
 .clear-btn {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--fg-muted);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 9px;
   cursor: pointer;
 }
 
@@ -235,15 +237,15 @@ body {
 .event-log-content {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  height: 110px;
+  border-radius: 2px;
+  padding: 8px 10px;
+  height: 90px;
   overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: inherit;
+  font-size: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .log-entry {
@@ -252,7 +254,6 @@ body {
 
 .log-system {
   color: var(--fg-muted);
-  font-style: italic;
 }
 
 .log-stroke {

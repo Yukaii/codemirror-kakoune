@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>browser-kakoune - Live Demo & Testpad</title>
+  <title>browser-kakoune - Demo & Testbed</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -12,12 +12,12 @@
       <div class="brand">
         <span class="logo">KAK</span>
         <div>
-          <h1>browser-kakoune Demo</h1>
-          <p>Test Kakoune modal editing across Textarea, CodeMirror 5, and CodeMirror 6</p>
+          <h1>browser-kakoune testbed</h1>
+          <p>Multi-engine verification: Textarea, CodeMirror 5, CodeMirror 6</p>
         </div>
       </div>
       <div class="actions">
-        <a href="../options/index.html" class="link-btn">⚙ Settings</a>
+        <a href="../options/index.html" class="link-btn">Settings</a>
       </div>
     </header>
 
@@ -25,13 +25,13 @@
       <!-- Section 1: Standard Textarea -->
       <div class="editor-card">
         <div class="editor-card-header">
-          <div class="title-with-badge">
-            <h2>1. Standard HTML Textarea</h2>
+          <div class="title-row">
+            <h2>Textarea (In-Place CM6 Swap)</h2>
             <span class="engine-badge badge-textarea">TEXTAREA</span>
           </div>
           <span class="mode-pill" id="badge-textarea">SELECT</span>
         </div>
-        <textarea id="demo-textarea" class="native-textarea" rows="10">function calculateTotal(items, discountRate = 0) {
+        <textarea id="demo-textarea" class="native-textarea" rows="10" spellcheck="false">function calculateTotal(items, discountRate = 0) {
   let subtotal = 0;
   for (const item of items) {
     subtotal += item.price * item.quantity;
@@ -44,8 +44,8 @@
       <!-- Section 2: CodeMirror 6 -->
       <div class="editor-card">
         <div class="editor-card-header">
-          <div class="title-with-badge">
-            <h2>2. CodeMirror 6 Editor</h2>
+          <div class="title-row">
+            <h2>CodeMirror 6 Instance</h2>
             <span class="engine-badge badge-cm6">CM6</span>
           </div>
           <span class="mode-pill" id="badge-cm6">SELECT</span>
@@ -56,13 +56,13 @@
       <!-- Section 3: CodeMirror 5 -->
       <div class="editor-card">
         <div class="editor-card-header">
-          <div class="title-with-badge">
-            <h2>3. CodeMirror 5 Editor</h2>
+          <div class="title-row">
+            <h2>CodeMirror 5 Instance</h2>
             <span class="engine-badge badge-cm5">CM5</span>
           </div>
           <span class="mode-pill" id="badge-cm5">SELECT</span>
         </div>
-        <textarea id="demo-cm5-textarea">// CodeMirror 5 editor instance
+        <textarea id="demo-cm5-textarea" spellcheck="false">// CodeMirror 5 editor instance
 class EventEmitter {
   constructor() {
     this.events = new Map();
@@ -86,24 +86,24 @@ class EventEmitter {
       <!-- Section 4: Single-Line Input -->
       <div class="editor-card">
         <div class="editor-card-header">
-          <div class="title-with-badge">
-            <h2>4. Single-line Input</h2>
+          <div class="title-row">
+            <h2>Single-line Input</h2>
             <span class="engine-badge badge-input">INPUT</span>
           </div>
           <span class="mode-pill" id="badge-input">SELECT</span>
         </div>
-        <input type="text" id="demo-input" class="native-input" value="git checkout -b feature/kakoune-browser-extension" />
+        <input type="text" id="demo-input" class="native-input" value="git checkout -b feature/browser-kakoune" spellcheck="false" />
       </div>
     </div>
 
-    <!-- Live Event Log -->
+    <!-- Event Log -->
     <div class="log-card">
       <div class="log-header">
-        <h3>⚡ Real-time Event & Stroke Log</h3>
+        <h3>Event & Keystroke Log</h3>
         <button id="btn-clear-log" class="clear-btn">Clear</button>
       </div>
       <div id="event-log" class="event-log-content">
-        <div class="log-entry log-system">Ready. Click on any editor above to begin modal editing.</div>
+        <div class="log-entry log-system">Ready. Focus any editor to test modal keybindings.</div>
       </div>
     </div>
   </div>
