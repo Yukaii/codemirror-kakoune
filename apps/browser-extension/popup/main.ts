@@ -1,6 +1,7 @@
 import { loadSettings, saveSettings, isDomainEnabled } from "../src/storage";
 import { TextareaAdapter } from "../src/adapter/textarea";
 import { buildKakouneBindings } from "../src/adapter/bindings";
+import { browserAPI } from "../src/browser-api";
 import { KakouneKeyProcessor, KakounePromptController, normalizeKeyStroke, type KakouneMode } from "kakoune-core-js";
 import type { ExtensionSettings } from "../src/types";
 
@@ -12,8 +13,8 @@ async function initPopup(): Promise<void> {
 
   // Try to query active tab for current domain
   try {
-    if (typeof chrome !== "undefined" && chrome.tabs?.query) {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (browserAPI?.tabs?.query) {
+      const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
       if (tab?.url) {
         const url = new URL(tab.url);
         currentDomain = url.hostname.toLowerCase().replace(/:\d+$/, "");
@@ -105,16 +106,16 @@ function setupUI(): void {
   });
 
   btnOptions.addEventListener("click", () => {
-    if (typeof chrome !== "undefined" && chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
+    if (browserAPI?.runtime?.openOptionsPage) {
+      browserAPI.runtime.openOptionsPage();
     } else {
       window.open("../options/index.html", "_blank");
     }
   });
 
   btnDemo.addEventListener("click", () => {
-    if (typeof chrome !== "undefined" && chrome.tabs?.create) {
-      chrome.tabs.create({ url: chrome.runtime.getURL("demo/index.html") });
+    if (browserAPI?.tabs?.create) {
+      browserAPI.tabs.create({ url: browserAPI.runtime.getURL("demo/index.html") });
     } else {
       window.open("../demo/index.html", "_blank");
     }

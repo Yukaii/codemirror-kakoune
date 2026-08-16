@@ -4,6 +4,12 @@
   "version": "0.4.4",
   "description": "Brings Kakoune-style modal editing to textareas, CodeMirror 5, and CodeMirror 6 across the web.",
   "author": "Yukai Huang",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kakoune-browser@yukaii.github.io",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": [
     "storage",
     "activeTab",
@@ -22,6 +28,7 @@
   },
   "background": {
     "service_worker": "background.js",
+    "scripts": ["background.js"],
     "type": "module"
   },
   "content_scripts": [

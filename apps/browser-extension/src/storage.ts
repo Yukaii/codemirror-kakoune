@@ -1,9 +1,10 @@
 import { DEFAULT_SETTINGS, type ExtensionSettings } from "./types";
+import { browserAPI } from "./browser-api";
 
 export async function loadSettings(): Promise<ExtensionSettings> {
   try {
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      const storageArea = chrome.storage.sync || chrome.storage.local;
+    if (browserAPI?.storage) {
+      const storageArea = browserAPI.storage.sync || browserAPI.storage.local;
       const res = await storageArea.get("kakoune_settings");
       if (res && res.kakoune_settings) {
         return { ...DEFAULT_SETTINGS, ...res.kakoune_settings };
@@ -24,8 +25,8 @@ export async function saveSettings(settings: Partial<ExtensionSettings>): Promis
   const current = await loadSettings();
   const updated: ExtensionSettings = { ...current, ...settings };
   try {
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      const storageArea = chrome.storage.sync || chrome.storage.local;
+    if (browserAPI?.storage) {
+      const storageArea = browserAPI.storage.sync || browserAPI.storage.local;
       await storageArea.set({ kakoune_settings: updated });
     } else if (typeof localStorage !== "undefined") {
       localStorage.setItem("kakoune_settings", JSON.stringify(updated));

@@ -12,6 +12,7 @@ import { detectCM5, attachCM5Kakoune } from "../adapter/cm5";
 import { detectCM6 } from "../adapter/cm6";
 import { OverlayController } from "../ui/overlay";
 import { isDomainEnabled, loadSettings } from "../storage";
+import { browserAPI } from "../browser-api";
 import type { ExtensionSettings, UIState, MessageType } from "../types";
 
 class ContentScriptManager {
@@ -72,8 +73,8 @@ class ContentScriptManager {
   }
 
   private setupMessageListener(): void {
-    if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
-      chrome.runtime.onMessage.addListener((message: MessageType, _sender, sendResponse) => {
+    if (browserAPI?.runtime?.onMessage) {
+      browserAPI.runtime.onMessage.addListener((message: MessageType, _sender, sendResponse) => {
         if (message.type === "GET_TAB_STATUS") {
           const isEnabled = this.settings ? isDomainEnabled(window.location.hostname, this.settings) : true;
           const currentMode = this.activeAdapter ? this.activeAdapter.getMode() : this.settings?.defaultMode ?? "select";
