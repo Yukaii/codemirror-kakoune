@@ -169,7 +169,7 @@ export default class KakounePlugin extends Plugin {
     if (!this.settings.showStatusBar || !this.statusBarItemEl) return;
 
     if (!this.settings.enabled) {
-      this.statusBarItemEl.setText("KAK: OFF");
+      this.statusBarItemEl.setText("Kak: off");
       this.statusBarItemEl.removeAttribute("data-mode");
       return;
     }
@@ -249,8 +249,8 @@ class KakouneSettingTab extends PluginSettingTab {
   getSettingDefinitions(): SettingDefinitionItem[] {
     return [
       {
-        name: "Enable Kakoune modal editing",
-        desc: "Toggle Kakoune modal keybindings and motions in Obsidian editor.",
+        name: "Enable modal editing",
+        desc: "Toggle modal keybindings and motions in Obsidian editor.",
         control: {
           type: "toggle",
           key: "enabled",
@@ -259,7 +259,7 @@ class KakouneSettingTab extends PluginSettingTab {
       },
       {
         name: "Show status bar item",
-        desc: "Display the active Kakoune mode (NORMAL / INSERT) in the status bar.",
+        desc: "Display the active mode (normal / insert) in the status bar.",
         control: {
           type: "toggle",
           key: "showStatusBar",
@@ -298,8 +298,8 @@ class KakouneSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName("Enable Kakoune modal editing")
-      .setDesc("Toggle Kakoune modal keybindings and motions in Obsidian editor.")
+      .setName("Enable modal editing")
+      .setDesc("Toggle modal keybindings and motions in Obsidian editor.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.enabled).onChange(async (value) => {
           this.plugin.settings.enabled = value;
@@ -309,7 +309,7 @@ class KakouneSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Show status bar item")
-      .setDesc("Display the active Kakoune mode (NORMAL / INSERT) in the status bar.")
+      .setDesc("Display the active mode (normal / insert) in the status bar.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showStatusBar).onChange(async (value) => {
           this.plugin.settings.showStatusBar = value;

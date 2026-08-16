@@ -1,4 +1,4 @@
-/* eslint-disable obsidianmd/prefer-create-el */
+import "./dom-helpers";
 import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
@@ -23,21 +23,14 @@ let promptActive = false;
 kakoune(editor, {
   onWhichKey(pending, items) {
     if (!hud || !hudItems) return;
-    hudItems.replaceChildren(...items.map(item => {
-      const element = document.createElement("div");
-      element.className = "hud-item";
-      const keySpan = document.createElement("span");
-      keySpan.className = "hud-key";
-      keySpan.textContent = item.keys.join(" ");
-      element.appendChild(keySpan);
+    hudItems.replaceChildren();
+    for (const item of items) {
+      const el = hudItems.createDiv({ cls: "hud-item" });
+      el.createSpan({ cls: "hud-key", text: item.keys.join(" ") });
       if (item.description) {
-        const descSpan = document.createElement("span");
-        descSpan.className = "hud-desc";
-        descSpan.textContent = item.description;
-        element.appendChild(descSpan);
+        el.createSpan({ cls: "hud-desc", text: item.description });
       }
-      return element;
-    }));
+    }
     hud.classList.toggle("hidden", pending.length === 0 && !promptActive);
   },
   onPrompt(prompt) {
@@ -51,7 +44,7 @@ kakoune(editor, {
   },
   onPromptError(message) {
     if (!message || !hud || !hudTitle || !hudPrompt) return;
-    hudTitle.textContent = "error";
+    hudTitle.textContent = "Error";
     hudPrompt.textContent = message;
     hudPrompt.classList.remove("hidden");
     hud.classList.remove("hidden");
