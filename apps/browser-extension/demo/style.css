@@ -1,4 +1,5 @@
-:root {
+:root,
+[data-theme="kakoune"] {
   --bg-main: #0f0e15;
   --bg-surface: #191724;
   --bg-input: #1f1d2e;
@@ -10,6 +11,58 @@
   --accent-gold: #f6c177;
   --border: #26233a;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+[data-theme="dark"] {
+  --bg-main: #0a0c10;
+  --bg-surface: #161b22;
+  --bg-input: #21262d;
+  --bg-hover: #30363d;
+  --fg-main: #c9d1d9;
+  --fg-muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-gold: #d29922;
+  --accent-blue: #79c0ff;
+  --border: #30363d;
+}
+
+[data-theme="nord"] {
+  --bg-main: #1e222a;
+  --bg-surface: #242933;
+  --bg-input: #2e3440;
+  --bg-hover: #434c5e;
+  --fg-main: #eceff4;
+  --fg-muted: #d8dee9;
+  --accent: #88c0d0;
+  --accent-gold: #ebcb8b;
+  --accent-blue: #81a1c1;
+  --border: #3b4252;
+}
+
+[data-theme="gruvbox"] {
+  --bg-main: #141617;
+  --bg-surface: #1d2021;
+  --bg-input: #282828;
+  --bg-hover: #3c3836;
+  --fg-main: #ebdbb2;
+  --fg-muted: #a89984;
+  --accent: #fe8019;
+  --accent-gold: #fabd2f;
+  --accent-blue: #83a598;
+  --border: #3c3836;
+}
+
+[data-theme="light"] {
+  --bg-main: #f0f2f5;
+  --bg-surface: #f6f8fa;
+  --bg-input: #ffffff;
+  --bg-hover: #e1e4e8;
+  --fg-main: #24292e;
+  --fg-muted: #586069;
+  --accent: #0366d6;
+  --accent-gold: #d97706;
+  --accent-blue: #0969da;
+  --border: #d1d5da;
 }
 
 * {
@@ -158,11 +211,19 @@ body {
   color: var(--fg-main);
   border: 1px solid var(--border);
   border-radius: 2px;
-  padding: 8px 10px;
+  padding: 10px;
   font-family: inherit;
   font-size: 11px;
+  line-height: 1.4;
   outline: none;
   width: 100%;
+  min-height: 220px;
+  resize: vertical;
+}
+
+.native-input {
+  min-height: auto;
+  height: 34px;
 }
 
 .native-textarea:focus, .native-input:focus {
@@ -173,18 +234,18 @@ body {
   border: 1px solid var(--border);
   border-radius: 2px;
   overflow: hidden;
-  min-height: 160px;
+  min-height: 220px;
 }
 
 .cm-editor {
-  height: 160px;
+  height: 220px;
   font-family: inherit;
   font-size: 11px;
 }
 
 /* CodeMirror 5 */
 .CodeMirror {
-  height: 160px;
+  height: 220px;
   border: 1px solid var(--border);
   border-radius: 2px;
   font-family: inherit;

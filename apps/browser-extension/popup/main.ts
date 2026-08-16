@@ -1,15 +1,18 @@
 import { loadSettings, saveSettings, isDomainEnabled } from "../src/storage";
-import { TextareaAdapter } from "../src/adapter/textarea";
-import { buildKakouneBindings } from "../src/adapter/bindings";
 import { browserAPI } from "../src/browser-api";
-import { KakouneKeyProcessor, KakounePromptController, normalizeKeyStroke, type KakouneMode } from "kakoune-core-js";
-import type { ExtensionSettings } from "../src/types";
+import type { ExtensionSettings, ExtensionTheme } from "../src/types";
+import type { KakouneMode } from "kakoune-core-js";
 
 let currentSettings: ExtensionSettings;
 let currentDomain = "";
 
+function applyTheme(theme: ExtensionTheme): void {
+  document.documentElement.dataset.theme = theme;
+}
+
 async function initPopup(): Promise<void> {
   currentSettings = await loadSettings();
+  applyTheme(currentSettings.theme);
 
   // Try to query active tab for current domain
   try {
@@ -25,7 +28,6 @@ async function initPopup(): Promise<void> {
   }
 
   setupUI();
-  setupScratchpad();
 }
 
 function setupUI(): void {
@@ -44,165 +46,109 @@ function setupUI(): void {
   const btnDemo = document.getElementById("btn-open-demo") as HTMLButtonElement;
 
   // Apply initial values
-  globalToggle.checked = currentSettings.enabled;
-  updateStatusBadge(currentSettings.enabled);
+  if (globalToggle) {
+    globalToggle.checked = currentSettings.enabled;
+    updateStatusBadge(currentSettings.enabled);
+  }
 
-  if (currentDomain && !currentDomain.startsWith("chrome") && !currentDomain.startsWith("extension")) {
-    siteName.textContent = currentDomain;
-    siteToggle.checked = isDomainEnabled(currentDomain, currentSettings);
-  } else {
+  if (currentDomain && !currentDomain.startsWith("chrome") && !currentDomain.startsWith("extension") && !currentDomain.startsWith("about")) {
+    if (siteName) siteName.textContent = currentDomain;
+    if (siteToggle) siteToggle.checked = isDomainEnabled(currentDomain, currentSettings);
+  } else if (siteCard) {
     siteCard.style.display = "none";
   }
 
-  defaultModeSelect.value = currentSettings.defaultMode;
-  themeSelect.value = currentSettings.theme;
-  textareasToggle.checked = currentSettings.enableTextareas;
-  cm5Toggle.checked = currentSettings.enableCodeMirror5;
-  cm6Toggle.checked = currentSettings.enableCodeMirror6;
-  whichkeyToggle.checked = currentSettings.showWhichKey;
+  if (defaultModeSelect) defaultModeSelect.value = currentSettings.defaultMode;
+  if (themeSelect) themeSelect.value = currentSettings.theme;
+  if (textareasToggle) textareasToggle.checked = currentSettings.enableTextareas;
+  if (cm5Toggle) cm5Toggle.checked = currentSettings.enableCodeMirror5;
+  if (cm6Toggle) cm6Toggle.checked = currentSettings.enableCodeMirror6;
+  if (whichkeyToggle) whichkeyToggle.checked = currentSettings.showWhichKey;
 
   // Event Listeners
-  globalToggle.addEventListener("change", async () => {
+  globalToggle?.addEventListener("change", async () => {
     currentSettings.enabled = globalToggle.checked;
     updateStatusBadge(currentSettings.enabled);
     await saveSettings({ enabled: currentSettings.enabled });
   });
 
-  siteToggle.addEventListener("change", async () => {
+  siteToggle?.addEventListener("change", async () => {
     if (!currentDomain) return;
     const overrides = { ...currentSettings.siteOverrides, [currentDomain]: siteToggle.checked };
     currentSettings.siteOverrides = overrides;
     await saveSettings({ siteOverrides: overrides });
   });
 
-  defaultModeSelect.addEventListener("change", async () => {
+  defaultModeSelect?.addEventListener("change", async () => {
     currentSettings.defaultMode = defaultModeSelect.value as KakouneMode;
     await saveSettings({ defaultMode: currentSettings.defaultMode });
   });
 
-  themeSelect.addEventListener("change", async () => {
-    currentSettings.theme = themeSelect.value as any;
+  themeSelect?.addEventListener("change", async () => {
+    currentSettings.theme = themeSelect.value as ExtensionTheme;
+    applyTheme(currentSettings.theme);
     await saveSettings({ theme: currentSettings.theme });
   });
 
-  textareasToggle.addEventListener("change", async () => {
+  textareasToggle?.addEventListener("change", async () => {
     currentSettings.enableTextareas = textareasToggle.checked;
     await saveSettings({ enableTextareas: currentSettings.enableTextareas });
   });
 
-  cm5Toggle.addEventListener("change", async () => {
+  cm5Toggle?.addEventListener("change", async () => {
     currentSettings.enableCodeMirror5 = cm5Toggle.checked;
     await saveSettings({ enableCodeMirror5: currentSettings.enableCodeMirror5 });
   });
 
-  cm6Toggle.addEventListener("change", async () => {
+  cm6Toggle?.addEventListener("change", async () => {
     currentSettings.enableCodeMirror6 = cm6Toggle.checked;
     await saveSettings({ enableCodeMirror6: currentSettings.enableCodeMirror6 });
   });
 
-  whichkeyToggle.addEventListener("change", async () => {
+  whichkeyToggle?.addEventListener("change", async () => {
     currentSettings.showWhichKey = whichkeyToggle.checked;
     await saveSettings({ showWhichKey: currentSettings.showWhichKey });
   });
 
-  btnOptions.addEventListener("click", () => {
-    if (browserAPI?.runtime?.openOptionsPage) {
+  btnOptions?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (typeof chrome !== "undefined" && chrome.runtime?.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    } else if (browserAPI?.runtime?.openOptionsPage) {
       browserAPI.runtime.openOptionsPage();
     } else {
       window.open("../options/index.html", "_blank");
     }
   });
 
-  btnDemo.addEventListener("click", () => {
-    if (browserAPI?.tabs?.create) {
-      browserAPI.tabs.create({ url: browserAPI.runtime.getURL("demo/index.html") });
+  btnDemo?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const demoUrl = typeof chrome !== "undefined" && chrome.runtime?.getURL
+      ? chrome.runtime.getURL("demo/index.html")
+      : browserAPI?.runtime?.getURL
+      ? browserAPI.runtime.getURL("demo/index.html")
+      : "../demo/index.html";
+
+    if (typeof chrome !== "undefined" && chrome.tabs?.create) {
+      chrome.tabs.create({ url: demoUrl });
+    } else if (browserAPI?.tabs?.create) {
+      browserAPI.tabs.create({ url: demoUrl });
     } else {
-      window.open("../demo/index.html", "_blank");
+      window.open(demoUrl, "_blank");
     }
   });
 }
 
 function updateStatusBadge(enabled: boolean): void {
   const globalStatus = document.getElementById("global-status") as HTMLElement;
+  if (!globalStatus) return;
   if (enabled) {
-    globalStatus.textContent = "ACTIVE";
+    globalStatus.textContent = "ON";
     globalStatus.classList.remove("disabled");
   } else {
-    globalStatus.textContent = "DISABLED";
+    globalStatus.textContent = "OFF";
     globalStatus.classList.add("disabled");
   }
-}
-
-function setupScratchpad(): void {
-  const scratchpad = document.getElementById("scratchpad") as HTMLTextAreaElement;
-  const modeBadge = document.getElementById("scratch-mode") as HTMLElement;
-  if (!scratchpad || !modeBadge) return;
-
-  const adapter = new TextareaAdapter(scratchpad);
-  const prompts = new KakounePromptController();
-  const processor = new KakouneKeyProcessor(buildKakouneBindings(prompts));
-  adapter.setMode("select");
-
-  const updateBadge = () => {
-    const mode = adapter.getMode();
-    const pending = processor.getPending().join("");
-    modeBadge.textContent = (mode.toUpperCase() + (pending ? ` ${pending}` : ""));
-    modeBadge.style.background = mode === "select" ? "var(--accent)" : "var(--accent-secondary)";
-  };
-
-  scratchpad.addEventListener("beforeinput", event => {
-    if (adapter.getMode() === "select" || prompts.isActive()) {
-      event.preventDefault();
-    }
-  });
-
-  scratchpad.addEventListener("keydown", event => {
-    const key = normalizeKeyStroke(event);
-    if (!key) return;
-
-    if (prompts.isActive()) {
-      const handled = prompts.handleKey(adapter, key);
-      updateBadge();
-      if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      return;
-    }
-
-    const mode = adapter.getMode();
-    if (mode === "insert") {
-      if (key === "<Esc>") {
-        adapter.setMode("select");
-        updateBadge();
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      return;
-    }
-
-    if (key === "<Esc>") {
-      processor.reset();
-      updateBadge();
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    const handled = processor.handle(mode, key, adapter);
-    updateBadge();
-
-    if (handled) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    if (mode === "select" && (key.length === 1 || key === "<Enter>" || key === "<Backspace>")) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  });
 }
 
 document.addEventListener("DOMContentLoaded", initPopup);

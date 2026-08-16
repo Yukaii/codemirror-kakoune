@@ -5,8 +5,13 @@ import type { KakouneMode } from "kakoune-core-js";
 
 let currentSettings: ExtensionSettings;
 
+function applyTheme(theme: ExtensionTheme): void {
+  document.documentElement.dataset.theme = theme;
+}
+
 async function initOptions(): Promise<void> {
   currentSettings = await loadSettings();
+  applyTheme(currentSettings.theme);
   setupTabs();
   bindFormControls();
   setupSearchFilter();
@@ -87,7 +92,11 @@ function bindFormControls(): void {
   btnReset.addEventListener("click", async () => {
     if (confirm("Reset all browser-kakoune settings to defaults?")) {
       currentSettings = await saveSettings(DEFAULT_SETTINGS);
-      populate(currentSettings);
+  populate(currentSettings);
+
+  optTheme?.addEventListener("change", () => {
+    applyTheme(optTheme.value as ExtensionTheme);
+  });
       showToast("Reset to default settings.");
     }
   });

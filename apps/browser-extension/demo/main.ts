@@ -6,7 +6,12 @@ import CodeMirror5 from "codemirror";
 import { kakoune as kakouneCm5 } from "codemirror-kakoune-cm5";
 import { TextareaAdapter } from "../src/adapter/textarea";
 import { buildKakouneBindings } from "../src/adapter/bindings";
+import { loadSettings } from "../src/storage";
 import { KakouneKeyProcessor, KakounePromptController, normalizeKeyStroke, type KakouneMode } from "kakoune-core-js";
+
+function applyTheme(theme: string): void {
+  document.documentElement.dataset.theme = theme;
+}
 
 function log(msg: string, isStroke = false): void {
   const container = document.getElementById("event-log");
@@ -216,7 +221,10 @@ function initCM5(): void {
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  const settings = await loadSettings();
+  applyTheme(settings.theme);
+
   initTextarea();
   initInput();
   initCM6();
