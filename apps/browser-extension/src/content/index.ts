@@ -2,14 +2,13 @@ import {
   normalizeKeyStroke,
   KakounePromptController,
   KakouneKeyProcessor,
-  type KakouneMode,
-  type KakounePromptState,
-  type WhichKeyItem
+  type KakouneMode
 } from "kakoune-core-js";
 import { TextareaAdapter, type TextInputElement } from "../adapter/textarea";
 import { buildKakouneBindings } from "../adapter/bindings";
 import { detectCM5, attachCM5Kakoune } from "../adapter/cm5";
 import { detectCM6 } from "../adapter/cm6";
+import { CM6OverlayEditor } from "../adapter/cm6-overlay";
 import { OverlayController } from "../ui/overlay";
 import { isDomainEnabled, loadSettings } from "../storage";
 import { browserAPI } from "../browser-api";
@@ -19,6 +18,7 @@ class ContentScriptManager {
   private settings: ExtensionSettings | null = null;
   private overlay: OverlayController | null = null;
   private activeElement: HTMLElement | null = null;
+  private activeOverlayEditor: CM6OverlayEditor | null = null;
   private activeAdapter: TextareaAdapter | null = null;
   private activeProcessor: KakouneKeyProcessor<TextareaAdapter> | null = null;
   private activePrompts: KakounePromptController | null = null;
@@ -53,7 +53,7 @@ class ContentScriptManager {
       }
     }, true);
 
-    document.addEventListener("focusout", event => {
+    document.addEventListener("focusout", () => {
       setTimeout(() => {
         if (!document.activeElement || document.activeElement === document.body) {
           this.activeEngine = "none";
@@ -77,7 +77,12 @@ class ContentScriptManager {
       browserAPI.runtime.onMessage.addListener((message: MessageType, _sender, sendResponse) => {
         if (message.type === "GET_TAB_STATUS") {
           const isEnabled = this.settings ? isDomainEnabled(window.location.hostname, this.settings) : true;
-          const currentMode = this.activeAdapter ? this.activeAdapter.getMode() : this.settings?.defaultMode ?? "select";
+          const currentMode = this.activeOverlayEditor
+            ? this.activeOverlayEditor.getMode()
+            : this.activeAdapter
+            ? this.activeAdapter.getMode()
+            : this.settings?.defaultMode ?? "select";
+
           sendResponse({
             type: "TAB_STATUS_RESPONSE",
             payload: {
@@ -104,16 +109,30 @@ class ContentScriptManager {
   }
 
   private toggleOnActiveElement(): void {
-    if (!this.activeAdapter) return;
-    const current = this.activeAdapter.getMode();
-    const next: KakouneMode = current === "select" ? "insert" : "select";
-    this.activeAdapter.setMode(next);
-    this.updateUI();
+    if (this.activeOverlayEditor) {
+      const current = this.activeOverlayEditor.getMode();
+      const next: KakouneMode = current === "select" ? "insert" : "select";
+      this.activeOverlayEditor.setMode(next);
+      this.updateUI();
+      return;
+    }
+
+    if (this.activeAdapter) {
+      const current = this.activeAdapter.getMode();
+      const next: KakouneMode = current === "select" ? "insert" : "select";
+      this.activeAdapter.setMode(next);
+      this.updateUI();
+    }
   }
 
   private handleFocus(element: HTMLElement): void {
     if (!this.settings || !isDomainEnabled(window.location.hostname, this.settings)) {
       this.overlay?.hide();
+      return;
+    }
+
+    // If focus is inside our own CM6 overlay editor, keep active
+    if (element.closest(".kakoune-cm6-overlay-wrapper")) {
       return;
     }
 
@@ -140,7 +159,7 @@ class ContentScriptManager {
       }
     }
 
-    // 2. Check CodeMirror 6
+    // 2. Check native CodeMirror 6
     if (this.settings.enableCodeMirror6) {
       const cm6 = detectCM6(element);
       if (cm6) {
@@ -158,11 +177,58 @@ class ContentScriptManager {
       }
     }
 
-    // 3. Check Textarea or Text Input
-    if (this.settings.enableTextareas && this.isTextInput(element)) {
+    // 3. Check Textarea -> In-place CodeMirror 6 swap!
+    if (this.settings.enableTextareas && element.tagName === "TEXTAREA") {
+      const textarea = element as HTMLTextAreaElement;
       this.activeEngine = "textarea";
       this.activeElement = element;
-      this.attachTextarea(element as TextInputElement);
+
+      if (!this.activeOverlayEditor || (element as any).__kakoune_overlay !== this.activeOverlayEditor) {
+        const overlay = new CM6OverlayEditor(textarea, {
+          initialMode: this.settings.defaultMode,
+          onWhichKey: (pending, items) => {
+            this.overlay?.render({
+              mode: overlay.getMode(),
+              pendingKeys: pending,
+              pendingItems: items,
+              prompt: null,
+              promptError: null,
+              engine: "textarea"
+            });
+          },
+          onModeChange: mode => {
+            this.overlay?.render({
+              mode,
+              pendingKeys: [],
+              pendingItems: [],
+              prompt: null,
+              promptError: null,
+              engine: "textarea"
+            });
+          }
+        });
+
+        (element as any).__kakoune_overlay = overlay;
+        this.activeOverlayEditor = overlay;
+        overlay.focus();
+      }
+
+      this.overlay?.render({
+        mode: this.activeOverlayEditor.getMode(),
+        pendingKeys: [],
+        pendingItems: [],
+        prompt: null,
+        promptError: null,
+        engine: "textarea"
+      });
+      return;
+    }
+
+    // 4. Check Single-line text input
+    if (this.settings.enableTextareas && element.tagName === "INPUT" && this.isTextInput(element)) {
+      this.activeEngine = "textarea";
+      this.activeElement = element;
+      this.attachTextInput(element as TextInputElement);
       return;
     }
 
@@ -180,7 +246,7 @@ class ContentScriptManager {
     return false;
   }
 
-  private attachTextarea(el: TextInputElement): void {
+  private attachTextInput(el: TextInputElement): void {
     let adapter: TextareaAdapter;
     let processor: KakouneKeyProcessor<TextareaAdapter>;
     let prompts: KakounePromptController;
@@ -199,7 +265,7 @@ class ContentScriptManager {
       (el as any).__kakoune_instance = { adapter, processor, prompts };
       this.attachedElements.add(el);
 
-      this.wireTextareaListeners(el, adapter, processor, prompts);
+      this.wireTextInputListeners(el, adapter, processor, prompts);
     }
 
     this.activeAdapter = adapter;
@@ -209,13 +275,12 @@ class ContentScriptManager {
     this.updateUI();
   }
 
-  private wireTextareaListeners(
+  private wireTextInputListeners(
     el: TextInputElement,
     adapter: TextareaAdapter,
     processor: KakouneKeyProcessor<TextareaAdapter>,
     prompts: KakounePromptController
   ): void {
-    // Intercept input in select mode
     el.addEventListener("beforeinput", event => {
       if (!this.settings || !isDomainEnabled(window.location.hostname, this.settings)) return;
       const mode = adapter.getMode();
@@ -231,7 +296,6 @@ class ContentScriptManager {
       const key = normalizeKeyStroke(event);
       if (!key) return;
 
-      // Handle active prompt (s / S regex)
       if (prompts.isActive()) {
         const handled = prompts.handleKey(adapter, key);
         this.updateUI();
@@ -244,7 +308,6 @@ class ContentScriptManager {
 
       const mode = adapter.getMode();
 
-      // In insert mode: allow normal typing, only intercept <Esc> or handle multi-cursor typing
       if (mode === "insert") {
         if (key === "<Esc>") {
           adapter.setMode("select");
@@ -254,17 +317,9 @@ class ContentScriptManager {
           return;
         }
 
-        // Multi-cursor simultaneous typing
         if (adapter.getSelections().length > 1) {
           if (key === "<Backspace>") {
             adapter.backspaceAtAllSelections();
-            this.updateUI();
-            event.preventDefault();
-            event.stopPropagation();
-            return;
-          }
-          if (key === "<Enter>") {
-            adapter.insertTextAtAllSelections("\n");
             this.updateUI();
             event.preventDefault();
             event.stopPropagation();
@@ -281,7 +336,6 @@ class ContentScriptManager {
         return;
       }
 
-      // In select mode:
       if (key === "<Esc>") {
         processor.reset();
         this.updateUI();
@@ -299,7 +353,6 @@ class ContentScriptManager {
         return;
       }
 
-      // Block unhandled single characters or backspace/enter from modifying document in select mode
       if (mode === "select" && (key.length === 1 || key === "<Enter>" || key === "<Backspace>")) {
         event.preventDefault();
         event.stopPropagation();
@@ -313,6 +366,18 @@ class ContentScriptManager {
 
   private updateUI(): void {
     if (!this.overlay || !this.settings) return;
+
+    if (this.activeOverlayEditor) {
+      this.overlay.render({
+        mode: this.activeOverlayEditor.getMode(),
+        pendingKeys: [],
+        pendingItems: [],
+        prompt: null,
+        promptError: null,
+        engine: "textarea"
+      });
+      return;
+    }
 
     if (this.activeEngine === "none" || !this.activeAdapter) {
       this.overlay.hide();
@@ -332,6 +397,5 @@ class ContentScriptManager {
   }
 }
 
-// Instantiate and start manager
 const manager = new ContentScriptManager();
 manager.init().catch(err => console.error("[Kakoune Extension] Content script init failed:", err));

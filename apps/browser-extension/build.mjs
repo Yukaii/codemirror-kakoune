@@ -16,8 +16,10 @@ const aliases = {
 function ensureUtf8(filePath) {
   if (existsSync(filePath)) {
     const raw = readFileSync(filePath, "utf8");
-    // Strip BOM if present and re-write clean UTF-8
-    const clean = raw.replace(/^\uFEFF/, "");
+    // Strip BOM and escape any non-ASCII characters as \uXXXX to guarantee 100% clean UTF-8
+    const clean = raw.replace(/^\uFEFF/, "").replace(/[\u0080-\uFFFF]/g, ch => {
+      return "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0");
+    });
     writeFileSync(filePath, clean, { encoding: "utf8" });
   }
 }
@@ -29,7 +31,7 @@ async function buildAll() {
     configFile: false,
     resolve: { alias: aliases },
     esbuild: {
-      charset: "utf8"
+      charset: "ascii"
     },
     build: {
       outDir,
@@ -50,7 +52,7 @@ async function buildAll() {
     configFile: false,
     resolve: { alias: aliases },
     esbuild: {
-      charset: "utf8"
+      charset: "ascii"
     },
     build: {
       outDir,
@@ -73,7 +75,7 @@ async function buildAll() {
     configFile: false,
     resolve: { alias: aliases },
     esbuild: {
-      charset: "utf8"
+      charset: "ascii"
     },
     build: {
       outDir,
