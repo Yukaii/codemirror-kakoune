@@ -1,37 +1,8 @@
-import { EditorView } from "@codemirror/view";
-import { Cm6Adapter, kakouneStateField } from "codemirror-kakoune";
-import type { KakouneMode, KakounePromptState, WhichKeyItem } from "kakoune-core-js";
-
-export function detectCM6(element: HTMLElement): EditorView | null {
-  // 1. Try EditorView.findFromDOM
-  try {
-    const view = EditorView.findFromDOM(element);
-    if (view) return view;
-  } catch {
-    // Ignore
+export function detectCM6(element: HTMLElement): HTMLElement | null {
+  if (element.classList.contains("cm-content") || element.closest(".cm-content")) {
+    return (element.closest(".cm-editor") || element.closest(".cm-content") || element) as HTMLElement;
   }
-
-  // 2. Look for .cm-editor or .cm-content
-  const cmEditor = element.closest(".cm-editor") || (element.classList.contains("cm-editor") ? element : null);
-  if (cmEditor) {
-    // Check known internal properties
-    const cmView = (cmEditor as any).cmView;
-    if (cmView && cmView.view instanceof EditorView) {
-      return cmView.view;
-    }
-    const content = cmEditor.querySelector(".cm-content");
-    if (content && (content as any).cmView && (content as any).cmView.view instanceof EditorView) {
-      return (content as any).cmView.view;
-    }
-  }
-
+  const editor = element.closest(".cm-editor");
+  if (editor) return editor as HTMLElement;
   return null;
-}
-
-export function isCM6KakouneActive(view: EditorView): boolean {
-  try {
-    return Boolean(view.state.field(kakouneStateField, false));
-  } catch {
-    return false;
-  }
 }

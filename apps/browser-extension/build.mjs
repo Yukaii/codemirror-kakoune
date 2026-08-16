@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { build } from "vite";
 
@@ -13,12 +13,24 @@ const aliases = {
   "kakoune-core-js": resolve(root, "../../packages/kakoune-core/src")
 };
 
+function ensureUtf8(filePath) {
+  if (existsSync(filePath)) {
+    const raw = readFileSync(filePath, "utf8");
+    // Strip BOM if present and re-write clean UTF-8
+    const clean = raw.replace(/^\uFEFF/, "");
+    writeFileSync(filePath, clean, { encoding: "utf8" });
+  }
+}
+
 async function buildAll() {
   console.log("[build] 1/3 Building popup, options, and demo pages...");
   await build({
     root,
     configFile: false,
     resolve: { alias: aliases },
+    esbuild: {
+      charset: "utf8"
+    },
     build: {
       outDir,
       emptyOutDir: true,
@@ -37,6 +49,9 @@ async function buildAll() {
     root,
     configFile: false,
     resolve: { alias: aliases },
+    esbuild: {
+      charset: "utf8"
+    },
     build: {
       outDir,
       emptyOutDir: false,
@@ -57,6 +72,9 @@ async function buildAll() {
     root,
     configFile: false,
     resolve: { alias: aliases },
+    esbuild: {
+      charset: "utf8"
+    },
     build: {
       outDir,
       emptyOutDir: false,
@@ -79,6 +97,11 @@ async function buildAll() {
     copyFileSync(manifestSrc, manifestDest);
     console.log("[build] Copied manifest.json to dist/");
   }
+
+  // Ensure all output files are clean UTF-8
+  ensureUtf8(resolve(outDir, "content.js"));
+  ensureUtf8(resolve(outDir, "background.js"));
+  ensureUtf8(resolve(outDir, "manifest.json"));
 
   console.log("[build] Browser extension build complete!");
 }
