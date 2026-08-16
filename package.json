@@ -19,9 +19,13 @@
     "sync:obsidian": "node scripts/sync-obsidian-version.mjs",
     "version": "node scripts/sync-jsr-version.mjs && git add packages/codemirror-kakoune/jsr.json packages/kakoune-core/jsr.json packages/codemirror-kakoune-cm5/jsr.json packages/kakoune-core/package.json packages/codemirror-kakoune-cm5/package.json",
     "probe:parity": "pnpm --filter codemirror-kakoune probe:parity",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:obsidian": "eslint ."
   },
   "devDependencies": {
+    "eslint": "^9.20.0",
+    "eslint-plugin-obsidianmd": "^0.4.1",
     "typescript": "^6.0.3"
   }
 }

@@ -1,4 +1,4 @@
-/* eslint-disable obsidianmd/prefer-create-el */
+import "./dom-helpers";
 import { EditorView, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightActiveLine, keymap } from "@codemirror/view";
 import { Compartment, EditorState } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
@@ -246,18 +246,6 @@ const initialFontSize: FontSize = isFontSize(window.localStorage.getItem(fontSiz
   ? window.localStorage.getItem(fontSizeStorageKey) as FontSize
   : "medium";
 
-function createChild<K extends keyof HTMLElementTagNameMap>(
-  parent: HTMLElement,
-  tag: K,
-  options?: { cls?: string; text?: string }
-): HTMLElementTagNameMap[K] {
-  const el = parent.ownerDocument.createElement(tag);
-  if (options?.cls) el.className = options.cls;
-  if (options?.text !== undefined) el.textContent = options.text;
-  parent.appendChild(el);
-  return el;
-}
-
 const view = new EditorView({
   state: EditorState.create({
     doc: [
@@ -319,10 +307,10 @@ const view = new EditorView({
 
           hudItems.replaceChildren();
           for (const item of items) {
-            const el = createChild(hudItems, "div", { cls: "hud-item" });
+            const el = hudItems.createDiv({ cls: "hud-item" });
             const remainingKeys = item.keys.slice(pending.length);
-            createChild(el, "span", { cls: "hud-key", text: remainingKeys.join(" ") });
-            createChild(el, "span", { cls: "hud-desc", text: item.description || "" });
+            el.createSpan({ cls: "hud-key", text: remainingKeys.join(" ") });
+            el.createSpan({ cls: "hud-desc", text: item.description || "" });
           }
         }
       }),
@@ -548,9 +536,10 @@ vk.addEventListener("pointerdown", (e) => {
 // Remove press state on pointer up / cancel
 function clearPressed() {
   if (!vk) return;
-  for (const el of vk.querySelectorAll(".vk-key.pressed")) {
+  const elements = vk.querySelectorAll<HTMLElement>(".vk-key.pressed");
+  elements.forEach(el => {
     el.classList.remove("pressed");
-  }
+  });
 }
 document.addEventListener("pointerup", clearPressed);
 document.addEventListener("pointercancel", clearPressed);
