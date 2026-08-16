@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "jest --runInBand"
   },
