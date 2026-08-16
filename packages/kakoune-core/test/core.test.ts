@@ -21,6 +21,7 @@ import {
   selectAll,
   deleteSelection,
   selectLine,
+  joinLines,
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
@@ -367,5 +368,15 @@ describe("KakounePromptController", () => {
     prompts.handleKey(editor, "<Enter>");
     expect(prompts.getError()).toBe("'split': empty regex");
     expect(editor.getSelections()).toEqual(original);
+  });
+
+  it("joins lines (<a-j> and <a-J>)", () => {
+    const editor = new MemoryEditor("first line\n  second line\n    third line", [{ anchor: 0, head: 0 }]);
+    joinLines(editor, false);
+    expect(editor.getDoc()).toBe("first line second line\n    third line");
+
+    selectAll(editor);
+    joinLines(editor, false);
+    expect(editor.getDoc()).toBe("first line second line third line");
   });
 });

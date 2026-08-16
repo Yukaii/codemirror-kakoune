@@ -48,6 +48,7 @@ export {
   jumpDocumentEnd,
   selectAll,
   selectLine,
+  joinLines,
   deleteSelection,
   yankSelection,
   undoEdit,

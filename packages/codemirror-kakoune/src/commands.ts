@@ -17,7 +17,8 @@ import {
   moveWordForwardRange as coreWordForward,
   selectWordBackward,
   selectWordEnd,
-  selectWordForward
+  selectWordForward,
+  joinLines
 } from "kakoune-core-js";
 import { withAdapter } from "./adapter";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, setSearchQuery } from "@codemirror/search";
@@ -2221,6 +2222,8 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["e"], run: (view, _arg, count) => withAdapter(view, editor => selectWordEnd(editor, count ?? 1)), description: "Move to word end" },
     { keys: ["E"], run: (view, _arg, count) => extendSelections(view, range => moveWordEndRange(view, range).head, count ?? 1), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
+    { keys: ["<A-j>"], run: view => withAdapter(view, editor => joinLines(editor, false)), description: "Join lines" },
+    { keys: ["<A-J>"], run: view => withAdapter(view, editor => joinLines(editor, true)), description: "Join lines and select spaces" },
     { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },

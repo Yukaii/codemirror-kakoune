@@ -16,6 +16,7 @@ import {
   extendWordEnd,
   selectLine,
   selectAll,
+  joinLines,
   deleteSelection,
   changeSelection,
   yankSelection,
@@ -218,5 +219,14 @@ describe("TextareaAdapter with kakoune-core-js", () => {
 
     adapter.redoSelection();
     expect(adapter.getSelections()).toEqual([{ anchor: 6, head: 11 }]);
+  });
+
+  it("handles joining lines (<A-j>)", () => {
+    const el = createTextarea("hello\n  world");
+    const adapter = new TextareaAdapter(el);
+
+    adapter.setSelections([{ anchor: 0, head: 0 }]);
+    joinLines(adapter);
+    expect(adapter.getDoc()).toBe("hello world");
   });
 });

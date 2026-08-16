@@ -298,6 +298,61 @@ export function changeSelection(editor: EditorHost): boolean {
   return setMode(editor, "insert");
 }
 
+export function joinLines(editor: EditorHost, selectSpaces = false): boolean {
+  const doc = editor.getDoc();
+  const lineCount = editor.getLineCount();
+  const selections = editor.getSelections();
+  if (lineCount <= 1) return false;
+
+  const joinSpans: Array<{ from: number; to: number }> = [];
+
+  for (const sel of selections) {
+    const minPos = Math.min(sel.anchor, sel.head);
+    const maxPos = Math.max(sel.anchor, sel.head);
+    const minLine = editor.lineAt(minPos).number;
+    const maxLine = editor.lineAt(maxPos).number;
+    const endLine = Math.min(lineCount, maxLine + (minLine === maxLine ? 1 : 0));
+
+    for (let l = minLine; l < endLine; l++) {
+      const lineInfo = editor.line(l);
+      const newlinePos = lineInfo.to;
+      if (newlinePos >= doc.length || doc[newlinePos] !== "\n") continue;
+
+      let endPos = newlinePos + 1;
+      while (endPos < doc.length && (doc[endPos] === " " || doc[endPos] === "\t")) {
+        endPos++;
+      }
+
+      joinSpans.push({ from: newlinePos, to: endPos });
+    }
+  }
+
+  if (joinSpans.length === 0) return false;
+
+  const unique = Array.from(new Map(joinSpans.map(s => [`${s.from}:${s.to}`, s])).values())
+    .sort((a, b) => b.from - a.from);
+
+  for (const span of unique) {
+    editor.replaceRange(span.from, span.to, " ");
+  }
+
+  if (selectSpaces) {
+    const spaceSelections: SelectionRange[] = [];
+    const ascending = [...unique].reverse();
+    let delta = 0;
+    for (const span of ascending) {
+      const pos = span.from + delta;
+      spaceSelections.push({ anchor: pos, head: pos + 1 });
+      delta += 1 - (span.to - span.from);
+    }
+    if (spaceSelections.length > 0) {
+      editor.setSelections(spaceSelections, 0);
+    }
+  }
+
+  return true;
+}
+
 export const portableCommands = {
   setMode,
   moveLeft,
@@ -325,6 +380,7 @@ export const portableCommands = {
   jumpDocumentEnd,
   selectAll,
   selectLine,
+  joinLines,
   deleteSelection,
   yankSelection,
   undoEdit,

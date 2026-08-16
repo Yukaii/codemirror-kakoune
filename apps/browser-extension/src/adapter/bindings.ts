@@ -31,6 +31,7 @@ import {
   redoEdit,
   selectAll,
   selectLine,
+  joinLines,
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
@@ -171,6 +172,8 @@ export function buildKakouneBindings<T extends EditorHost>(
       // Selections & Prompts
       bind(["x"], editor => selectLine(editor), "Select line"),
       bind(["%"], editor => selectAll(editor), "Select all"),
+      bind(["<A-j>"], editor => joinLines(editor, false), "Join lines"),
+      bind(["<A-J>"], editor => joinLines(editor, true), "Join lines and select spaces"),
       bind(["s"], editor => prompts.open("select", editor), "Select regex matches"),
       bind(["S"], editor => prompts.open("split", editor), "Split selection on regex matches"),
 
