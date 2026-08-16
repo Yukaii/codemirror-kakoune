@@ -78,7 +78,6 @@ export class KakouneKeyProcessor {
   private count: number | null = null;
   private lastInsertKeys: string[] = [];
   private currentInsertKeys: string[] = [];
-  private handleDepth = 0;
   private replayingInsert = false;
   private temporaryNormal = false;
   private temporaryNormalSelection: Array<{ anchor: number; head: number }> | null = null;

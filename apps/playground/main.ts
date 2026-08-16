@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/prefer-create-el */
 import { EditorView, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightActiveLine, keymap } from "@codemirror/view";
 import { Compartment, EditorState } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
@@ -316,7 +317,7 @@ const view = new EditorView({
             hudPrompt.classList.add("hidden");
           }
 
-          hudItems.innerHTML = "";
+          hudItems.replaceChildren();
           for (const item of items) {
             const el = createChild(hudItems, "div", { cls: "hud-item" });
             const remainingKeys = item.keys.slice(pending.length);
