@@ -22,9 +22,15 @@ const cm5Jsr = JSON.parse(readFileSync(cm5JsrPath, "utf8"));
 const rootPkg = JSON.parse(readFileSync(rootPkgPath, "utf8"));
 
 jsr.version = pkg.version;
+if (jsr.imports?.["kakoune-core-js"]) {
+  jsr.imports["kakoune-core-js"] = `jsr:@ykmade/kakoune-core-js@^${pkg.version}`;
+}
 corePkg.version = pkg.version;
 coreJsr.version = pkg.version;
 cm5Pkg.version = pkg.version;
+if (cm5Jsr.imports?.["kakoune-core-js"]) {
+  cm5Jsr.imports["kakoune-core-js"] = `jsr:@ykmade/kakoune-core-js@^${pkg.version}`;
+}
 cm5Jsr.version = pkg.version;
 rootPkg.version = pkg.version;
 

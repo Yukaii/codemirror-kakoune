@@ -3,6 +3,9 @@
   "version": "0.4.2",
   "license": "MIT",
   "exports": "./src/index.ts",
+  "imports": {
+    "kakoune-core-js": "jsr:@ykmade/kakoune-core-js@^0.4.2"
+  },
   "publish": {
     "include": [
       "src",
