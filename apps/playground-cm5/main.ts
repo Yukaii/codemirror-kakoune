@@ -1,6 +1,8 @@
 import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
-import "codemirror/mode/markdown/markdown";
+import "codemirror/mode/javascript/javascript";
+import "codemirror/addon/edit/matchbrackets";
+import "codemirror/addon/edit/closebrackets";
 import { kakoune } from "codemirror-kakoune-cm5";
 import { attachVirtualKeyboard } from "./virtual-keyboard";
 import "./style.css";
@@ -10,7 +12,9 @@ if (!textarea) throw new Error("CM5 playground editor is missing.");
 
 const editor = CodeMirror.fromTextArea(textarea, {
   lineNumbers: true,
-  mode: "markdown",
+  mode: "javascript",
+  matchBrackets: true,
+  autoCloseBrackets: true,
   lineWrapping: true,
   viewportMargin: Infinity
 });

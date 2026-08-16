@@ -27,7 +27,10 @@ html, body { overflow-x: hidden; }
   border-right: 1px solid var(--panel-border);
 }
 
-.CodeMirror-linenumber { color: var(--muted); }
+.CodeMirror-linenumber {
+  color: var(--muted);
+  font-size: 12px;
+}
 
 .CodeMirror-cursor {
   border-left: 1px solid var(--accent);
@@ -69,6 +72,35 @@ html, body { overflow-x: hidden; }
 .CodeMirror-line > span > span::-moz-selection {
   background: var(--selection);
 }
+
+.CodeMirror-activeline-background {
+  background: var(--active-line);
+}
+
+.CodeMirror-matchingbracket {
+  color: var(--accent) !important;
+  background: var(--active-line);
+  font-weight: bold;
+}
+
+/* CodeMirror 5 Syntax Highlighting matching CM6 Themes */
+.CodeMirror .cm-keyword { color: var(--syntax-keyword); font-weight: 600; }
+.CodeMirror .cm-def { color: var(--syntax-def); }
+.CodeMirror .cm-variable { color: var(--syntax-variable); }
+.CodeMirror .cm-variable-2 { color: var(--syntax-variable); }
+.CodeMirror .cm-variable-3, .CodeMirror .cm-type { color: var(--syntax-type); }
+.CodeMirror .cm-property { color: var(--syntax-property); }
+.CodeMirror .cm-string, .CodeMirror .cm-string-2 { color: var(--syntax-string); }
+.CodeMirror .cm-number, .CodeMirror .cm-atom { color: var(--syntax-number); }
+.CodeMirror .cm-comment { color: var(--syntax-comment); font-style: italic; }
+.CodeMirror .cm-operator { color: var(--syntax-operator); }
+.CodeMirror .cm-punctuation, .CodeMirror .cm-bracket { color: var(--muted); }
+.CodeMirror .cm-qualifier, .CodeMirror .cm-builtin { color: var(--syntax-type); }
+.CodeMirror .cm-tag { color: var(--syntax-keyword); }
+.CodeMirror .cm-attribute { color: var(--syntax-property); }
+.CodeMirror .cm-header { color: var(--syntax-keyword); font-weight: bold; }
+.CodeMirror .cm-link { color: var(--accent); text-decoration: underline; }
+.CodeMirror .cm-error { color: #ff6b6b; }
 
 @media (max-width: 768px) {
   .CodeMirror { font-size: 16px; }

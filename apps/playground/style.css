@@ -10,6 +10,17 @@
   --selection: rgba(138, 212, 255, 0.22);
   --active-line: rgba(255, 255, 255, 0.04);
   --shadow: rgba(0, 0, 0, 0.24);
+  --syntax-keyword: #8ad4ff;
+  --syntax-string: #b4f0a7;
+  --syntax-comment: #7d8794;
+  --syntax-number: #f4d19a;
+  --syntax-variable: #e8ebf0;
+  --syntax-property: #9ee6d0;
+  --syntax-type: #f0b6ff;
+  --syntax-function: #d9b8ff;
+  --syntax-def: #d9b8ff;
+  --syntax-operator: #8ad4ff;
+  --syntax-atom: #f4d19a;
 }
 
 body[data-theme="paper"] {
@@ -24,6 +35,17 @@ body[data-theme="paper"] {
   --selection: rgba(47, 111, 143, 0.18);
   --active-line: rgba(36, 48, 65, 0.04);
   --shadow: rgba(36, 48, 65, 0.06);
+  --syntax-keyword: #2f6f8f;
+  --syntax-string: #7a8f4f;
+  --syntax-comment: #8b7d6a;
+  --syntax-number: #a15c2f;
+  --syntax-variable: #243041;
+  --syntax-property: #5e6f88;
+  --syntax-type: #7c4fb2;
+  --syntax-function: #4e6cb6;
+  --syntax-def: #4e6cb6;
+  --syntax-operator: #2f6f8f;
+  --syntax-atom: #a15c2f;
 }
 
 body[data-theme="sepia"] {
@@ -38,6 +60,17 @@ body[data-theme="sepia"] {
   --selection: rgba(139, 94, 52, 0.18);
   --active-line: rgba(62, 47, 32, 0.04);
   --shadow: rgba(62, 47, 32, 0.08);
+  --syntax-keyword: #8b5e34;
+  --syntax-string: #7f8a49;
+  --syntax-comment: #9a8a78;
+  --syntax-number: #9a5b2f;
+  --syntax-variable: #3e2f20;
+  --syntax-property: #7a5e45;
+  --syntax-type: #7c5f9c;
+  --syntax-function: #5f6f9d;
+  --syntax-def: #5f6f9d;
+  --syntax-operator: #8b5e34;
+  --syntax-atom: #9a5b2f;
 }
 
 body[data-theme="night"] {

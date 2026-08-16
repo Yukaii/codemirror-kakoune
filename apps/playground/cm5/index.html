@@ -43,15 +43,17 @@
       </header>
 
       <div id="editor">
-        <textarea id="editor-input"># Welcome to the CodeMirror 5 Kakoune playground
+        <textarea id="editor-input">function renderGreeting(name) {
+  const greeting = `Hello, ${name}!`;
+  console.log(greeting);
+  return greeting;
+}
 
-Move with **h**, **j**, **k**, **l**, and extend with **H**, **J**, **K**, **L**. Word motions use **w**, **b**, **e** and **W**, **B**, **E**. Capital **G** starts document/line extension commands. Press **x** to select a line, **d** to delete, **i** or **a** to insert, and **Esc** to return to normal mode.
-
-This playground uses the CodeMirror 5 adapter over the shared `kakoune-core` engine.</textarea>
+// Kakoune playground sample
+renderGreeting("CodeMirror");</textarea>
         <div id="which-key-hud" class="hidden"><div class="hud-header"><span id="hud-title" class="hud-title">which-key</span><span id="hud-prompt" class="hud-prompt hidden"></span></div><div class="hud-items"></div></div>
       </div>
 
-      <div class="hint">Normal mode: <strong>h j k l</strong> move, <strong>H J K L</strong> extend, <strong>s</strong> selects matches, <strong>S</strong> splits. Insert mode: <strong>i</strong> or <strong>a</strong>, then <strong>Esc</strong>.</div>
       <footer class="footer"><span>inspired by <a href="https://kakoune.org" target="_blank" rel="noopener noreferrer">kakoune</a>, built on <a href="https://codemirror.net/5/" target="_blank" rel="noopener noreferrer">CodeMirror 5</a></span></footer>
     </main>
     <nav id="vk" class="vk" aria-label="Virtual keyboard">
