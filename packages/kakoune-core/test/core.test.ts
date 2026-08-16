@@ -1,6 +1,16 @@
 import {
   KakouneKeyProcessor,
   enterInsert,
+  extendDown,
+  extendDocumentEnd,
+  extendDocumentStart,
+  extendLeft,
+  extendLineEnd,
+  extendRight,
+  extendToLine,
+  extendUp,
+  extendWordBackward,
+  extendWordForward,
   moveDown,
   moveLeft,
   moveRight,
@@ -116,6 +126,36 @@ describe("portable motion commands", () => {
       { anchor: 9, head: 9 }
     ]);
     expect(editor.getMode()).toBe("insert");
+  });
+
+  it("extends character, line, and word motions without moving the anchor", () => {
+    const editor = new MemoryEditor("alpha beta\ngamma", [{ anchor: 2, head: 2 }]);
+
+    extendRight(editor, 2);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 4 }]);
+    extendLeft(editor);
+    extendDown(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 14 }]);
+    extendUp(editor);
+    extendLineEnd(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 10 }]);
+
+    editor.setSelections([{ anchor: 0, head: 0 }]);
+    extendWordForward(editor, 2);
+    expect(editor.getSelections()).toEqual([{ anchor: 0, head: 11 }]);
+    extendWordBackward(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 0, head: 6 }]);
+  });
+
+  it("extends to counted lines and document boundaries", () => {
+    const editor = new MemoryEditor("one\ntwo\nthree", [{ anchor: 5, head: 5 }]);
+
+    extendToLine(editor, 3);
+    expect(editor.getSelections()).toEqual([{ anchor: 5, head: 8 }]);
+    extendDocumentStart(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 5, head: 0 }]);
+    extendDocumentEnd(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 5, head: 13 }]);
   });
 });
 

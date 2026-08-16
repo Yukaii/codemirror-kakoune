@@ -10,6 +10,8 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -19,8 +21,12 @@
     "codemirror": ">=5.0.0 <6"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/codemirror": "^5.60.16",
     "codemirror": "^5.65.20",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "ts-jest": "^29.4.11",
     "typescript": "^6.0.3"
   }
 }

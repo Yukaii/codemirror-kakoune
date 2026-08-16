@@ -30,6 +30,22 @@ export function moveSelections(
   return true;
 }
 
+export function extendSelections(
+  editor: EditorHost,
+  mapper: (range: SelectionRange) => number,
+  count = 1
+): boolean {
+  const ranges = editor.getSelections().map(range => {
+    let head = range.head;
+    for (let i = 0; i < count; i += 1) {
+      head = mapper({ anchor: range.anchor, head });
+    }
+    return { anchor: range.anchor, head };
+  });
+  editor.setSelections(ranges);
+  return true;
+}
+
 export function selectMapped(
   editor: EditorHost,
   mapper: (range: SelectionRange, doc: string) => SelectionRange,
@@ -65,6 +81,24 @@ export function moveUp(editor: EditorHost, count = 1): boolean {
   return moveSelections(editor, range => lineColumnPos(doc, range.head, -1), count);
 }
 
+export function extendLeft(editor: EditorHost, count = 1): boolean {
+  return extendSelections(editor, range => clamp(range.head - 1, 0, editor.getDocLength()), count);
+}
+
+export function extendRight(editor: EditorHost, count = 1): boolean {
+  return extendSelections(editor, range => clamp(range.head + 1, 0, editor.getDocLength()), count);
+}
+
+export function extendDown(editor: EditorHost, count = 1): boolean {
+  const doc = editor.getDoc();
+  return extendSelections(editor, range => lineColumnPos(doc, range.head, 1), count);
+}
+
+export function extendUp(editor: EditorHost, count = 1): boolean {
+  const doc = editor.getDoc();
+  return extendSelections(editor, range => lineColumnPos(doc, range.head, -1), count);
+}
+
 export function selectWordForward(editor: EditorHost, count = 1): boolean {
   return selectMapped(editor, (range, doc) => moveWordForwardRange(doc, range), count);
 }
@@ -77,12 +111,48 @@ export function selectWordEnd(editor: EditorHost, count = 1): boolean {
   return selectMapped(editor, (range, doc) => moveWordEndRange(doc, range), count);
 }
 
+export function extendWordForward(editor: EditorHost, count = 1): boolean {
+  const doc = editor.getDoc();
+  return extendSelections(editor, range => moveWordForwardRange(doc, range).head, count);
+}
+
+export function extendWordBackward(editor: EditorHost, count = 1): boolean {
+  const doc = editor.getDoc();
+  return extendSelections(editor, range => moveWordBackwardRange(doc, range).head, count);
+}
+
+export function extendWordEnd(editor: EditorHost, count = 1): boolean {
+  const doc = editor.getDoc();
+  return extendSelections(editor, range => moveWordEndRange(doc, range).head, count);
+}
+
 export function moveLineStart(editor: EditorHost): boolean {
   return moveSelections(editor, range => editor.lineAt(range.head).from);
 }
 
 export function moveLineEnd(editor: EditorHost): boolean {
   return moveSelections(editor, range => editor.lineAt(range.head).to);
+}
+
+export function extendLineStart(editor: EditorHost): boolean {
+  return extendSelections(editor, range => editor.lineAt(range.head).from);
+}
+
+export function extendLineEnd(editor: EditorHost): boolean {
+  return extendSelections(editor, range => editor.lineAt(range.head).to);
+}
+
+export function extendToLine(editor: EditorHost, lineNumber: number): boolean {
+  const targetLine = editor.line(clamp(lineNumber, 1, editor.getLineCount()));
+  return extendSelections(editor, () => targetLine.from);
+}
+
+export function extendDocumentStart(editor: EditorHost): boolean {
+  return extendSelections(editor, () => 0);
+}
+
+export function extendDocumentEnd(editor: EditorHost): boolean {
+  return extendSelections(editor, () => editor.getDocLength());
 }
 
 export function jumpDocumentStart(editor: EditorHost): boolean {
@@ -208,11 +278,23 @@ export const portableCommands = {
   moveRight,
   moveDown,
   moveUp,
+  extendLeft,
+  extendRight,
+  extendDown,
+  extendUp,
   selectWordForward,
   selectWordBackward,
   selectWordEnd,
+  extendWordForward,
+  extendWordBackward,
+  extendWordEnd,
   moveLineStart,
   moveLineEnd,
+  extendLineStart,
+  extendLineEnd,
+  extendToLine,
+  extendDocumentStart,
+  extendDocumentEnd,
   jumpDocumentStart,
   jumpDocumentEnd,
   selectLine,

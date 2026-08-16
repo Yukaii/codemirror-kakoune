@@ -6,6 +6,18 @@ import {
   enterInsert,
   enterInsertLineEnd,
   enterInsertLineStart,
+  extendDown,
+  extendDocumentEnd,
+  extendDocumentStart,
+  extendLeft,
+  extendLineEnd,
+  extendLineStart,
+  extendRight,
+  extendToLine,
+  extendUp,
+  extendWordBackward,
+  extendWordEnd,
+  extendWordForward,
   jumpDocumentEnd,
   jumpDocumentStart,
   moveDown,
@@ -39,6 +51,8 @@ export interface KakouneCm5Options {
 
 type Cm = CodeMirror.Editor;
 
+const directEditOrigins = new Set(["+input", "+delete", "paste", "cut"]);
+
 function bind(keys: string[], run: KakouneBinding<Cm5Adapter>["run"], description: string): KakouneBinding<Cm5Adapter> {
   return { keys, run, description };
 }
@@ -50,9 +64,16 @@ function buildBindings(): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
       bind(["j"], (editor, _arg, count) => moveDown(editor, count ?? 1), "Move down"),
       bind(["k"], (editor, _arg, count) => moveUp(editor, count ?? 1), "Move up"),
       bind(["l"], (editor, _arg, count) => moveRight(editor, count ?? 1), "Move right"),
+      bind(["H"], (editor, _arg, count) => extendLeft(editor, count ?? 1), "Extend left"),
+      bind(["J"], (editor, _arg, count) => extendDown(editor, count ?? 1), "Extend down"),
+      bind(["K"], (editor, _arg, count) => extendUp(editor, count ?? 1), "Extend up"),
+      bind(["L"], (editor, _arg, count) => extendRight(editor, count ?? 1), "Extend right"),
       bind(["w"], (editor, _arg, count) => selectWordForward(editor, count ?? 1), "Select word forward"),
       bind(["b"], (editor, _arg, count) => selectWordBackward(editor, count ?? 1), "Select word backward"),
       bind(["e"], (editor, _arg, count) => selectWordEnd(editor, count ?? 1), "Select to word end"),
+      bind(["W"], (editor, _arg, count) => extendWordForward(editor, count ?? 1), "Extend word forward"),
+      bind(["B"], (editor, _arg, count) => extendWordBackward(editor, count ?? 1), "Extend word backward"),
+      bind(["E"], (editor, _arg, count) => extendWordEnd(editor, count ?? 1), "Extend to word end"),
       bind(["x"], editor => selectLine(editor), "Select line"),
       bind(["d"], editor => deleteSelection(editor), "Delete selection"),
       bind(["c"], editor => changeSelection(editor), "Change selection"),
@@ -69,10 +90,22 @@ function buildBindings(): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
       bind(["$"], editor => moveLineEnd(editor), "Line end"),
       bind(["g", "h"], editor => moveLineStart(editor), "Go to line start"),
       bind(["g", "l"], editor => moveLineEnd(editor), "Go to line end"),
+      bind(["<A-h>"], editor => extendLineStart(editor), "Extend to line start"),
+      bind(["<A-l>"], editor => extendLineEnd(editor), "Extend to line end"),
       bind(["g", "k"], editor => jumpDocumentStart(editor), "Go to document start"),
       bind(["g", "j"], editor => jumpDocumentEnd(editor), "Go to document end"),
       bind(["g", "g"], editor => jumpDocumentStart(editor), "Go to document start"),
-      bind(["G"], editor => jumpDocumentEnd(editor), "Go to document end"),
+      bind(["G"], (editor, _arg, count) => count === undefined ? false : extendToLine(editor, count), "Extend to line (with count)"),
+      bind(["G", "h"], editor => extendLineStart(editor), "Extend to line start"),
+      bind(["G", "H"], editor => extendLineStart(editor), "Extend to line start"),
+      bind(["G", "l"], editor => extendLineEnd(editor), "Extend to line end"),
+      bind(["G", "L"], editor => extendLineEnd(editor), "Extend to line end"),
+      bind(["G", "k"], editor => extendDocumentStart(editor), "Extend to document start"),
+      bind(["G", "K"], editor => extendDocumentStart(editor), "Extend to document start"),
+      bind(["G", "j"], editor => extendDocumentEnd(editor), "Extend to document end"),
+      bind(["G", "J"], editor => extendDocumentEnd(editor), "Extend to document end"),
+      bind(["G", "g"], editor => extendDocumentStart(editor), "Extend to document start"),
+      bind(["G", "G"], editor => extendDocumentStart(editor), "Extend to document start"),
       bind(["<Esc>"], editor => setMode(editor, "select"), "Normal mode")
     ],
     insert: [
@@ -86,6 +119,16 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
   const processor = new KakouneKeyProcessor(buildBindings());
   adapter.setMode(options.initialMode ?? "select");
 
+  cm.on("beforeChange", (_instance, change) => {
+    if (
+      adapter.getMode() === "select" &&
+      change.origin !== undefined &&
+      directEditOrigins.has(change.origin)
+    ) {
+      change.cancel();
+    }
+  });
+
   cm.on("keydown", (_instance, event) => {
     const key = normalizeKeyStroke(event);
     if (!key) return;
@@ -96,6 +139,15 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
     const handled = processor.handle(mode, key, adapter);
     options.onWhichKey?.(processor.getPending(), processor.getPendingItems(adapter.getMode()));
     if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    // An unhandled key must not fall through to CM5's default keymap while
+    // normal mode is active. That keymap includes text insertion, deletion,
+    // indentation, and platform-specific editing shortcuts.
+    if (mode === "select") {
       event.preventDefault();
       event.stopPropagation();
     }
