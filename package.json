@@ -13,11 +13,11 @@
     "build:obsidian": "pnpm --filter obsidian-kakoune build",
     "test": "pnpm --filter kakoune-core-js test && pnpm --filter codemirror-kakoune test && pnpm --filter codemirror-kakoune-cm5 test",
     "test:watch": "pnpm --filter codemirror-kakoune test:watch",
-    "check:jsr": "pnpm --filter codemirror-kakoune check:jsr",
+    "check:jsr": "pnpm --filter kakoune-core-js check:jsr && pnpm --filter codemirror-kakoune check:jsr && pnpm --filter codemirror-kakoune-cm5 check:jsr",
     "sync:version": "node scripts/sync-jsr-version.mjs",
     "sync:jsr": "node scripts/sync-jsr-version.mjs",
     "sync:obsidian": "node scripts/sync-obsidian-version.mjs",
-    "version": "node scripts/sync-jsr-version.mjs && git add packages/codemirror-kakoune/jsr.json packages/kakoune-core/package.json packages/codemirror-kakoune-cm5/package.json",
+    "version": "node scripts/sync-jsr-version.mjs && git add packages/codemirror-kakoune/jsr.json packages/kakoune-core/jsr.json packages/codemirror-kakoune-cm5/jsr.json packages/kakoune-core/package.json packages/codemirror-kakoune-cm5/package.json",
     "probe:parity": "pnpm --filter codemirror-kakoune probe:parity",
     "typecheck": "pnpm -r typecheck"
   },

@@ -1,6 +1,7 @@
 # CodeMirror Kakoune CM5
 
 [![npm version](https://img.shields.io/npm/v/codemirror-kakoune-cm5)](https://www.npmjs.com/package/codemirror-kakoune-cm5)
+[![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune-cm5)](https://jsr.io/@ykmade/codemirror-kakoune-cm5)
 
 CodeMirror 5 adapter over the shared [`kakoune-core-js`](https://github.com/Yukaii/codemirror-kakoune/tree/main/packages/kakoune-core) engine.
 
@@ -12,6 +13,12 @@ npm install codemirror-kakoune-cm5
 pnpm add codemirror-kakoune-cm5
 # or
 yarn add codemirror-kakoune-cm5
+```
+
+Or via [JSR](https://jsr.io/@ykmade/codemirror-kakoune-cm5):
+
+```bash
+npx jsr add @ykmade/codemirror-kakoune-cm5
 ```
 
 ## Quick Start

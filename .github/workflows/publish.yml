@@ -52,7 +52,7 @@ jobs:
           pnpm --filter codemirror-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
           node scripts/sync-jsr-version.mjs
           VERSION=$(node -p "require('./packages/codemirror-kakoune/package.json').version")
-          git add package.json packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json packages/kakoune-core/package.json packages/codemirror-kakoune-cm5/package.json
+          git add package.json packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json packages/kakoune-core/package.json packages/kakoune-core/jsr.json packages/codemirror-kakoune-cm5/package.json packages/codemirror-kakoune-cm5/jsr.json
           git commit -m "chore(release): v$VERSION"
           git tag -a "v$VERSION" -m "v$VERSION"
           git push origin HEAD:${{ github.ref_name }}
@@ -79,8 +79,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to JSR
-        run: npx jsr publish
-        working-directory: packages/codemirror-kakoune
+        run: |
+          npx jsr publish
+          cd ../codemirror-kakoune && npx jsr publish
+          cd ../codemirror-kakoune-cm5 && npx jsr publish
+        working-directory: packages/kakoune-core
 
       - name: Extract version and tag
         run: |

@@ -3,6 +3,7 @@
 Framework-agnostic Kakoune modal editing engine in JavaScript/TypeScript.
 
 [![npm version](https://img.shields.io/npm/v/kakoune-core-js)](https://www.npmjs.com/package/kakoune-core-js)
+[![JSR](https://jsr.io/badges/@ykmade/kakoune-core-js)](https://jsr.io/@ykmade/kakoune-core-js)
 
 `kakoune-core-js` provides the foundational modal editing logic, selection mathematics, key sequence processing, and prompt controllers for Kakoune-style editing. It decouples core modal behavior from specific editor implementations, powering both [`codemirror-kakoune`](https://github.com/Yukaii/codemirror-kakoune/tree/main/packages/codemirror-kakoune) (CodeMirror 6) and [`codemirror-kakoune-cm5`](https://github.com/Yukaii/codemirror-kakoune/tree/main/packages/codemirror-kakoune-cm5) (CodeMirror 5).
 
@@ -26,6 +27,12 @@ npm install kakoune-core-js
 pnpm add kakoune-core-js
 # or
 yarn add kakoune-core-js
+```
+
+Or via [JSR](https://jsr.io/@ykmade/kakoune-core-js):
+
+```bash
+npx jsr add @ykmade/kakoune-core-js
 ```
 
 ---

@@ -31,6 +31,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
+    "check:jsr": "npx jsr publish --dry-run --allow-dirty",
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
