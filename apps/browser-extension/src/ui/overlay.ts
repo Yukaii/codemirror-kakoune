@@ -68,9 +68,25 @@ export class OverlayController {
     this.isVisible = true;
     let html = "";
 
-    // 1. Regex prompt overlay if prompt is active
+    // 1. Prompt overlay box if prompt is active
     if (state.prompt) {
-      const promptLabel = state.prompt.kind === "select" ? "Select (Regex)" : "Split (Regex)";
+      let promptLabel = state.prompt.kind.toUpperCase();
+      let promptPrefix = "/";
+
+      if (state.prompt.kind === "select") {
+        promptLabel = "SELECT (REGEX)";
+        promptPrefix = "/";
+      } else if (state.prompt.kind === "split") {
+        promptLabel = "SPLIT (REGEX)";
+        promptPrefix = "/";
+      } else if (state.prompt.kind === "search") {
+        promptLabel = "SEARCH";
+        promptPrefix = "/";
+      } else if (state.prompt.kind === "pipe") {
+        promptLabel = "PIPE";
+        promptPrefix = "|";
+      }
+
       const query = state.prompt.text || "";
       const errorHtml = state.promptError
         ? `<div class="kakoune-prompt-error">${this.escapeHtml(state.promptError)}</div>`
@@ -80,7 +96,7 @@ export class OverlayController {
         <div class="kakoune-prompt-container">
           <div class="kakoune-prompt-label">${promptLabel}</div>
           <div class="kakoune-prompt-input-row">
-            <span class="kakoune-prompt-prefix">/</span>
+            <span class="kakoune-prompt-prefix">${promptPrefix}</span>
             <span class="kakoune-prompt-value">${this.escapeHtml(query)}<span style="opacity: 0.6; animation: blink 1s infinite">|</span></span>
           </div>
           ${errorHtml}
@@ -110,10 +126,16 @@ export class OverlayController {
       `;
     }
 
-    // 3. Mode Badge with toggle button
+    // 3. Mode Badge with prompt indicator and toggle button
     if (this.currentSettings.showBadge) {
-      const modeClass = state.mode === "select" ? "mode-select" : "mode-insert";
-      const modeLabel = state.mode.toUpperCase();
+      let modeClass = state.mode === "select" ? "mode-select" : "mode-insert";
+      let modeLabel = state.mode.toUpperCase();
+
+      if (state.prompt) {
+        modeClass = "mode-select";
+        modeLabel = `PROMPT: ${state.prompt.kind}`;
+      }
+
       const engineLabel = state.engine.toUpperCase();
       const pendingLabel = state.pendingKeys.length > 0
         ? ` <span class="kakoune-badge-pending">${this.escapeHtml(state.pendingKeys.join(""))}</span>`

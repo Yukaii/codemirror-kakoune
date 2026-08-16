@@ -201,27 +201,36 @@ class ContentScriptManager {
       this.activeElement = element;
 
       if (!this.activeOverlayEditor || (element as any).__kakoune_overlay !== this.activeOverlayEditor) {
+        let lastPending: string[] = [];
+        let lastItems: any[] = [];
+        let lastPrompt: { kind: string; text: string } | null = null;
+        let lastPromptError: string | null = null;
+
+        const updateOverlayUI = (mode: KakouneMode) => {
+          this.overlay?.render({
+            mode,
+            pendingKeys: lastPending,
+            pendingItems: lastItems,
+            prompt: lastPrompt,
+            promptError: lastPromptError,
+            engine: "textarea"
+          });
+        };
+
         const overlay = new CM6OverlayEditor(textarea, {
           initialMode: this.settings.defaultMode,
           onWhichKey: (pending, items) => {
-            this.overlay?.render({
-              mode: overlay.getMode(),
-              pendingKeys: pending,
-              pendingItems: items,
-              prompt: null,
-              promptError: null,
-              engine: "textarea"
-            });
+            lastPending = pending;
+            lastItems = items;
+            updateOverlayUI(overlay.getMode());
           },
           onModeChange: mode => {
-            this.overlay?.render({
-              mode,
-              pendingKeys: [],
-              pendingItems: [],
-              prompt: null,
-              promptError: null,
-              engine: "textarea"
-            });
+            updateOverlayUI(mode);
+          },
+          onPrompt: (prompt, error) => {
+            lastPrompt = prompt;
+            lastPromptError = error;
+            updateOverlayUI(overlay.getMode());
           }
         });
 

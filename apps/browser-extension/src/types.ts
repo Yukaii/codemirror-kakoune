@@ -46,11 +46,16 @@ export type MessageType =
   | { type: "GET_TAB_STATUS" }
   | { type: "TAB_STATUS_RESPONSE"; payload: { enabled: boolean; domain: string; activeEngine?: string; mode?: KakouneMode } };
 
+export interface PromptDisplayState {
+  kind: string;
+  text: string;
+}
+
 export interface UIState {
   mode: KakouneMode;
   pendingKeys: string[];
   pendingItems: WhichKeyItem[];
-  prompt: KakounePromptState | null;
+  prompt: PromptDisplayState | null;
   promptError: string | null;
   engine: "textarea" | "cm5" | "cm6" | "none";
 }

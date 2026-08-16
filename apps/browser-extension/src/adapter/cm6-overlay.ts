@@ -12,6 +12,7 @@ export interface CM6OverlayOptions {
   initialMode?: KakouneMode;
   onWhichKey?: (pending: string[], items: WhichKeyItem[]) => void;
   onModeChange?: (mode: KakouneMode) => void;
+  onPrompt?: (prompt: { kind: string; text: string } | null, error: string | null) => void;
 }
 
 export class CM6OverlayEditor {
@@ -83,13 +84,28 @@ export class CM6OverlayEditor {
             if (update.docChanged) {
               this.syncToTextarea();
             }
-            if (options.onModeChange) {
-              try {
-                const mode = update.state.field(kakouneStateField).mode;
-                options.onModeChange(mode);
-              } catch {
-                // Ignore
+            try {
+              const state = update.state.field(kakouneStateField, false);
+              if (state) {
+                if (options.onModeChange) {
+                  options.onModeChange(state.mode);
+                }
+                if (options.onPrompt) {
+                  let prompt: { kind: string; text: string } | null = null;
+                  if (state.selectPrompt !== null) {
+                    prompt = { kind: "select", text: state.selectPrompt };
+                  } else if (state.splitPrompt !== null) {
+                    prompt = { kind: "split", text: state.splitPrompt };
+                  } else if (state.searchPrompt !== null) {
+                    prompt = { kind: "search", text: state.searchPrompt };
+                  } else if (state.pipePrompt !== null) {
+                    prompt = { kind: "pipe", text: state.pipePrompt.text };
+                  }
+                  options.onPrompt(prompt, state.commandError);
+                }
               }
+            } catch {
+              // Ignore
             }
           })
         ]
