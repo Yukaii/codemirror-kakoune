@@ -9,9 +9,9 @@ A CodeMirror 6 extension, CodeMirror 5 keymap integration, and Obsidian plugin t
 
 This monorepo contains:
 
-- **[`kakoune-core-js`](./packages/kakoune-core)**: Framework-agnostic Kakoune engine (adapter, processor, portable commands).
-- **[`codemirror-kakoune`](./packages/codemirror-kakoune)**: CodeMirror 6 adapter and prompts/rendering.
-- **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)**: CodeMirror 5 adapter.
+- **[`kakoune-core-js`](./packages/kakoune-core)** [![npm](https://img.shields.io/npm/v/kakoune-core-js)](https://www.npmjs.com/package/kakoune-core-js): Framework-agnostic Kakoune engine (adapter, processor, portable commands).
+- **[`codemirror-kakoune`](./packages/codemirror-kakoune)** [![npm](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune) [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune): CodeMirror 6 adapter and prompts/rendering.
+- **[`codemirror-kakoune-cm5`](./packages/codemirror-kakoune-cm5)** [![npm](https://img.shields.io/npm/v/codemirror-kakoune-cm5)](https://www.npmjs.com/package/codemirror-kakoune-cm5): CodeMirror 5 adapter.
 - **[`obsidian-kakoune`](./packages/obsidian-kakoune)**: Obsidian community plugin providing native Kakoune modal editing.
 - **[`playground`](./apps/playground)**: CodeMirror 6 interactive playground.
 - **[`playground-cm5`](./apps/playground-cm5)**: CodeMirror 5-specific playground.
