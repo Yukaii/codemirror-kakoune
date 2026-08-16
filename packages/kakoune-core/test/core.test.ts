@@ -22,6 +22,15 @@ import {
   deleteSelection,
   selectLine,
   joinLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
+  reduceToCursor,
+  flipSelectionDirection,
+  ensureForwardDirection,
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
@@ -378,5 +387,44 @@ describe("KakounePromptController", () => {
     selectAll(editor);
     joinLines(editor, false);
     expect(editor.getDoc()).toBe("first line second line third line");
+  });
+
+  it("handles case conversions (~, `, <a-`>)", () => {
+    const editor = new MemoryEditor("Hello World", [{ anchor: 0, head: 5 }]);
+    toUpperCaseSelection(editor);
+    expect(editor.getDoc()).toBe("HELLO World");
+
+    toLowerCaseSelection(editor);
+    expect(editor.getDoc()).toBe("hello World");
+
+    swapCaseSelection(editor);
+    expect(editor.getDoc()).toBe("HELLO World");
+  });
+
+  it("handles whitespace trim (_)", () => {
+    const editor = new MemoryEditor("  hello world  ", [{ anchor: 0, head: 15 }]);
+    trimSelections(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 13 }]);
+  });
+
+  it("handles adding empty lines (<a-o> and <a-O>)", () => {
+    const editor = new MemoryEditor("first line\nsecond line", [{ anchor: 0, head: 0 }]);
+    addEmptyLineBelow(editor);
+    expect(editor.getDoc()).toBe("first line\n\nsecond line");
+
+    addEmptyLineAbove(editor);
+    expect(editor.getDoc()).toBe("\nfirst line\n\nsecond line");
+  });
+
+  it("handles selection direction adjustments (;, <a-;>, <a-:>)", () => {
+    const editor = new MemoryEditor("hello", [{ anchor: 0, head: 4 }]);
+    flipSelectionDirection(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 4, head: 0, linewise: undefined }]);
+
+    ensureForwardDirection(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 0, head: 4, linewise: undefined }]);
+
+    reduceToCursor(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 4, head: 4 }]);
   });
 });

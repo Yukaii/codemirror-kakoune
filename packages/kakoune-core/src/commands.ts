@@ -353,6 +353,127 @@ export function joinLines(editor: EditorHost, selectSpaces = false): boolean {
   return true;
 }
 
+export function transformCase(editor: EditorHost, transform: (text: string) => string): boolean {
+  const doc = editor.getDoc();
+  const selections = editor.getSelections();
+  if (selections.length === 0) return false;
+
+  const spans = selections.map(range => {
+    const from = rangeFrom(range);
+    const to = isEmptyRange(range) ? Math.min(doc.length, from + 1) : rangeTo(range);
+    return { from, to, text: transform(doc.slice(from, to)) };
+  }).sort((a, b) => b.from - a.from);
+
+  for (const span of spans) {
+    editor.replaceRange(span.from, span.to, span.text);
+  }
+  editor.setSelections(selections);
+  return true;
+}
+
+export function toUpperCaseSelection(editor: EditorHost): boolean {
+  return transformCase(editor, text => text.toUpperCase());
+}
+
+export function toLowerCaseSelection(editor: EditorHost): boolean {
+  return transformCase(editor, text => text.toLowerCase());
+}
+
+export function swapCaseSelection(editor: EditorHost): boolean {
+  return transformCase(editor, text => {
+    let res = "";
+    for (const ch of text) {
+      const up = ch.toUpperCase();
+      res += ch === up ? ch.toLowerCase() : up;
+    }
+    return res;
+  });
+}
+
+export function trimSelections(editor: EditorHost): boolean {
+  const doc = editor.getDoc();
+  const nextSelections: SelectionRange[] = [];
+
+  for (const range of editor.getSelections()) {
+    const from = rangeFrom(range);
+    const to = rangeTo(range);
+    const text = doc.slice(from, to);
+
+    const leadingWs = text.match(/^\s*/)?.[0].length ?? 0;
+    const trailingWs = text.match(/\s*$/)?.[0].length ?? 0;
+
+    const nextFrom = from + leadingWs;
+    const nextTo = Math.max(nextFrom, to - trailingWs);
+
+    if (nextFrom < nextTo) {
+      nextSelections.push(
+        range.anchor <= range.head
+          ? { anchor: nextFrom, head: nextTo }
+          : { anchor: nextTo, head: nextFrom }
+      );
+    }
+  }
+
+  if (nextSelections.length > 0) {
+    editor.setSelections(nextSelections);
+    return true;
+  }
+  return false;
+}
+
+export function addEmptyLineBelow(editor: EditorHost): boolean {
+  const insertions = editor.getSelections().map((range, index) => {
+    const line = editor.lineAt(range.head);
+    return { at: line.to, index };
+  }).sort((a, b) => b.at - a.at);
+
+  for (const ins of insertions) {
+    editor.replaceRange(ins.at, ins.at, "\n");
+  }
+  return true;
+}
+
+export function addEmptyLineAbove(editor: EditorHost): boolean {
+  const insertions = editor.getSelections().map((range, index) => {
+    const line = editor.lineAt(range.head);
+    return { at: line.from, index };
+  }).sort((a, b) => b.at - a.at);
+
+  for (const ins of insertions) {
+    editor.replaceRange(ins.at, ins.at, "\n");
+  }
+  return true;
+}
+
+export function reduceToCursor(editor: EditorHost): boolean {
+  const next = editor.getSelections().map(range => ({
+    anchor: range.head,
+    head: range.head
+  }));
+  editor.setSelections(next);
+  return true;
+}
+
+export function flipSelectionDirection(editor: EditorHost): boolean {
+  const next = editor.getSelections().map(range => ({
+    anchor: range.head,
+    head: range.anchor,
+    linewise: range.linewise
+  }));
+  editor.setSelections(next);
+  return true;
+}
+
+export function ensureForwardDirection(editor: EditorHost): boolean {
+  const next = editor.getSelections().map(range => ({
+    anchor: Math.min(range.anchor, range.head),
+    head: Math.max(range.anchor, range.head),
+    linewise: range.linewise
+  }));
+  editor.setSelections(next);
+  return true;
+}
+
 export const portableCommands = {
   setMode,
   moveLeft,
@@ -381,6 +502,15 @@ export const portableCommands = {
   selectAll,
   selectLine,
   joinLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
+  reduceToCursor,
+  flipSelectionDirection,
+  ensureForwardDirection,
   deleteSelection,
   yankSelection,
   undoEdit,

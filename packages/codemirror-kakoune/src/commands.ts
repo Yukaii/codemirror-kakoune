@@ -18,7 +18,14 @@ import {
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
-  joinLines
+  joinLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
+  ensureForwardDirection
 } from "kakoune-core-js";
 import { withAdapter } from "./adapter";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, setSearchQuery } from "@codemirror/search";
@@ -2224,6 +2231,13 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
     { keys: ["<A-j>"], run: view => withAdapter(view, editor => joinLines(editor, false)), description: "Join lines" },
     { keys: ["<A-J>"], run: view => withAdapter(view, editor => joinLines(editor, true)), description: "Join lines and select spaces" },
+    { keys: ["~"], run: view => withAdapter(view, editor => toUpperCaseSelection(editor)), description: "Convert to uppercase" },
+    { keys: ["`"], run: view => withAdapter(view, editor => toLowerCaseSelection(editor)), description: "Convert to lowercase" },
+    { keys: ["<A-`>"], run: view => withAdapter(view, editor => swapCaseSelection(editor)), description: "Swap case" },
+    { keys: ["_"], run: view => withAdapter(view, editor => trimSelections(editor)), description: "Trim whitespace from selections" },
+    { keys: ["<A-o>"], run: view => withAdapter(view, editor => addEmptyLineBelow(editor)), description: "Add empty line below" },
+    { keys: ["<A-O>"], run: view => withAdapter(view, editor => addEmptyLineAbove(editor)), description: "Add empty line above" },
+    { keys: ["<A-:>"], run: view => withAdapter(view, editor => ensureForwardDirection(editor)), description: "Ensure selection forward" },
     { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },

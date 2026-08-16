@@ -17,6 +17,12 @@ import {
   selectLine,
   selectAll,
   joinLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
   deleteSelection,
   changeSelection,
   yankSelection,
@@ -228,5 +234,21 @@ describe("TextareaAdapter with kakoune-core-js", () => {
     adapter.setSelections([{ anchor: 0, head: 0 }]);
     joinLines(adapter);
     expect(adapter.getDoc()).toBe("hello world");
+  });
+
+  it("handles case conversions (~, `, <A-`>) and whitespace trim (_)", () => {
+    const el = createTextarea("  hello world  ");
+    const adapter = new TextareaAdapter(el);
+
+    adapter.setSelections([{ anchor: 2, head: 7 }]);
+    toUpperCaseSelection(adapter);
+    expect(adapter.getDoc()).toBe("  HELLO world  ");
+
+    toLowerCaseSelection(adapter);
+    expect(adapter.getDoc()).toBe("  hello world  ");
+
+    adapter.setSelections([{ anchor: 0, head: 15 }]);
+    trimSelections(adapter);
+    expect(adapter.getSelections()).toEqual([{ anchor: 2, head: 13 }]);
   });
 });
