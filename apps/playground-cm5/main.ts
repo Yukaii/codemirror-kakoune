@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/prefer-create-el */
 import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
@@ -25,7 +26,16 @@ kakoune(editor, {
     hudItems.replaceChildren(...items.map(item => {
       const element = document.createElement("div");
       element.className = "hud-item";
-      element.innerHTML = `<span class="hud-key">${item.keys.join(" ")}</span>${item.description ? `<span class="hud-desc">${item.description}</span>` : ""}`;
+      const keySpan = document.createElement("span");
+      keySpan.className = "hud-key";
+      keySpan.textContent = item.keys.join(" ");
+      element.appendChild(keySpan);
+      if (item.description) {
+        const descSpan = document.createElement("span");
+        descSpan.className = "hud-desc";
+        descSpan.textContent = item.description;
+        element.appendChild(descSpan);
+      }
       return element;
     }));
     hud.classList.toggle("hidden", pending.length === 0 && !promptActive);
@@ -135,10 +145,14 @@ applyFontFamily(savedFontFamily);
 applyFontSize(savedFontSize);
 editor.refresh();
 
-if (document.fonts?.ready) {
-  document.fonts.ready.then(() => {
-    editor.refresh();
-  });
+if ("fonts" in document && document.fonts) {
+  void document.fonts.ready
+    .then(() => {
+      editor.refresh();
+    })
+    .catch(() => {
+      // Ignore font loading errors
+    });
 }
 window.addEventListener("resize", () => {
   editor.refresh();

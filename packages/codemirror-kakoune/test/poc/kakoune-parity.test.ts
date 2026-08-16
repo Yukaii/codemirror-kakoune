@@ -101,10 +101,6 @@ function tokenize(cmd: string): string[] {
   return tokens;
 }
 
-function formatSelection(selection: { anchor: number; head: number }): string {
-  return `(${selection.anchor}, ${selection.head})`;
-}
-
 function formatVisible(text: string): string {
   return JSON.stringify(text);
 }

@@ -20,7 +20,10 @@ html, body { overflow-x: hidden; }
 }
 
 /* iOS Safari zooms focused text inputs below 16px. */
-.CodeMirror textarea { font-size: 16px !important; }
+.shell .CodeMirror textarea,
+#editor .CodeMirror textarea {
+  font-size: 16px;
+}
 
 .CodeMirror-gutters {
   background: var(--panel);
@@ -36,10 +39,11 @@ html, body { overflow-x: hidden; }
   border-left: 1px solid var(--accent);
 }
 
-.cm-fat-cursor .CodeMirror-cursor,
-.CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor {
-  border: 0 !important;
-  background: var(--accent) !important;
+.shell .cm-fat-cursor .CodeMirror-cursor,
+.shell .CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor,
+#editor .CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor {
+  border: 0;
+  background: var(--accent);
   opacity: 0.7;
 }
 
@@ -48,17 +52,20 @@ html, body { overflow-x: hidden; }
   z-index: 3;
 }
 
-.CodeMirror[data-kakoune-mode="insert"] .CodeMirror-cursor {
-  border-left: 1.5px solid var(--text) !important;
-  border-right: none !important;
-  background: transparent !important;
-  width: 0 !important;
-  opacity: 1 !important;
+.shell .CodeMirror[data-kakoune-mode="insert"] .CodeMirror-cursor,
+#editor .CodeMirror[data-kakoune-mode="insert"] .CodeMirror-cursor {
+  border-left: 1.5px solid var(--text);
+  border-right: none;
+  background: transparent;
+  width: 0;
+  opacity: 1;
 }
 
-.CodeMirror-selected,
-.CodeMirror-focused .CodeMirror-selected {
-  background: var(--selection) !important;
+.shell .CodeMirror .CodeMirror-selected,
+.shell .CodeMirror-focused .CodeMirror-selected,
+#editor .CodeMirror .CodeMirror-selected,
+#editor .CodeMirror-focused .CodeMirror-selected {
+  background: var(--selection);
 }
 
 .CodeMirror-line::selection,
@@ -77,8 +84,10 @@ html, body { overflow-x: hidden; }
   background: var(--active-line);
 }
 
-.CodeMirror-matchingbracket {
-  color: var(--accent) !important;
+.shell .CodeMirror .CodeMirror-matchingbracket,
+#editor .CodeMirror .CodeMirror-matchingbracket,
+#editor .CodeMirror-matchingbracket {
+  color: var(--accent);
   background: var(--active-line);
   font-weight: bold;
 }

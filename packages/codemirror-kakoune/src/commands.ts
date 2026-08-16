@@ -20,7 +20,7 @@ import {
   selectWordForward
 } from "kakoune-core-js";
 import { withAdapter } from "./adapter";
-import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
+import { getSearchQuery, SearchQuery, findNext, findPrevious, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
   kakouneSelectionTypeField,
@@ -308,10 +308,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function isWordChar(char: string | undefined): boolean {
-  return typeof char === "string" && /[\p{L}\p{N}_]/u.test(char);
-}
-
 function moveLineColumn(view: EditorView, range: SelectionRange, delta: number): number {
   const state = view.state;
   const doc = state.doc;
@@ -367,21 +363,6 @@ function collectSelectionTexts(state: EditorView["state"], isLine: boolean): str
     const text = state.doc.sliceString(from, adjustedTo);
     return isLine && !text.endsWith("\n") ? `${text}\n` : text;
   });
-}
-
-function moveWordSelections(view: EditorView, mapper: (range: SelectionRange) => { anchor: number, head: number }, count: number = 1): boolean {
-  const state = view.state;
-  const result = state.changeByRange(range => {
-    let current = range;
-    for (let i = 0; i < count; i++) {
-      const { anchor, head } = mapper(current);
-      current = EditorSelection.range(anchor, head);
-    }
-    return { range: current };
-  });
-
-  view.dispatch({ ...result, scrollIntoView: true });
-  return true;
 }
 
 function extendSelections(view: EditorView, mapper: (range: SelectionRange) => number, count: number = 1): boolean {
@@ -2356,7 +2337,7 @@ function buildSelectBindings(): KakouneBinding[] {
     }, description: "Extend until previous character" },
     { keys: ["<A-.>"], run: (view, _arg, count) => repeatLastSelect(view, count), description: "Repeat last select/find" },
     { keys: ["<a-.>"], run: (view, _arg, count) => repeatLastSelect(view, count), description: "Repeat last select/find" },
-    { keys: ["r"], run: view => {
+    { keys: ["r"], run: () => {
       // replace char handled by key processor or command
       return true;
     }, description: "Replace character" },
