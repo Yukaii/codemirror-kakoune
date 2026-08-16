@@ -43,6 +43,7 @@ import {
   type KakouneMode,
   type EditorHost
 } from "kakoune-core-js";
+import type { TextareaAdapter } from "./textarea";
 
 function bind<T extends EditorHost>(
   keys: string[],
@@ -81,6 +82,7 @@ export function buildKakouneBindings<T extends EditorHost>(
 ): Record<KakouneMode, KakouneBinding<T>[]> {
   return {
     select: [
+      // Motions
       bind(["h"], (editor, _arg, count) => moveLeft(editor, count ?? 1), "Move left"),
       bind(["j"], (editor, _arg, count) => moveDown(editor, count ?? 1), "Move down"),
       bind(["k"], (editor, _arg, count) => moveUp(editor, count ?? 1), "Move up"),
@@ -95,10 +97,84 @@ export function buildKakouneBindings<T extends EditorHost>(
       bind(["W"], (editor, _arg, count) => extendWordForward(editor, count ?? 1), "Extend word forward"),
       bind(["B"], (editor, _arg, count) => extendWordBackward(editor, count ?? 1), "Extend word backward"),
       bind(["E"], (editor, _arg, count) => extendWordEnd(editor, count ?? 1), "Extend to word end"),
+
+      // Multi-Selection Commands
+      bind(["C"], editor => {
+        if ("copySelectionOnNextLine" in editor && typeof (editor as any).copySelectionOnNextLine === "function") {
+          (editor as any).copySelectionOnNextLine();
+          return true;
+        }
+        return false;
+      }, "Copy selection on next line"),
+      bind(["<A-C>"], editor => {
+        if ("copySelectionOnPrevLine" in editor && typeof (editor as any).copySelectionOnPrevLine === "function") {
+          (editor as any).copySelectionOnPrevLine();
+          return true;
+        }
+        return false;
+      }, "Copy selection on previous line"),
+      bind(["<A-s>"], editor => {
+        if ("splitSelectionsOnNewlines" in editor && typeof (editor as any).splitSelectionsOnNewlines === "function") {
+          (editor as any).splitSelectionsOnNewlines();
+          return true;
+        }
+        return false;
+      }, "Split selection on newlines"),
+      bind(["<Space>"], editor => {
+        if ("keepPrimarySelection" in editor && typeof (editor as any).keepPrimarySelection === "function") {
+          (editor as any).keepPrimarySelection();
+          return true;
+        }
+        const sel = editor.getSelections();
+        if (sel.length > 0) {
+          editor.setSelections([sel[0]], 0);
+          return true;
+        }
+        return false;
+      }, "Keep only primary selection"),
+      bind(["<A-Space>"], editor => {
+        if ("removePrimarySelection" in editor && typeof (editor as any).removePrimarySelection === "function") {
+          (editor as any).removePrimarySelection();
+          return true;
+        }
+        return false;
+      }, "Remove primary selection"),
+      bind([")"], editor => {
+        if ("cycleMainSelection" in editor && typeof (editor as any).cycleMainSelection === "function") {
+          (editor as any).cycleMainSelection(1);
+          return true;
+        }
+        return false;
+      }, "Cycle main selection forward"),
+      bind(["("], editor => {
+        if ("cycleMainSelection" in editor && typeof (editor as any).cycleMainSelection === "function") {
+          (editor as any).cycleMainSelection(-1);
+          return true;
+        }
+        return false;
+      }, "Cycle main selection backward"),
+      bind(["<A-)>"], editor => {
+        if ("rotateSelectionsContent" in editor && typeof (editor as any).rotateSelectionsContent === "function") {
+          (editor as any).rotateSelectionsContent(1);
+          return true;
+        }
+        return false;
+      }, "Rotate selections content forward"),
+      bind(["<A-(>"], editor => {
+        if ("rotateSelectionsContent" in editor && typeof (editor as any).rotateSelectionsContent === "function") {
+          (editor as any).rotateSelectionsContent(-1);
+          return true;
+        }
+        return false;
+      }, "Rotate selections content backward"),
+
+      // Selections & Prompts
       bind(["x"], editor => selectLine(editor), "Select line"),
       bind(["%"], editor => selectAll(editor), "Select all"),
       bind(["s"], editor => prompts.open("select", editor), "Select regex matches"),
       bind(["S"], editor => prompts.open("split", editor), "Split selection on regex matches"),
+
+      // Edit Operations
       bind(["d"], editor => deleteSelection(editor), "Delete selection"),
       bind(["c"], editor => changeSelection(editor), "Change selection"),
       bind(["y"], editor => yankSelection(editor), "Yank selection"),
@@ -110,8 +186,26 @@ export function buildKakouneBindings<T extends EditorHost>(
       bind(["A"], editor => enterInsertLineEnd(editor), "Insert at line end"),
       bind(["o"], editor => openLineBelow(editor), "Open line below"),
       bind(["O"], editor => openLineAbove(editor), "Open line above"),
+
+      // History
       bind(["u"], editor => undoEdit(editor), "Undo"),
       bind(["U"], editor => redoEdit(editor), "Redo"),
+      bind(["<A-u>"], editor => {
+        if ("undoSelection" in editor && typeof (editor as any).undoSelection === "function") {
+          (editor as any).undoSelection();
+          return true;
+        }
+        return false;
+      }, "Undo selection"),
+      bind(["<A-U>"], editor => {
+        if ("redoSelection" in editor && typeof (editor as any).redoSelection === "function") {
+          (editor as any).redoSelection();
+          return true;
+        }
+        return false;
+      }, "Redo selection"),
+
+      // Line / Document Navigation
       bind(["0"], editor => moveLineStart(editor), "Line start"),
       bind(["$"], editor => moveLineEnd(editor), "Line end"),
       bind(["g", "h"], editor => moveLineStart(editor), "Go to line start"),

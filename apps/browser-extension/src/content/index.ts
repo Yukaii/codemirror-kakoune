@@ -244,13 +244,39 @@ class ContentScriptManager {
 
       const mode = adapter.getMode();
 
-      // In insert mode: allow normal typing, only intercept <Esc>
+      // In insert mode: allow normal typing, only intercept <Esc> or handle multi-cursor typing
       if (mode === "insert") {
         if (key === "<Esc>") {
           adapter.setMode("select");
           this.updateUI();
           event.preventDefault();
           event.stopPropagation();
+          return;
+        }
+
+        // Multi-cursor simultaneous typing
+        if (adapter.getSelections().length > 1) {
+          if (key === "<Backspace>") {
+            adapter.backspaceAtAllSelections();
+            this.updateUI();
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          if (key === "<Enter>") {
+            adapter.insertTextAtAllSelections("\n");
+            this.updateUI();
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          if (key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            adapter.insertTextAtAllSelections(key);
+            this.updateUI();
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
         }
         return;
       }

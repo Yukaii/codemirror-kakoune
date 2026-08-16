@@ -167,4 +167,56 @@ describe("TextareaAdapter with kakoune-core-js", () => {
     const selections = adapter.getSelections();
     expect(selections.length).toBeGreaterThan(0);
   });
+
+  it("handles multi-selection copying, splitting, and filtering", () => {
+    const el = createTextarea("line 1\nline 2\nline 3");
+    const adapter = new TextareaAdapter(el);
+
+    adapter.setSelections([{ anchor: 0, head: 4 }]);
+    adapter.copySelectionOnNextLine();
+    expect(adapter.getSelections().length).toBe(2);
+
+    adapter.keepPrimarySelection();
+    expect(adapter.getSelections().length).toBe(1);
+
+    adapter.setSelections([{ anchor: 0, head: 20 }]);
+    adapter.splitSelectionsOnNewlines();
+    expect(adapter.getSelections().length).toBe(3);
+
+    adapter.cycleMainSelection(1);
+    expect(adapter.getMainSelectionIndex()).toBe(1);
+
+    adapter.removePrimarySelection();
+    expect(adapter.getSelections().length).toBe(2);
+  });
+
+  it("handles multi-cursor simultaneous text insertion and backspace", () => {
+    const el = createTextarea("foo bar foo");
+    const adapter = new TextareaAdapter(el);
+
+    adapter.setSelections([
+      { anchor: 0, head: 0 },
+      { anchor: 8, head: 8 }
+    ]);
+
+    adapter.insertTextAtAllSelections("X");
+    expect(adapter.getDoc()).toBe("Xfoo bar Xfoo");
+
+    adapter.backspaceAtAllSelections();
+    expect(adapter.getDoc()).toBe("foo bar foo");
+  });
+
+  it("handles selection history undo/redo (<A-u> / <A-U>)", () => {
+    const el = createTextarea("hello world");
+    const adapter = new TextareaAdapter(el);
+
+    adapter.setSelections([{ anchor: 0, head: 5 }]);
+    adapter.setSelections([{ anchor: 6, head: 11 }]);
+
+    adapter.undoSelection();
+    expect(adapter.getSelections()).toEqual([{ anchor: 0, head: 5 }]);
+
+    adapter.redoSelection();
+    expect(adapter.getSelections()).toEqual([{ anchor: 6, head: 11 }]);
+  });
 });
