@@ -72,7 +72,7 @@ jobs:
 
       - name: Publish to NPM
         run: |
-          pnpm --filter kakoune-core publish --access public --no-git-checks
+          pnpm --filter kakoune-core-js publish --access public --no-git-checks
           pnpm --filter codemirror-kakoune publish --access public --no-git-checks
           pnpm --filter codemirror-kakoune-cm5 publish --access public --no-git-checks
         env:

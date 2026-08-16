@@ -4,7 +4,7 @@
     "noEmit": true,
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "paths": { "kakoune-core": ["../kakoune-core/src"] }
+    "paths": { "kakoune-core-js": ["../kakoune-core/src"] }
   },
   "include": ["src/**/*.ts"]
 }

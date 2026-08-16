@@ -7,7 +7,7 @@
     "noEmit": true,
     "paths": {
       "codemirror-kakoune": ["../codemirror-kakoune/src/index.ts"],
-      "kakoune-core": ["../kakoune-core/src/index.ts"]
+      "kakoune-core-js": ["../kakoune-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"]

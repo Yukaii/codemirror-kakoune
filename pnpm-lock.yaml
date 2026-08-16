@@ -91,7 +91,7 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.0
         version: 6.43.0
-      kakoune-core:
+      kakoune-core-js:
         specifier: workspace:*
         version: link:../kakoune-core
     devDependencies:
@@ -119,7 +119,7 @@ importers:
 
   packages/codemirror-kakoune-cm5:
     dependencies:
-      kakoune-core:
+      kakoune-core-js:
         specifier: workspace:*
         version: link:../kakoune-core
     devDependencies:

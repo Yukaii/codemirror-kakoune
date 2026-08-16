@@ -1,7 +1,7 @@
 import { EditorSelection } from "@codemirror/state";
 import { redo, undo } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
-import type { EditorHost, KakouneMode, LineInfo, SelectionRange } from "kakoune-core";
+import type { EditorHost, KakouneMode, LineInfo, SelectionRange } from "kakoune-core-js";
 import {
   kakouneStateField,
   setKakouneModeEffect,

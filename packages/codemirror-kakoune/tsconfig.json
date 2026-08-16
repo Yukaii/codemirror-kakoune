@@ -5,7 +5,7 @@
     "moduleResolution": "Node",
     "noEmit": true,
     "types": ["jest", "node"],
-    "paths": { "kakoune-core": ["../kakoune-core/src"] }
+    "paths": { "kakoune-core-js": ["../kakoune-core/src"] }
   },
   "include": ["src", "test", "jest.config.cjs"]
 }

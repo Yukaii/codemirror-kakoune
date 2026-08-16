@@ -9,7 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "codemirror-kakoune-cm5": resolve(root, "../../packages/codemirror-kakoune-cm5/src"),
-      "kakoune-core": resolve(root, "../../packages/kakoune-core/src")
+      "kakoune-core-js": resolve(root, "../../packages/kakoune-core/src")
     }
   },
   build: { outDir: "dist", emptyOutDir: true }

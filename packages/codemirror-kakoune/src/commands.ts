@@ -18,7 +18,7 @@ import {
   selectWordBackward,
   selectWordEnd,
   selectWordForward
-} from "kakoune-core";
+} from "kakoune-core-js";
 import { withAdapter } from "./adapter";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
