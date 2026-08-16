@@ -1367,5 +1367,20 @@ describe("kakoune extension", () => {
 
       view.destroy();
     });
+
+    it("duplicates selections on next lines with C", () => {
+      const view = createView("line one\nline two\nline three");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      view.dispatch({ selection: EditorSelection.range(0, 4) });
+      expect(processor.handle("select", "C", view)).toBe(true);
+      expect(view.state.selection.ranges.length).toBe(2);
+      expect(view.state.selection.ranges[0].from).toBe(0);
+      expect(view.state.selection.ranges[0].to).toBe(4);
+      expect(view.state.selection.ranges[1].from).toBe(9);
+      expect(view.state.selection.ranges[1].to).toBe(13);
+
+      view.destroy();
+    });
   });
 });

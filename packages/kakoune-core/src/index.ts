@@ -49,6 +49,7 @@ export {
   selectAll,
   selectLine,
   joinLines,
+  copySelectionsOnNextLines,
   toUpperCaseSelection,
   toLowerCaseSelection,
   swapCaseSelection,

@@ -421,6 +421,40 @@ export function trimSelections(editor: EditorHost): boolean {
   return false;
 }
 
+export function copySelectionsOnNextLines(editor: EditorHost, direction: 1 | -1 = 1, count = 1): boolean {
+  const doc = editor.getDoc();
+  const lineCount = editor.getLineCount();
+  const currentSelections = editor.getSelections();
+  const additions: SelectionRange[] = [];
+
+  for (const sel of currentSelections) {
+    const fromLine = editor.lineAt(sel.anchor).number;
+    const toLine = editor.lineAt(sel.head).number;
+    const height = Math.abs(toLine - fromLine) + 1;
+
+    for (let i = 1; i <= count; i++) {
+      const lineOffset = direction * i * height;
+      const targetAnchorLine = fromLine + lineOffset;
+      const targetHeadLine = toLine + lineOffset;
+
+      if (targetAnchorLine < 1 || targetAnchorLine > lineCount ||
+          targetHeadLine < 1 || targetHeadLine > lineCount) {
+        break;
+      }
+
+      const nextAnchor = lineColumnPos(doc, sel.anchor, lineOffset);
+      const nextHead = lineColumnPos(doc, sel.head, lineOffset);
+      additions.push({ anchor: nextAnchor, head: nextHead, linewise: sel.linewise });
+    }
+  }
+
+  if (additions.length > 0) {
+    editor.setSelections([...currentSelections, ...additions]);
+    return true;
+  }
+  return false;
+}
+
 export function addEmptyLineBelow(editor: EditorHost): boolean {
   const insertions = editor.getSelections().map((range, index) => {
     const line = editor.lineAt(range.head);
@@ -502,6 +536,7 @@ export const portableCommands = {
   selectAll,
   selectLine,
   joinLines,
+  copySelectionsOnNextLines,
   toUpperCaseSelection,
   toLowerCaseSelection,
   swapCaseSelection,

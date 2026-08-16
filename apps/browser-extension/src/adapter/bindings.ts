@@ -32,6 +32,7 @@ import {
   selectAll,
   selectLine,
   joinLines,
+  copySelectionsOnNextLines,
   toUpperCaseSelection,
   toLowerCaseSelection,
   swapCaseSelection,
@@ -109,20 +110,8 @@ export function buildKakouneBindings<T extends EditorHost>(
       bind(["E"], (editor, _arg, count) => extendWordEnd(editor, count ?? 1), "Extend to word end"),
 
       // Multi-Selection Commands
-      bind(["C"], editor => {
-        if ("copySelectionOnNextLine" in editor && typeof (editor as any).copySelectionOnNextLine === "function") {
-          (editor as any).copySelectionOnNextLine();
-          return true;
-        }
-        return false;
-      }, "Copy selection on next line"),
-      bind(["<A-C>"], editor => {
-        if ("copySelectionOnPrevLine" in editor && typeof (editor as any).copySelectionOnPrevLine === "function") {
-          (editor as any).copySelectionOnPrevLine();
-          return true;
-        }
-        return false;
-      }, "Copy selection on previous line"),
+      bind(["C"], (editor, _arg, count) => copySelectionsOnNextLines(editor, 1, count ?? 1), "Duplicate selections on following lines"),
+      bind(["<A-C>"], (editor, _arg, count) => copySelectionsOnNextLines(editor, -1, count ?? 1), "Duplicate selections on preceding lines"),
       bind(["<A-s>"], editor => {
         if ("splitSelectionsOnNewlines" in editor && typeof (editor as any).splitSelectionsOnNewlines === "function") {
           (editor as any).splitSelectionsOnNewlines();
