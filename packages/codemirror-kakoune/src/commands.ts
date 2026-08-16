@@ -2,6 +2,24 @@ import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import { redo, undo, isolateHistory } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
+import {
+  enterInsert,
+  enterInsertLineEnd,
+  enterInsertLineStart,
+  moveDown,
+  moveLeft,
+  moveLineEnd,
+  moveLineStart,
+  moveRight,
+  moveUp,
+  moveWordBackwardRange as coreWordBackward,
+  moveWordEndRange as coreWordEnd,
+  moveWordForwardRange as coreWordForward,
+  selectWordBackward,
+  selectWordEnd,
+  selectWordForward
+} from "kakoune-core";
+import { withAdapter } from "./adapter";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, selectMatches, setSearchQuery } from "@codemirror/search";
 import {
   kakouneStateField,
@@ -305,107 +323,16 @@ function moveLineColumn(view: EditorView, range: SelectionRange, delta: number):
   return clamp(nextLine.from + column, nextLine.from, nextLine.to);
 }
 
-function getCharClass(char: string | undefined): "word" | "punctuation" | "whitespace" {
-  if (char === undefined) return "whitespace";
-  if (/[\s\n\r]/.test(char)) return "whitespace";
-  if (isWordChar(char)) return "word";
-  return "punctuation";
-}
-
-function isAtWordEnd(doc: string, pos: number): boolean {
-  if (pos < 0 || pos >= doc.length) return false;
-  const cls = getCharClass(doc[pos]);
-  if (cls === "whitespace") return false;
-
-  const nextCls = pos + 1 < doc.length ? getCharClass(doc[pos + 1]) : "whitespace";
-  return cls !== nextCls;
-}
-
-function isAtWordStart(doc: string, pos: number): boolean {
-  if (pos < 0 || pos >= doc.length) return false;
-  const cls = getCharClass(doc[pos]);
-  if (cls === "whitespace") return false;
-
-  const prevCls = pos > 0 ? getCharClass(doc[pos - 1]) : "whitespace";
-  return cls !== prevCls;
-}
-
 function moveWordForwardRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
-  const doc = view.state.doc.toString();
-  const len = doc.length;
-  const startPos = range.empty && isAtWordEnd(doc, range.head) ? range.head + 1 : range.head;
-  let pos = clamp(startPos, 0, len);
-
-  // Step 1: Skip initial whitespaces
-  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
-    pos += 1;
-  }
-
-  const anchor = pos;
-
-  if (pos < len) {
-    const cls = getCharClass(doc[pos]);
-    // Step 2: Skip characters of the same class (word or punctuation)
-    while (pos < len && getCharClass(doc[pos]) === cls) {
-      pos += 1;
-    }
-  }
-
-  // Step 3: Skip following whitespaces
-  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
-    pos += 1;
-  }
-
-  return { anchor, head: pos };
+  return coreWordForward(view.state.doc.toString(), { anchor: range.anchor, head: range.head });
 }
 
 function moveWordBackwardRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
-  const doc = view.state.doc.toString();
-  let pos = range.head;
-
-  // Step 1: Skip initial whitespaces to the left
-  while (pos > 0 && getCharClass(doc[pos - 1]) === "whitespace") {
-    pos -= 1;
-  }
-
-  if (pos > 0) {
-    const cls = getCharClass(doc[pos - 1]);
-    // Step 2: Skip characters of the same class to the left
-    while (pos > 0 && getCharClass(doc[pos - 1]) === cls) {
-      pos -= 1;
-    }
-  }
-
-  let anchor = range.head;
-  if (range.empty) {
-    const isWhitespace = getCharClass(doc[range.head]) === "whitespace";
-    const isStartOfMultiChar = isAtWordStart(doc, range.head) && !isAtWordEnd(doc, range.head);
-    anchor = (isWhitespace || isStartOfMultiChar) ? range.head : range.head + 1;
-  }
-
-  return { anchor: clamp(anchor, 0, doc.length), head: pos };
+  return coreWordBackward(view.state.doc.toString(), { anchor: range.anchor, head: range.head });
 }
 
 function moveWordEndRange(view: EditorView, range: SelectionRange): { anchor: number, head: number } {
-  const doc = view.state.doc.toString();
-  const len = doc.length;
-  const startPos = range.empty && isAtWordEnd(doc, range.head) ? range.head + 1 : range.head;
-  let pos = clamp(startPos, 0, len);
-
-  // Step 1: Skip initial whitespaces
-  while (pos < len && getCharClass(doc[pos]) === "whitespace") {
-    pos += 1;
-  }
-
-  if (pos < len) {
-    const cls = getCharClass(doc[pos]);
-    // Step 2: Skip characters of the same class (word or punctuation)
-    while (pos < len && getCharClass(doc[pos]) === cls) {
-      pos += 1;
-    }
-  }
-
-  return { anchor: range.head, head: pos };
+  return coreWordEnd(view.state.doc.toString(), { anchor: range.anchor, head: range.head });
 }
 
 function setMode(view: EditorView, mode: KakouneMode, preserveReplaceAnchors: boolean = false): boolean {
@@ -2296,21 +2223,21 @@ function buildSelectBindings(): KakouneBinding[] {
       }
       return true;
     }, description: "Reduce selections to single selection / Cancel prefix" },
-    { keys: ["i"], run: view => setMode(view, "insert"), description: "Insert mode before selections" },
+    { keys: ["i"], run: view => withAdapter(view, editor => enterInsert(editor)), description: "Insert mode before selections" },
     { keys: ["o"], run: (view, _arg, count) => openLine(view, "below", count ?? 1), description: "Insert new line below and enter insert mode" },
     { keys: ["O"], run: (view, _arg, count) => openLine(view, "above", count ?? 1), description: "Insert new line above and enter insert mode" },
-    { keys: ["a"], run: view => moveSelections(view, range => range.empty ? clamp(range.to + 1, 0, view.state.doc.length) : range.to) && setMode(view, "insert"), description: "Insert mode after selections" },
-    { keys: ["A"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to) && setMode(view, "insert"), description: "Insert mode at line end" },
-    { keys: ["I"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from) && setMode(view, "insert"), description: "Insert mode at line start" },
-    { keys: ["h"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Move left" },
-    { keys: ["l"], run: (view, _arg, count) => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length), count ?? 1), description: "Move right" },
-    { keys: ["j"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, 1), count ?? 1), description: "Move down" },
-    { keys: ["k"], run: (view, _arg, count) => moveSelections(view, range => moveLineColumn(view, range, -1), count ?? 1), description: "Move up" },
-    { keys: ["w"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordForwardRange(view, range), count ?? 1), description: "Move word forward" },
+    { keys: ["a"], run: view => withAdapter(view, editor => enterInsert(editor, true)), description: "Insert mode after selections" },
+    { keys: ["A"], run: view => withAdapter(view, editor => enterInsertLineEnd(editor)), description: "Insert mode at line end" },
+    { keys: ["I"], run: view => withAdapter(view, editor => enterInsertLineStart(editor)), description: "Insert mode at line start" },
+    { keys: ["h"], run: (view, _arg, count) => withAdapter(view, editor => moveLeft(editor, count ?? 1)), description: "Move left" },
+    { keys: ["l"], run: (view, _arg, count) => withAdapter(view, editor => moveRight(editor, count ?? 1)), description: "Move right" },
+    { keys: ["j"], run: (view, _arg, count) => withAdapter(view, editor => moveDown(editor, count ?? 1)), description: "Move down" },
+    { keys: ["k"], run: (view, _arg, count) => withAdapter(view, editor => moveUp(editor, count ?? 1)), description: "Move up" },
+    { keys: ["w"], run: (view, _arg, count) => withAdapter(view, editor => selectWordForward(editor, count ?? 1)), description: "Move word forward" },
     { keys: ["W"], run: (view, _arg, count) => extendSelections(view, range => moveWordForwardRange(view, range).head, count ?? 1), description: "Extend word forward" },
-    { keys: ["b"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordBackwardRange(view, range), count ?? 1), description: "Move word backward" },
+    { keys: ["b"], run: (view, _arg, count) => withAdapter(view, editor => selectWordBackward(editor, count ?? 1)), description: "Move word backward" },
     { keys: ["B"], run: (view, _arg, count) => extendSelections(view, range => moveWordBackwardRange(view, range).head, count ?? 1), description: "Extend word backward" },
-    { keys: ["e"], run: (view, _arg, count) => moveWordSelections(view, range => moveWordEndRange(view, range), count ?? 1), description: "Move to word end" },
+    { keys: ["e"], run: (view, _arg, count) => withAdapter(view, editor => selectWordEnd(editor, count ?? 1)), description: "Move to word end" },
     { keys: ["E"], run: (view, _arg, count) => extendSelections(view, range => moveWordEndRange(view, range).head, count ?? 1), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
     { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
@@ -2330,8 +2257,8 @@ function buildSelectBindings(): KakouneBinding[] {
       if (count !== undefined) return extendToLine(_view, count);
       return false;
     }, description: "Extend to line (with count)" },
-    { keys: ["g", "h"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Move to line begin" },
-    { keys: ["g", "l"], run: view => moveSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Move to line end" },
+    { keys: ["g", "h"], run: view => withAdapter(view, editor => moveLineStart(editor)), description: "Move to line begin" },
+    { keys: ["g", "l"], run: view => withAdapter(view, editor => moveLineEnd(editor)), description: "Move to line end" },
     { keys: ["<A-h>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Extend to line begin" },
     { keys: ["<A-l>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Extend to line end" },
     { keys: ["H"], run: (view, _arg, count) => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Extend left" },

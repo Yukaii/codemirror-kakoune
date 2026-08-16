@@ -50,6 +50,7 @@ export {
   setKakouneSelectionTypeEffect
 } from "./state";
 export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys, KakouneKeyProcessor } from "./keys";
+export { Cm6Adapter, withAdapter } from "./adapter";
 export {
   buildKakouneCommands,
   commitSearchPrompt,

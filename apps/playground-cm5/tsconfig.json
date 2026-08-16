@@ -3,7 +3,10 @@
   "compilerOptions": {
     "noEmit": true,
     "baseUrl": ".",
-    "paths": { "codemirror-kakoune-cm5": ["../../packages/codemirror-kakoune-cm5/src"] }
+    "paths": {
+      "codemirror-kakoune-cm5": ["../../packages/codemirror-kakoune-cm5/src"],
+      "kakoune-core": ["../../packages/kakoune-core/src"]
+    }
   },
   "include": ["main.ts", "global.d.ts", "vite-env.d.ts"]
 }

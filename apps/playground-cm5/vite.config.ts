@@ -6,6 +6,11 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   base: process.env.GITHUB_ACTIONS ? "/codemirror-kakoune/cm5/" : "/",
-  resolve: { alias: { "codemirror-kakoune-cm5": resolve(root, "../../packages/codemirror-kakoune-cm5/src") } },
+  resolve: {
+    alias: {
+      "codemirror-kakoune-cm5": resolve(root, "../../packages/codemirror-kakoune-cm5/src"),
+      "kakoune-core": resolve(root, "../../packages/kakoune-core/src")
+    }
+  },
   build: { outDir: "dist", emptyOutDir: true }
 });

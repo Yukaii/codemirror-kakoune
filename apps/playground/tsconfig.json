@@ -5,7 +5,8 @@
     "moduleResolution": "Bundler",
     "noEmit": true,
     "paths": {
-      "codemirror-kakoune": ["../../packages/codemirror-kakoune/src/index.ts"]
+      "codemirror-kakoune": ["../../packages/codemirror-kakoune/src/index.ts"],
+      "kakoune-core": ["../../packages/kakoune-core/src/index.ts"]
     }
   },
   "include": ["**/*.ts", "vite-env.d.ts"]
