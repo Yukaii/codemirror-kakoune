@@ -13,8 +13,20 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yukaii/codemirror-kakoune.git",
+    "directory": "packages/kakoune-core"
+  },
+  "keywords": [
+    "kakoune",
+    "modal-editing",
+    "editor-engine"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "jest --runInBand",
