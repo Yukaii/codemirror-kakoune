@@ -277,6 +277,9 @@ class ContentScriptManager {
       adapter = new TextareaAdapter(el);
       prompts = new KakounePromptController();
       processor = new KakouneKeyProcessor(buildKakouneBindings(prompts));
+      if (this.settings?.customKakrc) {
+        processor.loadKakrc(this.settings.customKakrc);
+      }
 
       adapter.setMode(this.settings?.defaultMode ?? "select");
       (el as any).__kakoune_instance = { adapter, processor, prompts };

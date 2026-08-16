@@ -37,6 +37,10 @@
           <span class="nav-icon">🌐</span>
           <span>Domain Rules</span>
         </button>
+        <button class="nav-item" data-tab="kakrc">
+          <span class="nav-icon">📜</span>
+          <span>Custom kakrc</span>
+        </button>
         <button class="nav-item" data-tab="keys">
           <span class="nav-icon">⌨️</span>
           <span>Key Reference</span>
@@ -242,6 +246,21 @@
               <span>If specified, only enable browser-kakoune on these websites</span>
             </div>
             <textarea id="opt-whitelist" class="domain-textarea" rows="6" placeholder="github.com&#10;gitlab.com&#10;leetcode.com&#10;stackoverflow.com"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Custom kakrc -->
+      <section id="tab-kakrc" class="tab-panel">
+        <header class="panel-header">
+          <h2>Custom kakrc & Key Remappings</h2>
+          <p>Write custom Kakoune configuration scripts (<code>map global normal ...</code>, <code>map global insert ...</code>, <code>declare-user-mode</code>, <code>set-register</code>).</p>
+        </header>
+
+        <div class="card-grid">
+          <div class="setting-card">
+            <div class="setting-title" style="margin-bottom: 8px;">kakrc Script</div>
+            <textarea id="opt-kakrc" class="domain-textarea" rows="12" style="font-size: 13px; min-height: 220px;" placeholder="# Example kakrc&#10;map global normal <space> ,&#10;map global insert jk <esc>&#10;declare-user-mode mytools&#10;map global normal <a-m> ':enter-user-mode mytools<ret>'"></textarea>
           </div>
         </div>
       </section>

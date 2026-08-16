@@ -41,6 +41,7 @@ function bindFormControls(): void {
   const optTheme = document.getElementById("opt-theme") as HTMLSelectElement;
   const optBlacklist = document.getElementById("opt-blacklist") as HTMLTextAreaElement;
   const optWhitelist = document.getElementById("opt-whitelist") as HTMLTextAreaElement;
+  const optKakrc = document.getElementById("opt-kakrc") as HTMLTextAreaElement;
   const btnSave = document.getElementById("btn-save-all") as HTMLButtonElement;
   const btnReset = document.getElementById("btn-reset-defaults") as HTMLButtonElement;
 
@@ -56,6 +57,9 @@ function bindFormControls(): void {
     optTheme.value = s.theme;
     optBlacklist.value = s.blacklistedDomains.join("\n");
     optWhitelist.value = s.whitelistedDomains.join("\n");
+    if (optKakrc) {
+      optKakrc.value = s.customKakrc || "";
+    }
   };
 
   populate(currentSettings);
@@ -71,6 +75,7 @@ function bindFormControls(): void {
       badgePosition: optBadgePosition.value as BadgePosition,
       showWhichKey: optShowWhichKey.checked,
       theme: optTheme.value as ExtensionTheme,
+      customKakrc: optKakrc ? optKakrc.value : "",
       blacklistedDomains: optBlacklist.value.split("\n").map(s => s.trim()).filter(Boolean),
       whitelistedDomains: optWhitelist.value.split("\n").map(s => s.trim()).filter(Boolean)
     };

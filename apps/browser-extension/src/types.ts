@@ -13,6 +13,7 @@ export interface ExtensionSettings {
   showWhichKey: boolean;
   badgePosition: BadgePosition;
   theme: ExtensionTheme;
+  customKakrc: string;
   blacklistedDomains: string[];
   whitelistedDomains: string[];
   siteOverrides: Record<string, boolean>; // domain -> enabled
@@ -28,6 +29,10 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   showWhichKey: true,
   badgePosition: "bottom-right",
   theme: "kakoune",
+  customKakrc: `# Custom kakrc configuration
+# Remap keys (e.g. map global normal <space> ,)
+# map global insert jk <esc>
+`,
   blacklistedDomains: [],
   whitelistedDomains: [],
   siteOverrides: {}

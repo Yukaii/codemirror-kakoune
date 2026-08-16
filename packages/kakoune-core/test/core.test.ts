@@ -34,6 +34,7 @@ import {
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
+  parseKakrc,
   type EditorHost,
   type KakouneBinding,
   type KakouneMode,
@@ -426,5 +427,23 @@ describe("KakounePromptController", () => {
 
     reduceToCursor(editor);
     expect(editor.getSelections()).toEqual([{ anchor: 4, head: 4 }]);
+  });
+
+  it("parses and executes kakrc mappings and user modes", () => {
+    const rc = `
+      # Custom mappings
+      map global normal <space> ,
+      map global insert jk <esc>
+      declare-user-mode mymode
+      map global mymode d 'xyd'
+      set-register a 'custom macro'
+    `;
+
+    const config = parseKakrc(rc);
+    expect(config.normalMappings.get("<Space>")).toEqual([","]);
+    expect(config.insertMappings.get("jk")).toEqual(["<Esc>"]);
+    expect(config.userModes.has("mymode")).toBe(true);
+    expect(config.userModes.get("mymode")?.get("d")).toEqual(["x", "y", "d"]);
+    expect(config.namedRegisters.get("a")).toBe("custom macro");
   });
 });

@@ -76,3 +76,8 @@ export {
   type KakounePromptKind,
   type KakounePromptState
 } from "./prompt";
+export {
+  parseKakrc,
+  tokenizeKakrcKeys,
+  type KakrcConfig
+} from "./kakrc";
