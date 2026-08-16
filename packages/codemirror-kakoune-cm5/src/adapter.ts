@@ -37,7 +37,10 @@ export class Cm5Adapter implements EditorHost {
   }
 
   setMode(mode: KakouneMode): void {
-    this.cm.getWrapperElement().dataset.kakouneMode = mode;
+    const wrapper = this.cm.getWrapperElement();
+    wrapper.dataset.kakouneMode = mode;
+    wrapper.classList.toggle("cm-fat-cursor", mode === "select");
+    this.cm.refresh();
   }
 
   getDoc(): string {

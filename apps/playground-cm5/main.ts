@@ -73,11 +73,13 @@ function updateStatus(): void {
 function applyTheme(theme: string): void {
   document.body.dataset.theme = theme;
   window.localStorage.setItem("codemirror-kakoune.cm5.theme", theme);
+  editor.refresh();
 }
 
 function applyFontSize(size: string): void {
   wrapper.style.setProperty("--cm5-font-size", `${size}px`);
   window.localStorage.setItem("codemirror-kakoune.cm5.fontSize", size);
+  editor.refresh();
 }
 
 function applyFontFamily(family: string): void {
@@ -88,6 +90,7 @@ function applyFontFamily(family: string): void {
   };
   wrapper.style.setProperty("--cm5-font-family", values[family] ?? values.mono);
   window.localStorage.setItem("codemirror-kakoune.cm5.fontFamily", family);
+  editor.refresh();
 }
 
 const savedTheme = window.localStorage.getItem("codemirror-kakoune.cm5.theme") ?? "night";
@@ -112,6 +115,7 @@ if (lineNumbersSelect) {
   lineNumbersSelect.addEventListener("change", () => {
     editor.setOption("lineNumbers", lineNumbersSelect.value === "on");
     window.localStorage.setItem("codemirror-kakoune.cm5.lineNumbers", lineNumbersSelect.value);
+    editor.refresh();
   });
 }
 if (layoutSelect) {
@@ -125,6 +129,16 @@ if (layoutSelect) {
 applyTheme(savedTheme);
 applyFontFamily(savedFontFamily);
 applyFontSize(savedFontSize);
+editor.refresh();
+
+if (document.fonts?.ready) {
+  document.fonts.ready.then(() => {
+    editor.refresh();
+  });
+}
+window.addEventListener("resize", () => {
+  editor.refresh();
+});
 
 settingsToggle?.addEventListener("click", () => settings?.classList.toggle("show"));
 settingsClose?.addEventListener("click", () => settings?.classList.remove("show"));

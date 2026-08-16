@@ -4,6 +4,12 @@
 html, body { overflow-x: hidden; }
 .shell, .bar, .brand-container { min-width: 0; }
 .brand { overflow: hidden; text-overflow: ellipsis; }
+
+.CodeMirror,
+.CodeMirror * {
+  box-sizing: content-box;
+}
+
 .CodeMirror {
   height: 100%;
   color: var(--text);
@@ -22,15 +28,47 @@ html, body { overflow-x: hidden; }
 }
 
 .CodeMirror-linenumber { color: var(--muted); }
-.CodeMirror-cursor { border-left-color: var(--accent); }
-.CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor {
-  width: .7em;
-  border: 0;
-  background: var(--accent);
-  opacity: .7;
+
+.CodeMirror-cursor {
+  border-left: 1px solid var(--accent);
 }
-.CodeMirror[data-kakoune-mode="insert"] .CodeMirror-cursor { border-left: 1.5px solid var(--text); }
-.CodeMirror-selected { background: var(--selection); }
+
+.cm-fat-cursor .CodeMirror-cursor,
+.CodeMirror[data-kakoune-mode="select"] .CodeMirror-cursor {
+  border: 0 !important;
+  background: var(--accent) !important;
+  opacity: 0.7;
+}
+
+.cm-fat-cursor div.CodeMirror-cursors,
+.CodeMirror[data-kakoune-mode="select"] div.CodeMirror-cursors {
+  z-index: 3;
+}
+
+.CodeMirror[data-kakoune-mode="insert"] .CodeMirror-cursor {
+  border-left: 1.5px solid var(--text) !important;
+  border-right: none !important;
+  background: transparent !important;
+  width: 0 !important;
+  opacity: 1 !important;
+}
+
+.CodeMirror-selected,
+.CodeMirror-focused .CodeMirror-selected {
+  background: var(--selection) !important;
+}
+
+.CodeMirror-line::selection,
+.CodeMirror-line > span::selection,
+.CodeMirror-line > span > span::selection {
+  background: var(--selection);
+}
+
+.CodeMirror-line::-moz-selection,
+.CodeMirror-line > span::-moz-selection,
+.CodeMirror-line > span > span::-moz-selection {
+  background: var(--selection);
+}
 
 @media (max-width: 768px) {
   .CodeMirror { font-size: 16px; }

@@ -70,6 +70,22 @@ describe("CM5 normal-mode input isolation", () => {
     }
   );
 
+  it("manages cm-fat-cursor class and kakouneMode when switching modes", () => {
+    const editor = createEditor("alpha");
+    const wrapper = editor.getWrapperElement();
+
+    expect(wrapper.dataset.kakouneMode).toBe("select");
+    expect(wrapper.classList.contains("cm-fat-cursor")).toBe(true);
+
+    dispatchKey(editor, "i");
+    expect(wrapper.dataset.kakouneMode).toBe("insert");
+    expect(wrapper.classList.contains("cm-fat-cursor")).toBe(false);
+
+    dispatchKey(editor, "Escape");
+    expect(wrapper.dataset.kakouneMode).toBe("select");
+    expect(wrapper.classList.contains("cm-fat-cursor")).toBe(true);
+  });
+
   it("allows direct input after entering insert mode", () => {
     const editor = createEditor("alpha");
 
