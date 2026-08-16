@@ -46,13 +46,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version & sync JSR
+      - name: Bump version & sync packages
         if: github.event_name == 'workflow_dispatch'
         run: |
           pnpm --filter codemirror-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
           node scripts/sync-jsr-version.mjs
           VERSION=$(node -p "require('./packages/codemirror-kakoune/package.json').version")
-          git add package.json packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json
+          git add package.json packages/codemirror-kakoune/package.json packages/codemirror-kakoune/jsr.json packages/kakoune-core/package.json packages/codemirror-kakoune-cm5/package.json
           git commit -m "chore(release): v$VERSION"
           git tag -a "v$VERSION" -m "v$VERSION"
           git push origin HEAD:${{ github.ref_name }}
@@ -71,7 +71,10 @@ jobs:
         run: pnpm run build
 
       - name: Publish to NPM
-        run: pnpm --filter codemirror-kakoune publish --access public --no-git-checks
+        run: |
+          pnpm --filter kakoune-core publish --access public --no-git-checks
+          pnpm --filter codemirror-kakoune publish --access public --no-git-checks
+          pnpm --filter codemirror-kakoune-cm5 publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

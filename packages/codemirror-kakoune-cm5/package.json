@@ -6,8 +6,30 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yukaii/codemirror-kakoune.git",
+    "directory": "packages/codemirror-kakoune-cm5"
+  },
+  "keywords": [
+    "codemirror",
+    "codemirror5",
+    "kakoune",
+    "modal-editing",
+    "keymap",
+    "editor"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "jest --runInBand",
