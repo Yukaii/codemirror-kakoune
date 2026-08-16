@@ -1,6 +1,6 @@
 {
   "name": "kakoune-core-js",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Framework-agnostic Kakoune modal editing engine in JavaScript/TypeScript.",
   "type": "module",
   "main": "./dist/index.js",
