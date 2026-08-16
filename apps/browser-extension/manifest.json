@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Kakoune Modal Editing",
+  "name": "browser-kakoune",
   "version": "0.4.4",
-  "description": "Brings Kakoune-style modal editing to textareas, CodeMirror 5, and CodeMirror 6 across the web.",
+  "description": "Kakoune-style modal editing for textareas, CodeMirror 5, and CodeMirror 6 across the web.",
   "author": "Yukai Huang",
   "browser_specific_settings": {
     "gecko": {
-      "id": "kakoune-browser@yukaii.github.io",
+      "id": "browser-kakoune@yukaii.github.io",
       "strict_min_version": "109.0"
     }
   },
@@ -20,7 +20,7 @@
   ],
   "action": {
     "default_popup": "popup/index.html",
-    "default_title": "Kakoune Modal Editing"
+    "default_title": "browser-kakoune"
   },
   "options_ui": {
     "page": "options/index.html",

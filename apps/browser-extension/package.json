@@ -1,8 +1,8 @@
 {
-  "name": "browser-extension",
+  "name": "browser-kakoune",
   "version": "0.4.4",
   "private": true,
-  "description": "Browser extension bringing Kakoune modal editing to textareas, CodeMirror 5, and CodeMirror 6 across the web",
+  "description": "browser-kakoune: Kakoune modal editing for textareas, CodeMirror 5, and CodeMirror 6 across the web",
   "type": "module",
   "scripts": {
     "dev": "vite",

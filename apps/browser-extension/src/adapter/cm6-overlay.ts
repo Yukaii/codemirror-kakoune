@@ -125,6 +125,10 @@ export class CM6OverlayEditor {
     }
   }
 
+  getTextarea(): HTMLTextAreaElement {
+    return this.textarea;
+  }
+
   getView(): EditorView {
     return this.view;
   }
@@ -161,11 +165,18 @@ export class CM6OverlayEditor {
     }
   }
 
-  destroy(): void {
+  destroy(focusTextarea = true): void {
     if (this.isDestroyed) return;
     this.isDestroyed = true;
 
     this.syncToTextarea();
+
+    // Sync cursor position back to textarea
+    const mainSel = this.view.state.selection.main;
+    const from = Math.min(mainSel.anchor, mainSel.head);
+    const to = Math.max(mainSel.anchor, mainSel.head);
+    const dir = mainSel.anchor > mainSel.head ? "backward" : "forward";
+
     this.resizeObserver?.disconnect();
     this.view.destroy();
 
@@ -173,5 +184,14 @@ export class CM6OverlayEditor {
       this.container.parentNode.removeChild(this.container);
     }
     this.textarea.style.display = this.originalDisplay;
+
+    try {
+      this.textarea.setSelectionRange(from, to, dir);
+      if (focusTextarea) {
+        this.textarea.focus();
+      }
+    } catch {
+      // Ignore
+    }
   }
 }

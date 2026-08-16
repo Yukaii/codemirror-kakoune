@@ -7,9 +7,11 @@ export class OverlayController {
   private container: HTMLDivElement | null = null;
   private isVisible = false;
   private currentSettings: ExtensionSettings;
+  private onToggleOffCallback?: () => void;
 
-  constructor(settings: ExtensionSettings) {
+  constructor(settings: ExtensionSettings, onToggleOff?: () => void) {
     this.currentSettings = settings;
+    this.onToggleOffCallback = onToggleOff;
     this.init();
   }
 
@@ -108,7 +110,7 @@ export class OverlayController {
       `;
     }
 
-    // 3. Mode Badge
+    // 3. Mode Badge with toggle button
     if (this.currentSettings.showBadge) {
       const modeClass = state.mode === "select" ? "mode-select" : "mode-insert";
       const modeLabel = state.mode.toUpperCase();
@@ -118,14 +120,24 @@ export class OverlayController {
         : "";
 
       html += `
-        <div class="kakoune-badge ${modeClass}">
+        <div class="kakoune-badge ${modeClass}" title="Alt+Shift+K to toggle back to native textarea">
           <span class="kakoune-badge-engine">${engineLabel}</span>
           <span>${modeLabel}${pendingLabel}</span>
+          <button class="kakoune-badge-close" id="btn-toggle-off" title="Switch back to native textarea" style="background:transparent;border:none;color:inherit;opacity:0.7;cursor:pointer;padding:0 2px;font-size:10px;line-height:1;margin-left:2px;">&times;</button>
         </div>
       `;
     }
 
     this.container.innerHTML = html;
+
+    // Attach close button click handler
+    const closeBtn = this.container.querySelector("#btn-toggle-off");
+    if (closeBtn && this.onToggleOffCallback) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.onToggleOffCallback?.();
+      });
+    }
   }
 
   hide(): void {

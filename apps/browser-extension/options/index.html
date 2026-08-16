@@ -3,266 +3,338 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kakoune Extension Settings</title>
+  <title>browser-kakoune - Settings & Keybindings</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div class="app-layout">
-    <!-- Sidebar -->
+    <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="logo">KAK</div>
-        <div>
-          <h2>Kakoune</h2>
-          <span class="version">v0.4.4</span>
+        <div class="logo-box">
+          <span class="logo-icon">KAK</span>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-name">browser-kakoune</h1>
+          <span class="brand-desc">Modal Web Editing</span>
         </div>
       </div>
+
       <nav class="nav-menu">
-        <button class="nav-item active" data-tab="general">⚙ General</button>
-        <button class="nav-item" data-tab="targets">🎯 Target Engines</button>
-        <button class="nav-item" data-tab="appearance">🎨 Appearance</button>
-        <button class="nav-item" data-tab="domains">🌐 Domain Rules</button>
-        <button class="nav-item" data-tab="keybindings">⌨ Key Reference</button>
-        <button class="nav-item" data-tab="playground">🎮 Live Playground</button>
+        <button class="nav-item active" data-tab="general">
+          <span class="nav-icon">⚙️</span>
+          <span>General</span>
+        </button>
+        <button class="nav-item" data-tab="engines">
+          <span class="nav-icon">🎯</span>
+          <span>Editor Engines</span>
+        </button>
+        <button class="nav-item" data-tab="appearance">
+          <span class="nav-icon">🎨</span>
+          <span>Appearance</span>
+        </button>
+        <button class="nav-item" data-tab="domains">
+          <span class="nav-icon">🌐</span>
+          <span>Domain Rules</span>
+        </button>
+        <button class="nav-item" data-tab="keys">
+          <span class="nav-icon">⌨️</span>
+          <span>Key Reference</span>
+        </button>
+        <button class="nav-item" data-tab="playground">
+          <span class="nav-icon">🎮</span>
+          <span>Playground</span>
+        </button>
       </nav>
+
       <div class="sidebar-footer">
-        <button id="btn-save-all" class="btn-primary">Save Changes</button>
+        <button id="btn-save-all" class="btn-primary">Save Settings</button>
+        <button id="btn-reset-defaults" class="btn-secondary">Reset Defaults</button>
+        <div class="version-tag">browser-kakoune v0.4.4</div>
       </div>
     </aside>
 
-    <!-- Main Content Panels -->
+    <!-- Main Content Area -->
     <main class="main-content">
-      <!-- General Section -->
+      <!-- Section: General -->
       <section id="tab-general" class="tab-panel active">
-        <div class="panel-header">
+        <header class="panel-header">
           <h2>General Settings</h2>
-          <p>Configure general behavior for modal Kakoune editing across the web.</p>
-        </div>
+          <p>Control global activation and default behaviors for browser-kakoune.</p>
+        </header>
 
-        <div class="settings-group">
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Master Enable</div>
-              <div class="setting-desc">Enable Kakoune key interception globally</div>
+        <div class="card-grid">
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Global Enable</div>
+                <div class="setting-desc">Enable Kakoune modal keybindings across web pages</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="opt-enabled" checked />
+                <span class="slider"></span>
+              </label>
             </div>
-            <label class="switch">
-              <input type="checkbox" id="opt-enabled" checked />
-              <span class="slider"></span>
-            </label>
           </div>
 
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Default Focus Mode</div>
-              <div class="setting-desc">The mode activated whenever a field or editor is focused</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Default Focus Mode</div>
+                <div class="setting-desc">Initial mode when focusing an editable element or editor</div>
+              </div>
+              <select id="opt-default-mode" class="select-box">
+                <option value="select">Select (Normal Modal Mode)</option>
+                <option value="insert">Insert (Direct Typing Mode)</option>
+              </select>
             </div>
-            <select id="opt-default-mode" class="select-box">
-              <option value="select">Select (Normal Mode)</option>
-              <option value="insert">Insert (Typing Mode)</option>
-            </select>
           </div>
 
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Activation Keyboard Shortcut</div>
-              <div class="setting-desc">Shortcut to toggle Kakoune on the active element</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Activation & Toggle Shortcut</div>
+                <div class="setting-desc">Toggle browser-kakoune on/off for the focused element</div>
+              </div>
+              <div class="shortcut-pill">
+                <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd>
+              </div>
             </div>
-            <span class="badge-kbd">Alt + Shift + K</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Target Engines Section -->
-      <section id="tab-targets" class="tab-panel">
-        <div class="panel-header">
-          <h2>Target Engines</h2>
-          <p>Enable or disable support for specific editing components.</p>
-        </div>
-
-        <div class="settings-group">
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Standard Textareas & Text Inputs</div>
-              <div class="setting-desc">Multi-line textareas and single-line form inputs</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="opt-enable-textareas" checked />
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">CodeMirror 5 Editors</div>
-              <div class="setting-desc">Websites powered by CodeMirror 5 (e.g. legacy GitHub, online REPLs)</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="opt-enable-cm5" checked />
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">CodeMirror 6 Editors</div>
-              <div class="setting-desc">Websites powered by modern CodeMirror 6</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="opt-enable-cm6" checked />
-              <span class="slider"></span>
-            </label>
           </div>
         </div>
       </section>
 
-      <!-- Appearance Section -->
+      <!-- Section: Editor Engines -->
+      <section id="tab-engines" class="tab-panel">
+        <header class="panel-header">
+          <h2>Editor Engines & Targets</h2>
+          <p>Configure how browser-kakoune attaches to different editing components on the web.</p>
+        </header>
+
+        <div class="card-grid">
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">HTML &lt;textarea&gt; & Inputs</div>
+                <div class="setting-desc">In-place CodeMirror 6 overlay with true multi-cursor, fat cursor, and syntax styling</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="opt-enable-textareas" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">CodeMirror 5 (CM5) Instances</div>
+                <div class="setting-desc">Websites powered by CodeMirror 5 (legacy GitHub, online REPLs, LeetCode classic)</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="opt-enable-cm5" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">CodeMirror 6 (CM6) Instances</div>
+                <div class="setting-desc">Websites and applications powered by CodeMirror 6</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="opt-enable-cm6" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Appearance -->
       <section id="tab-appearance" class="tab-panel">
-        <div class="panel-header">
+        <header class="panel-header">
           <h2>Appearance & Overlays</h2>
-          <p>Customize the look and feel of the in-page mode badge, which-key hints, and regex prompts.</p>
-        </div>
+          <p>Customize floating mode badge, which-key hints, and visual themes.</p>
+        </header>
 
-        <div class="settings-group">
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Show Floating Mode Badge</div>
-              <div class="setting-desc">Display active mode badge in the corner of the active editor</div>
+        <div class="card-grid">
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Floating Mode Badge</div>
+                <div class="setting-desc">Show mode badge with current engine and pending strokes in the editor corner</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="opt-show-badge" checked />
+                <span class="slider"></span>
+              </label>
             </div>
-            <label class="switch">
-              <input type="checkbox" id="opt-show-badge" checked />
-              <span class="slider"></span>
-            </label>
           </div>
 
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Badge Position</div>
-              <div class="setting-desc">Screen position for floating overlays</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Badge Screen Position</div>
+                <div class="setting-desc">Anchor location for the floating badge overlay</div>
+              </div>
+              <select id="opt-badge-position" class="select-box">
+                <option value="bottom-right">Bottom Right (Default)</option>
+                <option value="top-right">Top Right</option>
+                <option value="bottom-left">Bottom Left</option>
+                <option value="top-left">Top Left</option>
+              </select>
             </div>
-            <select id="opt-badge-position" class="select-box">
-              <option value="bottom-right">Bottom Right</option>
-              <option value="top-right">Top Right</option>
-              <option value="bottom-left">Bottom Left</option>
-              <option value="top-left">Top Left</option>
-            </select>
           </div>
 
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Show Which-Key Helper</div>
-              <div class="setting-desc">Show popup menu of available keys when a prefix (g, G) is pressed</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Which-Key Suggestions Popup</div>
+                <div class="setting-desc">Display helpful key combinations when a prefix like 'g' or 'G' is pressed</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="opt-show-whichkey" checked />
+                <span class="slider"></span>
+              </label>
             </div>
-            <label class="switch">
-              <input type="checkbox" id="opt-show-whichkey" checked />
-              <span class="slider"></span>
-            </label>
           </div>
 
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Visual Theme</div>
-              <div class="setting-desc">Color palette for overlays</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-title">Overlay Visual Theme</div>
+                <div class="setting-desc">Color palette used for badges, which-key cards, and regex prompts</div>
+              </div>
+              <select id="opt-theme" class="select-box">
+                <option value="kakoune">Kakoune Rose Pine (Default)</option>
+                <option value="dark">Dark Charcoal</option>
+                <option value="nord">Nord Arctic Blue</option>
+                <option value="gruvbox">Gruvbox Warm</option>
+                <option value="light">Light Crisp</option>
+              </select>
             </div>
-            <select id="opt-theme" class="select-box">
-              <option value="kakoune">Kakoune Rose Pine</option>
-              <option value="dark">Dark Charcoal</option>
-              <option value="nord">Nord Arctic</option>
-              <option value="gruvbox">Gruvbox Warm</option>
-              <option value="light">Light Crisp</option>
-            </select>
           </div>
         </div>
       </section>
 
-      <!-- Domain Rules Section -->
+      <!-- Section: Domain Rules -->
       <section id="tab-domains" class="tab-panel">
-        <div class="panel-header">
-          <h2>Domain Rules</h2>
-          <p>Blacklist or whitelist specific websites. Use wildcards like <code>*.example.com</code>.</p>
-        </div>
+        <header class="panel-header">
+          <h2>Domain Whitelist & Blacklist</h2>
+          <p>Specify which websites should enable or disable browser-kakoune. Wildcards like <code>*.github.com</code> are supported.</p>
+        </header>
 
-        <div class="settings-group">
-          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-            <div class="setting-label">Blacklisted Domains (Never enable Kakoune on these)</div>
-            <textarea id="opt-blacklist" class="textarea-box" rows="4" placeholder="e.g.&#10;docs.google.com&#10;*.banking.com"></textarea>
+        <div class="domain-grid">
+          <div class="domain-card">
+            <div class="domain-header">
+              <h3>🚫 Blacklisted Domains</h3>
+              <span>Never enable browser-kakoune on these websites</span>
+            </div>
+            <textarea id="opt-blacklist" class="domain-textarea" rows="6" placeholder="docs.google.com&#10;*.banking.com&#10;mail.google.com"></textarea>
           </div>
 
-          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-            <div class="setting-label">Whitelisted Domains (If non-empty, only enable on these)</div>
-            <textarea id="opt-whitelist" class="textarea-box" rows="4" placeholder="e.g.&#10;github.com&#10;gitlab.com&#10;leetcode.com"></textarea>
+          <div class="domain-card">
+            <div class="domain-header">
+              <h3>⭐ Whitelisted Domains</h3>
+              <span>If specified, only enable browser-kakoune on these websites</span>
+            </div>
+            <textarea id="opt-whitelist" class="domain-textarea" rows="6" placeholder="github.com&#10;gitlab.com&#10;leetcode.com&#10;stackoverflow.com"></textarea>
           </div>
         </div>
       </section>
 
-      <!-- Key Reference Section -->
-      <section id="tab-keybindings" class="tab-panel">
-        <div class="panel-header">
+      <!-- Section: Key Reference -->
+      <section id="tab-keys" class="tab-panel">
+        <header class="panel-header">
           <h2>Kakoune Keybindings Reference</h2>
-          <p>Selection-first modal editing shortcuts supported by this extension.</p>
+          <p>Quick guide to selection-first modal editing shortcuts in browser-kakoune.</p>
+        </header>
+
+        <div class="search-box-row">
+          <input type="text" id="key-filter" class="search-input" placeholder="🔍 Search keybindings (e.g. word, delete, line, regex)..." />
         </div>
 
-        <div class="table-container">
-          <table class="key-table">
+        <div class="table-card">
+          <table class="key-table" id="key-table">
             <thead>
               <tr>
-                <th>Key</th>
-                <th>Action</th>
+                <th>Keys</th>
+                <th>Description</th>
                 <th>Category</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td><code>h / j / k / l</code></td><td>Move cursor left / down / up / right</td><td>Motions</td></tr>
-              <tr><td><code>H / J / K / L</code></td><td>Extend selection left / down / up / right</td><td>Motions</td></tr>
-              <tr><td><code>w / b / e</code></td><td>Select word forward / backward / to word end</td><td>Motions</td></tr>
-              <tr><td><code>W / B / E</code></td><td>Extend word forward / backward / to word end</td><td>Motions</td></tr>
-              <tr><td><code>0 / $</code></td><td>Move to line start / line end</td><td>Line Motions</td></tr>
-              <tr><td><code>g h / g l</code></td><td>Go to line start / line end</td><td>Line Motions</td></tr>
-              <tr><td><code>g k / g j / g g</code></td><td>Go to document start / document end</td><td>Jumps</td></tr>
-              <tr><td><code>&lt;A-h&gt; / &lt;A-l&gt;</code></td><td>Extend to line start / line end</td><td>Extensions</td></tr>
-              <tr><td><code>G h / G l</code></td><td>Extend to line start / line end</td><td>Extensions</td></tr>
-              <tr><td><code>G k / G j / G g</code></td><td>Extend to document start / document end</td><td>Extensions</td></tr>
-              <tr><td><code>x</code></td><td>Select whole line</td><td>Selection</td></tr>
-              <tr><td><code>%</code></td><td>Select all document text</td><td>Selection</td></tr>
-              <tr><td><code>s</code></td><td>Select regex matches within selection</td><td>Regex / Search</td></tr>
-              <tr><td><code>S</code></td><td>Split selection on regex matches</td><td>Regex / Search</td></tr>
-              <tr><td><code>i / a</code></td><td>Enter insert mode before / after selection</td><td>Editing</td></tr>
-              <tr><td><code>I / A</code></td><td>Enter insert mode at line start / line end</td><td>Editing</td></tr>
-              <tr><td><code>o / O</code></td><td>Open line below / above and enter insert</td><td>Editing</td></tr>
-              <tr><td><code>d / c</code></td><td>Delete selection / Change selection</td><td>Editing</td></tr>
-              <tr><td><code>y / p / P</code></td><td>Yank selection / Paste after / Paste before</td><td>Registers</td></tr>
-              <tr><td><code>u / U</code></td><td>Undo / Redo edit</td><td>History</td></tr>
-              <tr><td><code>&lt;Esc&gt;</code></td><td>Return to normal (select) mode</td><td>Mode</td></tr>
-              <tr><td><code>Alt + Shift + K</code></td><td>Toggle Kakoune on/off on active element</td><td>Extension</td></tr>
+              <!-- Motions -->
+              <tr data-cat="Motions"><td><kbd>h</kbd> / <kbd>j</kbd> / <kbd>k</kbd> / <kbd>l</kbd></td><td>Move cursor left / down / up / right</td><td>Motions</td></tr>
+              <tr data-cat="Motions"><td><kbd>H</kbd> / <kbd>J</kbd> / <kbd>K</kbd> / <kbd>L</kbd></td><td>Extend selection left / down / up / right</td><td>Motions</td></tr>
+              <tr data-cat="Motions"><td><kbd>w</kbd> / <kbd>b</kbd> / <kbd>e</kbd></td><td>Select word forward / backward / to word end</td><td>Motions</td></tr>
+              <tr data-cat="Motions"><td><kbd>W</kbd> / <kbd>B</kbd> / <kbd>E</kbd></td><td>Extend word forward / backward / to word end</td><td>Motions</td></tr>
+              <tr data-cat="Motions"><td><kbd>0</kbd> / <kbd>$</kbd></td><td>Move to line start / line end</td><td>Line Motions</td></tr>
+              <tr data-cat="Motions"><td><kbd>g</kbd> <kbd>h</kbd> / <kbd>g</kbd> <kbd>l</kbd></td><td>Go to line start / line end</td><td>Line Motions</td></tr>
+              <tr data-cat="Motions"><td><kbd>g</kbd> <kbd>k</kbd> / <kbd>g</kbd> <kbd>j</kbd> / <kbd>g</kbd> <kbd>g</kbd></td><td>Jump to document start / document end</td><td>Jumps</td></tr>
+
+              <!-- Multi-Selection -->
+              <tr data-cat="Multi-Select"><td><kbd>C</kbd></td><td>Duplicate selection on line below (multi-cursor down)</td><td>Multi-Select</td></tr>
+              <tr data-cat="Multi-Select"><td><kbd>Alt</kbd>+<kbd>C</kbd></td><td>Duplicate selection on line above (multi-cursor up)</td><td>Multi-Select</td></tr>
+              <tr data-cat="Multi-Select"><td><kbd>Alt</kbd>+<kbd>s</kbd></td><td>Split selection on newlines</td><td>Multi-Select</td></tr>
+              <tr data-cat="Multi-Select"><td><kbd>Space</kbd></td><td>Keep only primary selection</td><td>Multi-Select</td></tr>
+              <tr data-cat="Multi-Select"><td><kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Remove primary selection, keep others</td><td>Multi-Select</td></tr>
+              <tr data-cat="Multi-Select"><td><kbd>)</kbd> / <kbd>(</kbd></td><td>Cycle main selection forward / backward</td><td>Multi-Select</td></tr>
+              <tr data-cat="Multi-Select"><td><kbd>Alt</kbd>+<kbd>)</kbd> / <kbd>Alt</kbd>+<kbd>(</kbd></td><td>Rotate selections text content forward / backward</td><td>Multi-Select</td></tr>
+
+              <!-- Selection & Regex -->
+              <tr data-cat="Selection"><td><kbd>x</kbd></td><td>Select whole line</td><td>Selection</td></tr>
+              <tr data-cat="Selection"><td><kbd>%</kbd></td><td>Select entire document text</td><td>Selection</td></tr>
+              <tr data-cat="Regex"><td><kbd>s</kbd></td><td>Select regex matches within active selection</td><td>Regex</td></tr>
+              <tr data-cat="Regex"><td><kbd>S</kbd></td><td>Split selection on regex matches</td><td>Regex</td></tr>
+
+              <!-- Editing -->
+              <tr data-cat="Editing"><td><kbd>i</kbd> / <kbd>a</kbd></td><td>Insert before / after selection</td><td>Editing</td></tr>
+              <tr data-cat="Editing"><td><kbd>I</kbd> / <kbd>A</kbd></td><td>Insert at line start / line end</td><td>Editing</td></tr>
+              <tr data-cat="Editing"><td><kbd>o</kbd> / <kbd>O</kbd></td><td>Open line below / above and enter insert</td><td>Editing</td></tr>
+              <tr data-cat="Editing"><td><kbd>d</kbd> / <kbd>c</kbd></td><td>Delete selection / Change selection</td><td>Editing</td></tr>
+              <tr data-cat="Registers"><td><kbd>y</kbd> / <kbd>p</kbd> / <kbd>P</kbd></td><td>Yank selection / Paste after / Paste before</td><td>Registers</td></tr>
+              <tr data-cat="History"><td><kbd>u</kbd> / <kbd>U</kbd></td><td>Undo / Redo edit</td><td>History</td></tr>
+              <tr data-cat="History"><td><kbd>Alt</kbd>+<kbd>u</kbd> / <kbd>Alt</kbd>+<kbd>U</kbd></td><td>Undo / Redo selection history</td><td>History</td></tr>
+              <tr data-cat="Mode"><td><kbd>Esc</kbd></td><td>Return to normal (select) mode</td><td>Mode</td></tr>
+              <tr data-cat="Toggle"><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></td><td>Toggle browser-kakoune on/off on active element</td><td>Extension</td></tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- Live Playground Section -->
+      <!-- Section: Playground -->
       <section id="tab-playground" class="tab-panel">
-        <div class="panel-header">
-          <h2>Interactive Playground</h2>
-          <p>Test Kakoune keybindings on live Textarea and CodeMirror instances right here.</p>
-        </div>
+        <header class="panel-header">
+          <h2>Interactive Test Playground</h2>
+          <p>Test browser-kakoune modal editing directly on live editors below.</p>
+        </header>
 
-        <div class="playground-grid">
+        <div class="playground-layout">
           <div class="playground-card">
-            <h3>Standard HTML Textarea</h3>
-            <textarea id="play-textarea" class="play-editor" rows="8">def quicksort(arr):
-    if len(arr) <= 1:
-        return arr
-    pivot = arr[len(arr) // 2]
-    left = [x for x in arr if x < pivot]
-    middle = [x for x in arr if x == pivot]
-    right = [x for x in arr if x > pivot]
-    return quicksort(left) + middle + quicksort(right)</textarea>
+            <div class="playground-card-header">
+              <h3>In-Place Textarea Editor</h3>
+              <span class="badge-mini">TEXTAREA</span>
+            </div>
+            <textarea id="play-textarea" class="play-textarea" rows="8"># Welcome to browser-kakoune!
+# Try multi-cursor commands:
+# 1. Press % then s then type a regex like \w+ then Enter
+# 2. Press C to duplicate cursor down
+# 3. Press i to type at all cursors simultaneously
+def calculate_metrics(items):
+    total = sum(x.value for x in items)
+    average = total / len(items) if items else 0
+    return {"total": total, "average": average}</textarea>
           </div>
         </div>
       </section>
     </main>
   </div>
 
-  <div id="save-toast" class="toast">Settings saved successfully!</div>
+  <div id="save-toast" class="toast">✓ Settings saved successfully!</div>
   <script type="module" src="./main.ts"></script>
 </body>
 </html>

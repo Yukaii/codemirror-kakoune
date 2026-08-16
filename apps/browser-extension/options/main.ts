@@ -1,8 +1,7 @@
+import { DEFAULT_SETTINGS, type BadgePosition, type ExtensionSettings, type ExtensionTheme } from "../src/types";
 import { loadSettings, saveSettings } from "../src/storage";
-import { TextareaAdapter } from "../src/adapter/textarea";
-import { buildKakouneBindings } from "../src/adapter/bindings";
-import { KakouneKeyProcessor, KakounePromptController, normalizeKeyStroke, type KakouneMode } from "kakoune-core-js";
-import type { BadgePosition, ExtensionSettings, ExtensionTheme } from "../src/types";
+import { CM6OverlayEditor } from "../src/adapter/cm6-overlay";
+import type { KakouneMode } from "kakoune-core-js";
 
 let currentSettings: ExtensionSettings;
 
@@ -10,6 +9,7 @@ async function initOptions(): Promise<void> {
   currentSettings = await loadSettings();
   setupTabs();
   bindFormControls();
+  setupSearchFilter();
   setupPlayground();
 }
 
@@ -42,19 +42,23 @@ function bindFormControls(): void {
   const optBlacklist = document.getElementById("opt-blacklist") as HTMLTextAreaElement;
   const optWhitelist = document.getElementById("opt-whitelist") as HTMLTextAreaElement;
   const btnSave = document.getElementById("btn-save-all") as HTMLButtonElement;
+  const btnReset = document.getElementById("btn-reset-defaults") as HTMLButtonElement;
 
-  // Set values from currentSettings
-  optEnabled.checked = currentSettings.enabled;
-  optDefaultMode.value = currentSettings.defaultMode;
-  optEnableTextareas.checked = currentSettings.enableTextareas;
-  optEnableCm5.checked = currentSettings.enableCodeMirror5;
-  optEnableCm6.checked = currentSettings.enableCodeMirror6;
-  optShowBadge.checked = currentSettings.showBadge;
-  optBadgePosition.value = currentSettings.badgePosition;
-  optShowWhichKey.checked = currentSettings.showWhichKey;
-  optTheme.value = currentSettings.theme;
-  optBlacklist.value = currentSettings.blacklistedDomains.join("\n");
-  optWhitelist.value = currentSettings.whitelistedDomains.join("\n");
+  const populate = (s: ExtensionSettings) => {
+    optEnabled.checked = s.enabled;
+    optDefaultMode.value = s.defaultMode;
+    optEnableTextareas.checked = s.enableTextareas;
+    optEnableCm5.checked = s.enableCodeMirror5;
+    optEnableCm6.checked = s.enableCodeMirror6;
+    optShowBadge.checked = s.showBadge;
+    optBadgePosition.value = s.badgePosition;
+    optShowWhichKey.checked = s.showWhichKey;
+    optTheme.value = s.theme;
+    optBlacklist.value = s.blacklistedDomains.join("\n");
+    optWhitelist.value = s.whitelistedDomains.join("\n");
+  };
+
+  populate(currentSettings);
 
   btnSave.addEventListener("click", async () => {
     const updated: Partial<ExtensionSettings> = {
@@ -72,13 +76,42 @@ function bindFormControls(): void {
     };
 
     currentSettings = await saveSettings(updated);
-    showToast();
+    showToast("Settings saved successfully!");
+  });
+
+  btnReset.addEventListener("click", async () => {
+    if (confirm("Reset all browser-kakoune settings to defaults?")) {
+      currentSettings = await saveSettings(DEFAULT_SETTINGS);
+      populate(currentSettings);
+      showToast("Reset to default settings.");
+    }
   });
 }
 
-function showToast(): void {
+function setupSearchFilter(): void {
+  const searchInput = document.getElementById("key-filter") as HTMLInputElement;
+  const table = document.getElementById("key-table");
+  if (!searchInput || !table) return;
+
+  const rows = table.querySelectorAll("tbody tr");
+
+  searchInput.addEventListener("input", () => {
+    const query = searchInput.value.toLowerCase().trim();
+    rows.forEach(row => {
+      const text = row.textContent?.toLowerCase() || "";
+      if (query === "" || text.includes(query)) {
+        (row as HTMLElement).style.display = "";
+      } else {
+        (row as HTMLElement).style.display = "none";
+      }
+    });
+  });
+}
+
+function showToast(msg = "Settings saved successfully!") {
   const toast = document.getElementById("save-toast");
   if (!toast) return;
+  toast.textContent = `✓ ${msg}`;
   toast.classList.add("show");
   setTimeout(() => {
     toast.classList.remove("show");
@@ -89,58 +122,8 @@ function setupPlayground(): void {
   const textarea = document.getElementById("play-textarea") as HTMLTextAreaElement;
   if (!textarea) return;
 
-  const adapter = new TextareaAdapter(textarea);
-  const prompts = new KakounePromptController();
-  const processor = new KakouneKeyProcessor(buildKakouneBindings(prompts));
-  adapter.setMode("select");
-
-  textarea.addEventListener("beforeinput", event => {
-    if (adapter.getMode() === "select" || prompts.isActive()) {
-      event.preventDefault();
-    }
-  });
-
-  textarea.addEventListener("keydown", event => {
-    const key = normalizeKeyStroke(event);
-    if (!key) return;
-
-    if (prompts.isActive()) {
-      const handled = prompts.handleKey(adapter, key);
-      if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      return;
-    }
-
-    const mode = adapter.getMode();
-    if (mode === "insert") {
-      if (key === "<Esc>") {
-        adapter.setMode("select");
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      return;
-    }
-
-    if (key === "<Esc>") {
-      processor.reset();
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    const handled = processor.handle(mode, key, adapter);
-    if (handled) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    if (mode === "select" && (key.length === 1 || key === "<Enter>" || key === "<Backspace>")) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
+  new CM6OverlayEditor(textarea, {
+    initialMode: "select"
   });
 }
 

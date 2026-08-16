@@ -29,7 +29,7 @@ class ContentScriptManager {
     this.settings = await loadSettings();
     if (!this.settings) return;
 
-    this.overlay = new OverlayController(this.settings);
+    this.overlay = new OverlayController(this.settings, () => this.toggleOnActiveElement());
     this.setupEventListeners();
     this.setupMessageListener();
 
@@ -110,10 +110,21 @@ class ContentScriptManager {
 
   private toggleOnActiveElement(): void {
     if (this.activeOverlayEditor) {
-      const current = this.activeOverlayEditor.getMode();
-      const next: KakouneMode = current === "select" ? "insert" : "select";
-      this.activeOverlayEditor.setMode(next);
-      this.updateUI();
+      // Revert from CM6 overlay back to native textarea
+      const targetTextarea = this.activeOverlayEditor.getTextarea();
+      (targetTextarea as any).__kakoune_disabled = true;
+      this.activeOverlayEditor.destroy(true);
+      this.activeOverlayEditor = null;
+      this.activeEngine = "none";
+      this.overlay?.hide();
+      return;
+    }
+
+    const activeEl = document.activeElement;
+    if (activeEl && activeEl.tagName === "TEXTAREA") {
+      // Re-enable CM6 overlay on textarea
+      (activeEl as any).__kakoune_disabled = false;
+      this.handleFocus(activeEl as HTMLElement);
       return;
     }
 
@@ -133,6 +144,12 @@ class ContentScriptManager {
 
     // If focus is inside our own CM6 overlay editor, keep active
     if (element.closest(".kakoune-cm6-overlay-wrapper")) {
+      return;
+    }
+
+    // If element was manually toggled off by user, respect it
+    if ((element as any).__kakoune_disabled) {
+      this.overlay?.hide();
       return;
     }
 
