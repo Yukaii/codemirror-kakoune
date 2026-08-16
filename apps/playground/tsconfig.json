@@ -6,6 +6,7 @@
     "noEmit": true,
     "paths": {
       "codemirror-kakoune": ["../../packages/codemirror-kakoune/src/index.ts"],
+      "codemirror-kakoune-cm5": ["../../packages/codemirror-kakoune-cm5/src/index.ts"],
       "kakoune-core": ["../../packages/kakoune-core/src/index.ts"]
     }
   },

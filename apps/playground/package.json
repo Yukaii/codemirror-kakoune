@@ -22,6 +22,7 @@
     "codemirror-kakoune": "workspace:*"
   },
   "devDependencies": {
+    "@types/codemirror": "^5.60.16",
     "typescript": "^6.0.3",
     "vite": "^8.0.14"
   }
