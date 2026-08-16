@@ -6,7 +6,8 @@
     "moduleResolution": "Bundler",
     "noEmit": true,
     "paths": {
-      "codemirror-kakoune": ["../codemirror-kakoune/src/index.ts"]
+      "codemirror-kakoune": ["../codemirror-kakoune/src/index.ts"],
+      "kakoune-core": ["../kakoune-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"]
