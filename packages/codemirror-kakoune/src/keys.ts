@@ -6,9 +6,13 @@ import {
   setKakounePipePromptEffect,
   setKakouneReplaceInsertAnchorsEffect,
   setKakouneSelectionRepeatCountEffect,
+  kakouneGotoFileFacet,
+  kakouneGotoBufferFacet,
+  kakouneExecuteCommandFacet,
   type KakouneMode,
   type WhichKeyItem
 } from "./state";
+import { handlePipePromptKey } from "./commands";
 
 /** A single key binding mapping a key sequence to a command. */
 export interface KakouneBinding {
@@ -64,6 +68,38 @@ function tokenizeSimpleKeys(text: string): string[] {
     tokens.push(ch);
   }
   return tokens;
+}
+
+function parseCommandLine(text: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let inQuote: '"' | "'" | null = null;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inQuote) {
+      if (ch === inQuote) {
+        inQuote = null;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"' || ch === "'") {
+      inQuote = ch;
+    } else if (/\s/.test(ch)) {
+      if (current.length > 0) {
+        parts.push(current);
+        current = "";
+      }
+    } else {
+      current += ch;
+    }
+  }
+
+  if (current.length > 0) {
+    parts.push(current);
+  }
+
+  return parts;
 }
 
 /**
@@ -177,19 +213,41 @@ export class KakouneKeyProcessor {
       return true;
     }
 
-    if (prompt.startsWith("execute-keys ")) {
-      const payload = prompt.slice("execute-keys ".length);
+    const trimmed = prompt.trim();
+
+    if (trimmed.startsWith("execute-keys ")) {
+      const payload = trimmed.slice("execute-keys ".length);
       this.temporaryNormal = false;
       for (const key of tokenizeSimpleKeys(payload)) {
         this.handle("insert", key, view);
       }
-    } else if (prompt.startsWith("enter-user-mode")) {
-      const payload = prompt.slice("enter-user-mode".length).trim();
+    } else if (trimmed.startsWith("enter-user-mode")) {
+      const payload = trimmed.slice("enter-user-mode".length).trim();
       const args = payload.length > 0 ? payload.split(/\s+/) : [];
       const isLock = args[0] === "-lock";
       const modeName = isLock ? args[1] : args[0];
       if (modeName) {
         this.activeUserMode = { name: modeName, lock: isLock };
+      }
+    } else {
+      const [command, ...args] = parseCommandLine(trimmed);
+      if (command) {
+        const onExecute = view.state.facet(kakouneExecuteCommandFacet);
+        if (onExecute) {
+          onExecute(command, args, trimmed, view);
+        }
+
+        if (command === "b" || command === "buffer") {
+          const onGotoBuffer = view.state.facet(kakouneGotoBufferFacet);
+          if (onGotoBuffer && args[0]) {
+            onGotoBuffer(args[0], view);
+          }
+        } else if (command === "e" || command === "e!" || command === "edit" || command === "edit!") {
+          const onGotoFile = view.state.facet(kakouneGotoFileFacet);
+          if (onGotoFile && args[0]) {
+            onGotoFile(args[0], view);
+          }
+        }
       }
     }
 
@@ -279,6 +337,11 @@ export class KakouneKeyProcessor {
   }
 
   private processKey(mode: KakouneMode, key: string, view: EditorView, recordKey: boolean): boolean {
+    const kakoune = view.state.field(kakouneStateField);
+    if (kakoune.pipePrompt !== null) {
+      return handlePipePromptKey(view, key);
+    }
+
     if (this.commandPrompt !== null) {
       return this.handleCommandPromptKey(view, key);
     }

@@ -1,4 +1,5 @@
 import { Facet, StateEffect, type StateEffectType, StateField, type EditorState } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 
 /** The active editing mode in Kakoune-style modal editing. */
 export type KakouneMode = "select" | "insert";
@@ -116,12 +117,48 @@ export interface KakouneState {
   jumpState: KakouneJumpState;
 }
 
+/** Callback when a 'goto file' (`gf` / `Gf`) action is triggered. */
+export type GotoFileCallback = (filename: string, view: EditorView) => boolean | undefined;
+
+/** Callback when a 'goto last buffer' (`ga` / `Ga` or `:b`) action is triggered. */
+export type GotoBufferCallback = (bufferName: string, view: EditorView) => boolean | undefined;
+
+/** Parameters for the pipe callback. */
+export interface PipeCallbackParams {
+  command: string;
+  inputs: string[];
+  mode: "pipe" | "pipe-to";
+  register?: string;
+}
+
+/** Callback when a pipe (`|` or `<a-|>`) action is executed. */
+export type PipeCallback = (
+  params: PipeCallbackParams,
+  view: EditorView
+) => string[] | undefined | Promise<string[] | undefined>;
+
+/** Callback when a command line prompt (`:command`) is executed. */
+export type ExecuteCommandCallback = (
+  command: string,
+  args: string[],
+  raw: string,
+  view: EditorView
+) => boolean | undefined;
+
 /** Options for configuring the {@link kakoune} extension. */
 export interface KakouneOptions {
   /** Initial mode when the editor is created. Defaults to `"select"`. */
   initialMode?: KakouneMode;
   /** Callback for displaying pending key sequences and available bindings. */
   onWhichKey?: WhichKeyCallback;
+  /** Callback when `gf` (goto file) is triggered. */
+  onGotoFile?: GotoFileCallback;
+  /** Callback when `ga` (goto last buffer) or `:buffer` is triggered. */
+  onGotoBuffer?: GotoBufferCallback;
+  /** Callback when `|` (pipe) or `<a-|>` (pipe-to) is executed. */
+  onPipe?: PipeCallback;
+  /** Callback when a command line prompt (`:command`) is executed. */
+  onExecuteCommand?: ExecuteCommandCallback;
 }
 
 /**
@@ -129,6 +166,34 @@ export interface KakouneOptions {
  * key sequences and available completions so you can build a discovery UI.
  */
 export const kakouneWhichKeyFacet: Facet<WhichKeyCallback, WhichKeyCallback | null> = Facet.define<WhichKeyCallback, WhichKeyCallback | null>({
+  combine(values) {
+    return values.length > 0 ? values[values.length - 1] : null;
+  }
+});
+
+/** Facet for registering a goto-file callback. */
+export const kakouneGotoFileFacet: Facet<GotoFileCallback, GotoFileCallback | null> = Facet.define<GotoFileCallback, GotoFileCallback | null>({
+  combine(values) {
+    return values.length > 0 ? values[values.length - 1] : null;
+  }
+});
+
+/** Facet for registering a goto-buffer callback. */
+export const kakouneGotoBufferFacet: Facet<GotoBufferCallback, GotoBufferCallback | null> = Facet.define<GotoBufferCallback, GotoBufferCallback | null>({
+  combine(values) {
+    return values.length > 0 ? values[values.length - 1] : null;
+  }
+});
+
+/** Facet for registering a pipe handler callback. */
+export const kakounePipeFacet: Facet<PipeCallback, PipeCallback | null> = Facet.define<PipeCallback, PipeCallback | null>({
+  combine(values) {
+    return values.length > 0 ? values[values.length - 1] : null;
+  }
+});
+
+/** Facet for registering a command execution callback. */
+export const kakouneExecuteCommandFacet: Facet<ExecuteCommandCallback, ExecuteCommandCallback | null> = Facet.define<ExecuteCommandCallback, ExecuteCommandCallback | null>({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : null;
   }

@@ -1382,5 +1382,180 @@ describe("kakoune extension", () => {
 
       view.destroy();
     });
+
+    it("triggers onGotoFile callback on gf and Gf", () => {
+      const onGotoFile = jest.fn();
+      const parent = document.createElement("div");
+      document.body.appendChild(parent);
+
+      const view = new EditorView({
+        state: EditorState.create({
+          doc: "open src/index.ts now",
+          selection: EditorSelection.range(5, 17), // "src/index.ts"
+          extensions: [kakoune({ onGotoFile })]
+        }),
+        parent
+      });
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      expect(processor.handle("select", "g", view)).toBe(true);
+      expect(processor.handle("select", "f", view)).toBe(true);
+      expect(onGotoFile).toHaveBeenCalledWith("src/index.ts", view);
+
+      expect(processor.handle("select", "G", view)).toBe(true);
+      expect(processor.handle("select", "f", view)).toBe(true);
+      expect(onGotoFile).toHaveBeenCalledTimes(2);
+
+      view.destroy();
+    });
+
+    it("triggers onGotoBuffer callback on ga and Ga", () => {
+      const onGotoBuffer = jest.fn();
+      const parent = document.createElement("div");
+      document.body.appendChild(parent);
+
+      const view = new EditorView({
+        state: EditorState.create({
+          doc: "some buffer text",
+          selection: EditorSelection.cursor(0),
+          extensions: [kakoune({ onGotoBuffer })]
+        }),
+        parent
+      });
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      expect(processor.handle("select", "g", view)).toBe(true);
+      expect(processor.handle("select", "a", view)).toBe(true);
+      expect(onGotoBuffer).toHaveBeenCalledWith("", view);
+
+      expect(processor.handle("select", "G", view)).toBe(true);
+      expect(processor.handle("select", "a", view)).toBe(true);
+      expect(onGotoBuffer).toHaveBeenCalledTimes(2);
+
+      view.destroy();
+    });
+
+    it("moves and extends to buffer end with ge and Ge", () => {
+      const view = createView("hello world");
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      expect(processor.handle("select", "g", view)).toBe(true);
+      expect(processor.handle("select", "e", view)).toBe(true);
+      expect(view.state.selection.main.head).toBe(11);
+      expect(view.state.selection.main.anchor).toBe(11);
+
+      view.dispatch({ selection: EditorSelection.cursor(2) });
+      expect(processor.handle("select", "G", view)).toBe(true);
+      expect(processor.handle("select", "e", view)).toBe(true);
+      expect(view.state.selection.main.anchor).toBe(2);
+      expect(view.state.selection.main.head).toBe(11);
+
+      view.destroy();
+    });
+
+    it("triggers onPipe callback and replaces text in pipe mode", () => {
+      const onPipe = jest.fn(({ inputs }: { inputs: string[] }) => inputs.map(s => s.toUpperCase()));
+      const parent = document.createElement("div");
+      document.body.appendChild(parent);
+
+      const view = new EditorView({
+        state: EditorState.create({
+          doc: "hello world",
+          selection: EditorSelection.range(0, 5),
+          extensions: [kakoune({ onPipe })]
+        }),
+        parent
+      });
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      expect(processor.handle("select", "|", view)).toBe(true);
+      expect(processor.handle("select", "u", view)).toBe(true);
+      expect(processor.handle("select", "p", view)).toBe(true);
+      expect(processor.handle("select", "<Enter>", view)).toBe(true);
+
+      expect(onPipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: "up",
+          inputs: ["hello"],
+          mode: "pipe"
+        }),
+        view
+      );
+      expect(view.state.doc.toString()).toBe("HELLO world");
+
+      view.destroy();
+    });
+
+    it("triggers onPipe callback in pipe-to mode (<A-|>) without altering selections", () => {
+      const onPipe = jest.fn();
+      const parent = document.createElement("div");
+      document.body.appendChild(parent);
+
+      const view = new EditorView({
+        state: EditorState.create({
+          doc: "hello world",
+          selection: EditorSelection.range(0, 5),
+          extensions: [kakoune({ onPipe })]
+        }),
+        parent
+      });
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      expect(processor.handle("select", "<A-|>", view)).toBe(true);
+      expect(processor.handle("select", "w", view)).toBe(true);
+      expect(processor.handle("select", "<Enter>", view)).toBe(true);
+
+      expect(onPipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: "w",
+          inputs: ["hello"],
+          mode: "pipe-to"
+        }),
+        view
+      );
+      expect(view.state.doc.toString()).toBe("hello world");
+
+      view.destroy();
+    });
+
+    it("executes command prompt :commands and calls onExecuteCommand, onGotoBuffer, and onGotoFile", () => {
+      const onExecuteCommand = jest.fn();
+      const onGotoBuffer = jest.fn();
+      const onGotoFile = jest.fn();
+      const parent = document.createElement("div");
+      document.body.appendChild(parent);
+
+      const view = new EditorView({
+        state: EditorState.create({
+          doc: "hello",
+          selection: EditorSelection.cursor(0),
+          extensions: [kakoune({ onExecuteCommand, onGotoBuffer, onGotoFile })]
+        }),
+        parent
+      });
+      const processor = new KakouneKeyProcessor(buildKakouneCommands());
+
+      // :buffer my-buffer<Enter>
+      expect(processor.handle("select", ":", view)).toBe(true);
+      for (const ch of "buffer my-buffer") {
+        processor.handle("select", ch, view);
+      }
+      expect(processor.handle("select", "<Enter>", view)).toBe(true);
+
+      expect(onExecuteCommand).toHaveBeenCalledWith("buffer", ["my-buffer"], "buffer my-buffer", view);
+      expect(onGotoBuffer).toHaveBeenCalledWith("my-buffer", view);
+
+      // :edit foo.ts<Enter>
+      expect(processor.handle("select", ":", view)).toBe(true);
+      for (const ch of "edit foo.ts") {
+        processor.handle("select", ch, view);
+      }
+      expect(processor.handle("select", "<Enter>", view)).toBe(true);
+
+      expect(onExecuteCommand).toHaveBeenCalledWith("edit", ["foo.ts"], "edit foo.ts", view);
+      expect(onGotoFile).toHaveBeenCalledWith("foo.ts", view);
+
+      view.destroy();
+    });
   });
 });

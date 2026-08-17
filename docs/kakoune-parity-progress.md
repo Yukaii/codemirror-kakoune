@@ -52,11 +52,11 @@
 - pipe-replaces-all-lines
 - selection-undo/redo
 - selection-undo/undo
+- concat-paste-line
 
 ## Still Red
 - repeat-insert/repeat-insert-hooks
 - repeat-insert/repeat-insert-mapped-word-completion
-- concat-paste-line
 - goto/file
 - goto/last-buffer
 - macro/replay-macro-mapped-word-completion

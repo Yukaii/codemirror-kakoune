@@ -8,6 +8,10 @@ import {
   kakouneInitialModeFacet,
   kakouneStateField,
   kakouneWhichKeyFacet,
+  kakouneGotoFileFacet,
+  kakouneGotoBufferFacet,
+  kakounePipeFacet,
+  kakouneExecuteCommandFacet,
   kakouneSelectionTypeField,
   type KakouneMode,
   type KakouneOptions,
@@ -19,7 +23,10 @@ import {
   commitSearchPrompt,
   deleteSearchPromptChar,
   cancelSearchPrompt,
+  commitPipePrompt,
+  deletePipePromptChar,
   cancelPipePrompt,
+  handlePipePromptKey,
   handleSearchPromptKey,
   commitSelectPrompt,
   deleteSelectPromptChar,
@@ -31,7 +38,20 @@ import {
   handleSplitPromptKey
 } from "./commands";
 
-export type { KakouneMode, KakouneOptions, KakouneState, WhichKeyCallback, WhichKeyItem, KakouneFindKind, KakouneLastSelect } from "./state";
+export type {
+  KakouneMode,
+  KakouneOptions,
+  KakouneState,
+  WhichKeyCallback,
+  WhichKeyItem,
+  KakouneFindKind,
+  KakouneLastSelect,
+  GotoFileCallback,
+  GotoBufferCallback,
+  PipeCallbackParams,
+  PipeCallback,
+  ExecuteCommandCallback
+} from "./state";
 export {
   kakouneStateField,
   kakouneInitialModeFacet,
@@ -46,6 +66,10 @@ export {
   setKakouneSplitPromptEffect,
   setKakouneSplitSelectionEffect,
   kakouneWhichKeyFacet,
+  kakouneGotoFileFacet,
+  kakouneGotoBufferFacet,
+  kakounePipeFacet,
+  kakouneExecuteCommandFacet,
   kakouneSelectionTypeField,
   setKakouneSelectionTypeEffect
 } from "./state";
@@ -65,6 +89,12 @@ export {
   deleteSplitPromptChar,
   cancelSplitPrompt,
   handleSplitPromptKey,
+  gotoFile,
+  extendGotoFile,
+  gotoLastBuffer,
+  extendGotoLastBuffer,
+  gotoBufferEnd,
+  extendGotoBufferEnd,
   kakouneCommands
 } from "./commands";
 
@@ -123,6 +153,18 @@ function createKakouneHandler(processor: KakouneKeyProcessor) {
           return false;
         }
         const handledPrompt = handleSplitPromptKey(view, key);
+        if (handledPrompt) {
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+      }
+
+      if (state.pipePrompt !== null) {
+        if (key === "<Enter>" || key === "<Backspace>" || key === "<Esc>") {
+          return false;
+        }
+        const handledPrompt = handlePipePromptKey(view, key);
         if (handledPrompt) {
           event.preventDefault();
           event.stopPropagation();
@@ -289,6 +331,9 @@ export function kakoune(options: KakouneOptions = {}): Extension {
             if (state.splitPrompt !== null) {
               return commitSplitPrompt(view);
             }
+            if (state.pipePrompt !== null) {
+              return commitPipePrompt(view);
+            }
 
             // Swallow Enter in select mode so the default keymap doesn't insert a newline
             return state.mode !== "insert";
@@ -306,6 +351,9 @@ export function kakoune(options: KakouneOptions = {}): Extension {
             }
             if (state.splitPrompt !== null) {
               return deleteSplitPromptChar(view);
+            }
+            if (state.pipePrompt !== null) {
+              return deletePipePromptChar(view);
             }
 
             // Swallow Backspace in select mode so the default keymap doesn't delete
@@ -350,6 +398,18 @@ export function kakoune(options: KakouneOptions = {}): Extension {
 
   if (options.onWhichKey) {
     extensions.push(kakouneWhichKeyFacet.of(options.onWhichKey));
+  }
+  if (options.onGotoFile) {
+    extensions.push(kakouneGotoFileFacet.of(options.onGotoFile));
+  }
+  if (options.onGotoBuffer) {
+    extensions.push(kakouneGotoBufferFacet.of(options.onGotoBuffer));
+  }
+  if (options.onPipe) {
+    extensions.push(kakounePipeFacet.of(options.onPipe));
+  }
+  if (options.onExecuteCommand) {
+    extensions.push(kakouneExecuteCommandFacet.of(options.onExecuteCommand));
   }
 
   return extensions;
