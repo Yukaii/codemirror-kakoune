@@ -5,6 +5,7 @@ coverage/
 .vite/
 *.log
 pnpm-debug.log*
+*.zip
 packages/obsidian-kakoune/main.js
 /main.js
 /styles.css

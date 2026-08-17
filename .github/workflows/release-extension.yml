@@ -1,0 +1,109 @@
+name: Release Browser Extension
+
+on:
+  push:
+    tags:
+      - "extension-v*"
+      - "ext-v*"
+      - "browser-kakoune-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version bump type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - none
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Configure Git
+        if: github.event_name == 'workflow_dispatch' && inputs.version != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version & sync extension manifest
+        if: github.event_name == 'workflow_dispatch' && inputs.version != 'none'
+        run: |
+          pnpm --filter browser-kakoune exec npm version ${{ inputs.version }} --no-git-tag-version
+          node scripts/sync-extension-version.mjs
+          VERSION=$(node -p "require('./apps/browser-extension/package.json').version")
+          git add apps/browser-extension/package.json apps/browser-extension/manifest.json
+          git commit -m "chore(extension): release v$VERSION"
+          git tag -a "extension-v$VERSION" -m "extension-v$VERSION"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "extension-v$VERSION"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Run tests
+        run: pnpm --filter kakoune-core-js test && pnpm --filter codemirror-kakoune test && pnpm --filter codemirror-kakoune-cm5 test && pnpm --filter browser-kakoune test
+
+      - name: Build Browser Extension
+        run: pnpm --filter browser-kakoune build
+
+      - name: Package extension zip
+        run: node scripts/pack-extension.mjs
+
+      - name: Determine tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION=$(node -p "require('./apps/browser-extension/package.json').version")
+            TAG="extension-v$VERSION"
+          else
+            TAG="$GITHUB_REF_NAME"
+            VERSION="${GITHUB_REF_NAME#*v}"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Release tag: $TAG, Version: $VERSION"
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            apps/browser-extension/browser-kakoune.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: "Browser Extension v${{ env.VERSION }}"
+          files: |
+            apps/browser-extension/browser-kakoune-v*.zip
+            apps/browser-extension/browser-kakoune.zip
+          generate_release_notes: true

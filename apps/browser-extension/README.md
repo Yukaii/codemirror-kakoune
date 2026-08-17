@@ -38,6 +38,16 @@ pnpm --filter browser-kakoune build
 
 The output extension bundle will be generated in `apps/browser-extension/dist`.
 
+To create distribution zip packages:
+
+```bash
+pnpm pack:extension
+# Or inside apps/browser-extension:
+pnpm pack
+```
+
+This outputs `browser-kakoune-v<version>.zip` and `browser-kakoune.zip`.
+
 ### 2. Load into Chrome / Chromium
 
 1. Open `chrome://extensions` in your browser.
