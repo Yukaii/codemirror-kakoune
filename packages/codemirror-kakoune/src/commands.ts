@@ -51,6 +51,10 @@ import {
   setKakouneSelectionHistoryEffect,
   setKakouneLastSelectEffect,
   setKakounePipePromptEffect,
+  kakouneGotoFileFacet,
+  kakouneGotoBufferFacet,
+  kakounePipeFacet,
+  kakouneExecuteCommandFacet,
   type KakouneFindKind,
   type KakouneJumpEntry,
   type KakouneJumpState,
@@ -606,24 +610,142 @@ export function commitPipePrompt(view: EditorView): boolean {
     return true;
   }
 
+  const ranges = state.selection.ranges;
+  const inputs = ranges.map(range => {
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    return state.doc.sliceString(from, to);
+  });
+
+  const onPipe = state.facet(kakounePipeFacet);
+  if (onPipe) {
+    const res = onPipe({ command: cmd, inputs, mode: prompt.mode, register: prompt.register }, view);
+    if (Array.isArray(res) && prompt.mode === "pipe") {
+      const changes = ranges.map((range, index) => {
+        const from = Math.min(range.from, range.to);
+        const to = Math.max(range.from, range.to);
+        const insert = res[index] ?? "";
+        return { from, to, insert };
+      });
+      view.dispatch({ changes });
+    }
+    return true;
+  }
+
   if (prompt.mode === "pipe") {
     // Pipe: replace each selection with filter output
-    const ranges = state.selection.ranges;
-    const changes = ranges.map(range => {
+    const changes = ranges.map((range, index) => {
       const from = Math.min(range.from, range.to);
       const to = Math.max(range.from, range.to);
-      const text = state.doc.sliceString(from, to);
+      const text = inputs[index];
       const output = executeSimplePipeCommand(text, cmd);
       return { from, to, insert: output };
     });
 
     view.dispatch({ changes });
     return true;
-  } else if (prompt.mode === "pipe-to") {
+  }
+
+  if (prompt.mode === "pipe-to") {
     // Pipe-to: pipe selections through command, ignore output (or write to file)
+    for (const text of inputs) {
+      executeSimplePipeCommand(text, cmd);
+    }
     return true;
   }
 
+  return true;
+}
+
+function getTargetFilename(view: EditorView): string {
+  const main = view.state.selection.main;
+  if (!main.empty) {
+    return view.state.doc.sliceString(main.from, main.to).trim();
+  }
+  const line = view.state.doc.lineAt(main.head);
+  const text = line.text;
+  const col = main.head - line.from;
+  let start = col;
+  while (start > 0 && /[^\s"'\(\)\[\]<>{}]/.test(text[start - 1])) {
+    start -= 1;
+  }
+  let end = col;
+  while (end < text.length && /[^\s"'\(\)\[\]<>{}]/.test(text[end])) {
+    end += 1;
+  }
+  return text.slice(start, end).trim();
+}
+
+/**
+ * Triggers the 'goto file' action (`gf`), invoking the configured `onGotoFile` callback.
+ */
+export function gotoFile(view: EditorView): boolean {
+  const file = getTargetFilename(view);
+  const callback = view.state.facet(kakouneGotoFileFacet);
+  if (callback) {
+    const res = callback(file, view);
+    return res !== false;
+  }
+  return true;
+}
+
+/**
+ * Extends selection to file (`Gf`), invoking the configured `onGotoFile` callback.
+ */
+export function extendGotoFile(view: EditorView): boolean {
+  return gotoFile(view);
+}
+
+/**
+ * Triggers the 'goto last buffer' action (`ga`), invoking the configured `onGotoBuffer` callback.
+ */
+export function gotoLastBuffer(view: EditorView): boolean {
+  const callback = view.state.facet(kakouneGotoBufferFacet);
+  if (callback) {
+    const res = callback("", view);
+    return res !== false;
+  }
+  return true;
+}
+
+/**
+ * Extends selection to last buffer (`Ga`), invoking the configured `onGotoBuffer` callback.
+ */
+export function extendGotoLastBuffer(view: EditorView): boolean {
+  return gotoLastBuffer(view);
+}
+
+/**
+ * Jumps to document end (`ge`).
+ */
+export function gotoBufferEnd(view: EditorView): boolean {
+  const docLen = view.state.doc.length;
+  view.dispatch({
+    selection: EditorSelection.cursor(docLen),
+    scrollIntoView: true
+  });
+  return true;
+}
+
+/**
+ * Extends selection to document end (`Ge`).
+ */
+export function extendGotoBufferEnd(view: EditorView): boolean {
+  const docLen = view.state.doc.length;
+  return extendSelections(view, () => docLen);
+}
+
+/** Deletes the last character from the active pipe prompt. */
+export function deletePipePromptChar(view: EditorView): boolean {
+  const kakoune = view.state.field(kakouneStateField);
+  const prompt = kakoune.pipePrompt;
+  if (!prompt) return false;
+  view.dispatch({
+    effects: setKakounePipePromptEffect.of({
+      ...prompt,
+      text: prompt.text.slice(0, -1)
+    })
+  });
   return true;
 }
 
@@ -650,26 +772,20 @@ export function handlePipePromptKey(view: EditorView, key: string): boolean {
   }
 
   if (key === "<Backspace>") {
-    view.dispatch({
-      effects: setKakounePipePromptEffect.of({
-        ...prompt,
-        text: prompt.text.slice(0, -1)
-      })
-    });
-    return true;
+    return deletePipePromptChar(view);
   }
 
   if (key === "<Space>") {
     view.dispatch({
       effects: setKakounePipePromptEffect.of({
         ...prompt,
-        text: prompt.text + " "
+        text: `${prompt.text} `
       })
     });
     return true;
   }
 
-  if (key.length === 1) {
+  if (key.length === 1 && !key.startsWith("<")) {
     view.dispatch({
       effects: setKakounePipePromptEffect.of({
         ...prompt,
@@ -682,6 +798,11 @@ export function handlePipePromptKey(view: EditorView, key: string): boolean {
   return true;
 }
 
+function areSelectionsEqual(a: Array<{ anchor: number; head: number }>, b: readonly SelectionRange[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((ra, i) => ra.anchor === b[i].anchor && ra.head === b[i].head);
+}
+
 function undoSelection(view: EditorView): boolean {
   const kakoune = view.state.field(kakouneStateField);
   const { selectionHistory, selectionHistoryIndex } = kakoune;
@@ -689,7 +810,20 @@ function undoSelection(view: EditorView): boolean {
     return true;
   }
 
-  const nextIndex = selectionHistoryIndex - 1;
+  const current = view.state.selection.ranges;
+  let nextIndex = selectionHistoryIndex - 1;
+  while (nextIndex >= 0) {
+    const target = selectionHistory[nextIndex];
+    if (target && !areSelectionsEqual(target, current)) {
+      break;
+    }
+    nextIndex -= 1;
+  }
+
+  if (nextIndex < 0) {
+    return true;
+  }
+
   const target = selectionHistory[nextIndex];
   if (target) {
     view.dispatch({
@@ -715,7 +849,20 @@ function redoSelection(view: EditorView): boolean {
     return true;
   }
 
-  const nextIndex = selectionHistoryIndex + 1;
+  const current = view.state.selection.ranges;
+  let nextIndex = selectionHistoryIndex + 1;
+  while (nextIndex < selectionHistory.length) {
+    const target = selectionHistory[nextIndex];
+    if (target && !areSelectionsEqual(target, current)) {
+      break;
+    }
+    nextIndex += 1;
+  }
+
+  if (nextIndex >= selectionHistory.length) {
+    return true;
+  }
+
   const target = selectionHistory[nextIndex];
   if (target) {
     view.dispatch({
@@ -1038,9 +1185,9 @@ function findEnclosingObject(doc: string, pos: number, openChar: string, closeCh
   let startIdx = -1;
 
   // Scan backwards to find the unmatched openChar
-  for (let i = pos - 1; i >= 0; i--) {
+  for (let i = Math.min(pos, doc.length - 1); i >= 0; i--) {
     const char = doc[i];
-    if (char === closeChar) {
+    if (char === closeChar && i !== pos) {
       nestedCount++;
     } else if (char === openChar) {
       if (nestedCount === 0) {
@@ -1097,7 +1244,7 @@ function findEnclosingQuote(doc: string, pos: number, quoteChar: string): { star
   for (let k = 0; k < quotes.length - 1; k += 2) {
     const start = quotes[k];
     const end = quotes[k + 1];
-    if (start < pos && end >= pos) {
+    if (start <= pos && end >= pos) {
       return { start, end };
     }
   }
@@ -1473,16 +1620,18 @@ function selectSurroundingObject(
 ): boolean {
   const doc = view.state.doc.toString();
   const state = view.state;
-  const ranges = state.selection.ranges.map(range => {
-    const result = getObjectRange(doc, range.head, objectKey, "start");
-    if (!result) {
-      return range;
-    }
+  const isDelimiterType = [
+    "b", "(", ")", "B", "{", "}", "r", "[", "]", "a", "<", ">", "<lt>", "<gt>",
+    "Q", "\"", "<dquote>", "q", "'", "<quote>", "g", "`"
+  ].includes(objectKey);
 
-    const isDelimiterType = [
-      "b", "(", ")", "B", "{", "}", "r", "[", "]", "a", "<", ">", "<lt>", "<gt>",
-      "Q", "\"", "<dquote>", "q", "'", "<quote>", "g", "`"
-    ].includes(objectKey);
+  const ranges: SelectionRange[] = [];
+  for (const range of state.selection.ranges) {
+    const pos = range.empty ? range.head : Math.min(range.anchor, range.head);
+    const result = getObjectRange(doc, pos, objectKey, "start");
+    if (!result) {
+      continue;
+    }
 
     let startIdx = result.start;
     let endIdx = result.end;
@@ -1490,19 +1639,28 @@ function selectSurroundingObject(
     if (inner && isDelimiterType) {
       startIdx = result.start + 1;
       endIdx = result.end;
-    } else if (!inner && isDelimiterType) {
-      endIdx = result.end + 1;
-    } else if (!inner) {
-      endIdx = result.end + 1;
+      if (startIdx >= endIdx) {
+        // Empty inner object: drop this selection
+        continue;
+      }
     } else {
       endIdx = result.end + 1;
     }
 
-    return EditorSelection.range(startIdx, endIdx);
-  });
+    ranges.push(EditorSelection.range(startIdx, endIdx));
+  }
+
+  if (ranges.length === 0) {
+    view.dispatch({
+      effects: [
+        setKakouneCommandErrorEffect.of("'exec': no selections remaining")
+      ]
+    });
+    return true;
+  }
 
   view.dispatch({
-    selection: EditorSelection.create(ranges, state.selection.mainIndex),
+    selection: EditorSelection.create(ranges, Math.min(state.selection.mainIndex, ranges.length - 1)),
     effects: [
       setKakouneLastSelectEffect.of({
         type: "surroundingObject",
@@ -2276,6 +2434,9 @@ function buildSelectBindings(): KakouneBinding[] {
     }, description: "Extend to line (with count)" },
     { keys: ["g", "h"], run: view => withAdapter(view, editor => moveLineStart(editor)), description: "Move to line begin" },
     { keys: ["g", "l"], run: view => withAdapter(view, editor => moveLineEnd(editor)), description: "Move to line end" },
+    { keys: ["g", "e"], run: view => gotoBufferEnd(view), description: "Move to buffer end" },
+    { keys: ["g", "f"], run: view => gotoFile(view), description: "Go to file" },
+    { keys: ["g", "a"], run: view => gotoLastBuffer(view), description: "Go to last buffer" },
     { keys: ["<A-h>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).from), description: "Extend to line begin" },
     { keys: ["<A-l>"], run: view => extendSelections(view, range => view.state.doc.lineAt(range.head).to), description: "Extend to line end" },
     { keys: ["H"], run: (view, _arg, count) => extendSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length), count ?? 1), description: "Extend left" },
@@ -2292,6 +2453,12 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["G", "J"], run: view => extendSelections(view, () => view.state.doc.length), description: "Extend to document end" },
     { keys: ["G", "g"], run: view => extendSelections(view, () => 0), description: "Extend to document start" },
     { keys: ["G", "G"], run: view => extendSelections(view, () => 0), description: "Extend to document start" },
+    { keys: ["G", "e"], run: view => extendGotoBufferEnd(view), description: "Extend to buffer end" },
+    { keys: ["G", "E"], run: view => extendGotoBufferEnd(view), description: "Extend to buffer end" },
+    { keys: ["G", "f"], run: view => extendGotoFile(view), description: "Extend to file" },
+    { keys: ["G", "F"], run: view => extendGotoFile(view), description: "Extend to file" },
+    { keys: ["G", "a"], run: view => extendGotoLastBuffer(view), description: "Extend to last buffer" },
+    { keys: ["G", "A"], run: view => extendGotoLastBuffer(view), description: "Extend to last buffer" },
     { keys: ["g", "k"], run: view => jumpToLine(view, 1), description: "Jump to document start" },
     { keys: ["g", "j"], run: view => jumpToLine(view, view.state.doc.lines), description: "Jump to document end" },
     { keys: ["d"], run: view => deleteSelection(view), description: "Delete selection" },
@@ -2477,8 +2644,8 @@ export function buildKakouneCommands(): Record<KakouneMode, KakouneBinding[]> {
     select: [...buildSelectBindings(), ...buildBracketBindings()],
     insert: [
       { keys: ["<Esc>"], run: view => setMode(view, "select"), description: "Exit insert mode" },
-      { keys: ["<Left>"], run: view => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)), description: "Move left" },
-      { keys: ["<Right>"], run: view => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)), description: "Move right" },
+      { keys: ["<Left>"], run: view => moveSelections(view, range => range.empty ? clamp(range.head - 1, 0, view.state.doc.length) : Math.min(range.from, range.to)), description: "Move left" },
+      { keys: ["<Right>"], run: view => moveSelections(view, range => range.empty ? clamp(range.head + 1, 0, view.state.doc.length) : Math.max(range.from, range.to)), description: "Move right" },
       { keys: ["<Up>"], run: view => moveSelections(view, range => moveLineColumn(view, range, -1)), description: "Move up" },
       { keys: ["<Down>"], run: view => moveSelections(view, range => moveLineColumn(view, range, 1)), description: "Move down" }
     ]
@@ -2495,5 +2662,11 @@ export const kakouneCommands = {
   pasteRegister,
   selectLine,
   moveSelections,
-  setMode
+  setMode,
+  gotoFile,
+  extendGotoFile,
+  gotoLastBuffer,
+  extendGotoLastBuffer,
+  gotoBufferEnd,
+  extendGotoBufferEnd
 };

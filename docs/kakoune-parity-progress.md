@@ -52,18 +52,18 @@
 - pipe-replaces-all-lines
 - selection-undo/redo
 - selection-undo/undo
+- concat-paste-line
+- replay-complex-insert
 
 ## Still Red
 - repeat-insert/repeat-insert-hooks
 - repeat-insert/repeat-insert-mapped-word-completion
-- concat-paste-line
 - goto/file
 - goto/last-buffer
 - macro/replay-macro-mapped-word-completion
 - pipe-to
 - pipe-to-reg
 - reload
-- replay-complex-insert
 - selection-undo/fold-redundant-entries
 - selection-undo/windisplay-hook
 - pipe-to
