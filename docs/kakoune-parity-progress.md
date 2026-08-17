@@ -53,6 +53,7 @@
 - selection-undo/redo
 - selection-undo/undo
 - concat-paste-line
+- replay-complex-insert
 
 ## Still Red
 - repeat-insert/repeat-insert-hooks
@@ -63,7 +64,6 @@
 - pipe-to
 - pipe-to-reg
 - reload
-- replay-complex-insert
 - selection-undo/fold-redundant-entries
 - selection-undo/windisplay-hook
 - pipe-to

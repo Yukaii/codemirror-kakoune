@@ -27,7 +27,7 @@ function readFixture(name) {
     cmd = readFileSync(cmdFile, "utf8");
   }
 
-  if (existsSync(scriptFile)) {
+  if (!cmd.trim() && existsSync(scriptFile)) {
     const script = readFileSync(scriptFile, "utf8");
     const match = script.match(/"params":\s*\[\s*"([^"]+)"\s*\]/);
     if (match) {
@@ -69,7 +69,7 @@ function buildProbeTest(candidateName) {
     '  if (existsSync(cmdFile)) {',
     '    cmd = readFileSync(cmdFile, "utf8");',
     '  }',
-    '  if (existsSync(scriptFile)) {',
+    '  if (!cmd.trim() && existsSync(scriptFile)) {',
     '    const script = readFileSync(scriptFile, "utf8");',
     '    const match = script.match(/"params":\\s*\\[\\s*"([^"]+)"\\s*\\]/);',
     '    if (match) {',

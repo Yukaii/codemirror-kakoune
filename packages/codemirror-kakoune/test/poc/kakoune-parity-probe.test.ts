@@ -267,6 +267,12 @@ describe("kakoune parity probe helpers", () => {
       cmd: "2jj<a-u><a-u><a-U>ihere<esc>"
     });
     expect(redoRes.doc).toBe("1\n2\nhere3\n4");
+
+    const foldRes = runKakouneFixture({
+      in: "1\n2\n3\n4",
+      cmd: "gjgkxd<a-u>ihere<esc>"
+    });
+    expect(foldRes.doc).toBe("2\n3\nhere4");
   });
 
   it("deletes full lines including newline with xd", () => {
@@ -363,4 +369,48 @@ describe("kakoune parity probe helpers", () => {
     expect(paraRepeat.selectionRanges).toEqual([{ anchor: 51, head: 51 }]);
   });
 
+  it("handles empty inner objects and emits no selections remaining error", () => {
+    const bracesResult = runKakouneFixture({
+      in: "%({)} {%({)}} {%(}) {{%(})}",
+      cmd: "<a-i>{"
+    });
+    expect(bracesResult.error).toBe("'exec': no selections remaining");
+
+    const quotesResult = runKakouneFixture({
+      in: "\"\"",
+      cmd: "<a-i>{"
+    });
+    expect(quotesResult.error).toBe("'exec': no selections remaining");
+  });
+
+  it("replays complex insert with temporary normal mode (<a-;>) and navigation", () => {
+    const result = runKakouneFixture({
+      in: "word word",
+      cmd: "i(<a-;>e<right>)<esc>fw;."
+    });
+    expect(result.doc).toBe("(word) (word)");
+  });
+
+  it("replays insert with executed commands via :execute-keys", () => {
+    const result = runKakouneFixture({
+      cmd: "i<a-;>:execute-keys foo<ret><esc>."
+    });
+    expect(result.doc).toBe("foofoo");
+  });
+
+  it("validates face description syntax in :face commands", () => {
+    const attrResult = runKakouneFixture({
+      cmd: ":face global Default default,default+<ret>"
+    });
+    expect(attrResult.error).toBe(
+      "'exec': 1:1: 'face': invalid face description, expected [<fg>][,<bg>[,<underline>]][+<attr>][@base] or just [base]"
+    );
+
+    const bgResult = runKakouneFixture({
+      cmd: ":face global Default default,<ret>"
+    });
+    expect(bgResult.error).toBe(
+      "'exec': 1:1: 'face': invalid face description, expected [<fg>][,<bg>[,<underline>]][+<attr>][@base] or just [base]"
+    );
+  });
 });

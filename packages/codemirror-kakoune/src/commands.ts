@@ -798,6 +798,11 @@ export function handlePipePromptKey(view: EditorView, key: string): boolean {
   return true;
 }
 
+function areSelectionsEqual(a: Array<{ anchor: number; head: number }>, b: readonly SelectionRange[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((ra, i) => ra.anchor === b[i].anchor && ra.head === b[i].head);
+}
+
 function undoSelection(view: EditorView): boolean {
   const kakoune = view.state.field(kakouneStateField);
   const { selectionHistory, selectionHistoryIndex } = kakoune;
@@ -805,7 +810,20 @@ function undoSelection(view: EditorView): boolean {
     return true;
   }
 
-  const nextIndex = selectionHistoryIndex - 1;
+  const current = view.state.selection.ranges;
+  let nextIndex = selectionHistoryIndex - 1;
+  while (nextIndex >= 0) {
+    const target = selectionHistory[nextIndex];
+    if (target && !areSelectionsEqual(target, current)) {
+      break;
+    }
+    nextIndex -= 1;
+  }
+
+  if (nextIndex < 0) {
+    return true;
+  }
+
   const target = selectionHistory[nextIndex];
   if (target) {
     view.dispatch({
@@ -831,7 +849,20 @@ function redoSelection(view: EditorView): boolean {
     return true;
   }
 
-  const nextIndex = selectionHistoryIndex + 1;
+  const current = view.state.selection.ranges;
+  let nextIndex = selectionHistoryIndex + 1;
+  while (nextIndex < selectionHistory.length) {
+    const target = selectionHistory[nextIndex];
+    if (target && !areSelectionsEqual(target, current)) {
+      break;
+    }
+    nextIndex += 1;
+  }
+
+  if (nextIndex >= selectionHistory.length) {
+    return true;
+  }
+
   const target = selectionHistory[nextIndex];
   if (target) {
     view.dispatch({
@@ -1154,9 +1185,9 @@ function findEnclosingObject(doc: string, pos: number, openChar: string, closeCh
   let startIdx = -1;
 
   // Scan backwards to find the unmatched openChar
-  for (let i = pos - 1; i >= 0; i--) {
+  for (let i = Math.min(pos, doc.length - 1); i >= 0; i--) {
     const char = doc[i];
-    if (char === closeChar) {
+    if (char === closeChar && i !== pos) {
       nestedCount++;
     } else if (char === openChar) {
       if (nestedCount === 0) {
@@ -1213,7 +1244,7 @@ function findEnclosingQuote(doc: string, pos: number, quoteChar: string): { star
   for (let k = 0; k < quotes.length - 1; k += 2) {
     const start = quotes[k];
     const end = quotes[k + 1];
-    if (start < pos && end >= pos) {
+    if (start <= pos && end >= pos) {
       return { start, end };
     }
   }
@@ -1589,16 +1620,18 @@ function selectSurroundingObject(
 ): boolean {
   const doc = view.state.doc.toString();
   const state = view.state;
-  const ranges = state.selection.ranges.map(range => {
-    const result = getObjectRange(doc, range.head, objectKey, "start");
-    if (!result) {
-      return range;
-    }
+  const isDelimiterType = [
+    "b", "(", ")", "B", "{", "}", "r", "[", "]", "a", "<", ">", "<lt>", "<gt>",
+    "Q", "\"", "<dquote>", "q", "'", "<quote>", "g", "`"
+  ].includes(objectKey);
 
-    const isDelimiterType = [
-      "b", "(", ")", "B", "{", "}", "r", "[", "]", "a", "<", ">", "<lt>", "<gt>",
-      "Q", "\"", "<dquote>", "q", "'", "<quote>", "g", "`"
-    ].includes(objectKey);
+  const ranges: SelectionRange[] = [];
+  for (const range of state.selection.ranges) {
+    const pos = range.empty ? range.head : Math.min(range.anchor, range.head);
+    const result = getObjectRange(doc, pos, objectKey, "start");
+    if (!result) {
+      continue;
+    }
 
     let startIdx = result.start;
     let endIdx = result.end;
@@ -1606,19 +1639,28 @@ function selectSurroundingObject(
     if (inner && isDelimiterType) {
       startIdx = result.start + 1;
       endIdx = result.end;
-    } else if (!inner && isDelimiterType) {
-      endIdx = result.end + 1;
-    } else if (!inner) {
-      endIdx = result.end + 1;
+      if (startIdx >= endIdx) {
+        // Empty inner object: drop this selection
+        continue;
+      }
     } else {
       endIdx = result.end + 1;
     }
 
-    return EditorSelection.range(startIdx, endIdx);
-  });
+    ranges.push(EditorSelection.range(startIdx, endIdx));
+  }
+
+  if (ranges.length === 0) {
+    view.dispatch({
+      effects: [
+        setKakouneCommandErrorEffect.of("'exec': no selections remaining")
+      ]
+    });
+    return true;
+  }
 
   view.dispatch({
-    selection: EditorSelection.create(ranges, state.selection.mainIndex),
+    selection: EditorSelection.create(ranges, Math.min(state.selection.mainIndex, ranges.length - 1)),
     effects: [
       setKakouneLastSelectEffect.of({
         type: "surroundingObject",
@@ -2602,8 +2644,8 @@ export function buildKakouneCommands(): Record<KakouneMode, KakouneBinding[]> {
     select: [...buildSelectBindings(), ...buildBracketBindings()],
     insert: [
       { keys: ["<Esc>"], run: view => setMode(view, "select"), description: "Exit insert mode" },
-      { keys: ["<Left>"], run: view => moveSelections(view, range => clamp(range.head - 1, 0, view.state.doc.length)), description: "Move left" },
-      { keys: ["<Right>"], run: view => moveSelections(view, range => clamp(range.head + 1, 0, view.state.doc.length)), description: "Move right" },
+      { keys: ["<Left>"], run: view => moveSelections(view, range => range.empty ? clamp(range.head - 1, 0, view.state.doc.length) : Math.min(range.from, range.to)), description: "Move left" },
+      { keys: ["<Right>"], run: view => moveSelections(view, range => range.empty ? clamp(range.head + 1, 0, view.state.doc.length) : Math.max(range.from, range.to)), description: "Move right" },
       { keys: ["<Up>"], run: view => moveSelections(view, range => moveLineColumn(view, range, -1)), description: "Move up" },
       { keys: ["<Down>"], run: view => moveSelections(view, range => moveLineColumn(view, range, 1)), description: "Move down" }
     ]

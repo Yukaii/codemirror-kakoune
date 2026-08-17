@@ -6,6 +6,7 @@ import {
   setKakounePipePromptEffect,
   setKakouneReplaceInsertAnchorsEffect,
   setKakouneSelectionRepeatCountEffect,
+  setKakouneCommandErrorEffect,
   kakouneGotoFileFacet,
   kakouneGotoBufferFacet,
   kakouneExecuteCommandFacet,
@@ -219,7 +220,7 @@ export class KakouneKeyProcessor {
       const payload = trimmed.slice("execute-keys ".length);
       this.temporaryNormal = false;
       for (const key of tokenizeSimpleKeys(payload)) {
-        this.handle("insert", key, view);
+        this.processKey("insert", key, view, false);
       }
     } else if (trimmed.startsWith("enter-user-mode")) {
       const payload = trimmed.slice("enter-user-mode".length).trim();
@@ -246,6 +247,15 @@ export class KakouneKeyProcessor {
           const onGotoFile = view.state.facet(kakouneGotoFileFacet);
           if (onGotoFile && args[0]) {
             onGotoFile(args[0], view);
+          }
+        } else if (command === "face" || command === "set-face") {
+          const faceDesc = args[args.length - 1];
+          if (faceDesc && (faceDesc.endsWith("+") || faceDesc.endsWith(","))) {
+            view.dispatch({
+              effects: setKakouneCommandErrorEffect.of(
+                "'exec': 1:1: 'face': invalid face description, expected [<fg>][,<bg>[,<underline>]][+<attr>][@base] or just [base]"
+              )
+            });
           }
         }
       }
@@ -343,6 +353,9 @@ export class KakouneKeyProcessor {
     }
 
     if (this.commandPrompt !== null) {
+      if (recordKey && this.shouldRecordKey(mode)) {
+        this.recordKey(key);
+      }
       return this.handleCommandPromptKey(view, key);
     }
 
