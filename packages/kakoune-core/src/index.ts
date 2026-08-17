@@ -59,6 +59,8 @@ export {
   reduceToCursor,
   flipSelectionDirection,
   ensureForwardDirection,
+  clearOtherSelections,
+  clearMainSelection,
   deleteSelection,
   yankSelection,
   undoEdit,

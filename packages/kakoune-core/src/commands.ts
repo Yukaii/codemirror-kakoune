@@ -508,6 +508,24 @@ export function ensureForwardDirection(editor: EditorHost): boolean {
   return true;
 }
 
+export function clearOtherSelections(editor: EditorHost): boolean {
+  const selections = editor.getSelections();
+  if (selections.length > 0) {
+    editor.setSelections([selections[0]], 0);
+    return true;
+  }
+  return false;
+}
+
+export function clearMainSelection(editor: EditorHost): boolean {
+  const selections = editor.getSelections();
+  if (selections.length > 1) {
+    editor.setSelections(selections.slice(1), 0);
+    return true;
+  }
+  return false;
+}
+
 export const portableCommands = {
   setMode,
   moveLeft,
@@ -546,6 +564,8 @@ export const portableCommands = {
   reduceToCursor,
   flipSelectionDirection,
   ensureForwardDirection,
+  clearOtherSelections,
+  clearMainSelection,
   deleteSelection,
   yankSelection,
   undoEdit,

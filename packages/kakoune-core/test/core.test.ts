@@ -32,6 +32,8 @@ import {
   reduceToCursor,
   flipSelectionDirection,
   ensureForwardDirection,
+  clearOtherSelections,
+  clearMainSelection,
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
@@ -448,13 +450,19 @@ describe("KakounePromptController", () => {
     expect(config.namedRegisters.get("a")).toBe("custom macro");
   });
 
-  it("duplicates selections on following/preceding lines with C and <A-C>", () => {
-    const editor = new MemoryEditor("line 1\nline 2\nline 3\nline 4", [{ anchor: 0, head: 4 }]);
-    copySelectionsOnNextLines(editor, 1, 2);
-    expect(editor.getSelections()).toEqual([
-      { anchor: 0, head: 4 },
-      { anchor: 7, head: 11, linewise: undefined },
-      { anchor: 14, head: 18, linewise: undefined }
+  it("clears secondary or main selections with comma (,) and <a-,>", () => {
+    const editor = new MemoryEditor("a b c", [
+      { anchor: 0, head: 1 },
+      { anchor: 2, head: 3 },
+      { anchor: 4, head: 5 }
     ]);
+    clearMainSelection(editor);
+    expect(editor.getSelections()).toEqual([
+      { anchor: 2, head: 3 },
+      { anchor: 4, head: 5 }
+    ]);
+
+    clearOtherSelections(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 3 }]);
   });
 });

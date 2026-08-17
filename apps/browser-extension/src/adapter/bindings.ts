@@ -42,6 +42,8 @@ import {
   reduceToCursor,
   flipSelectionDirection,
   ensureForwardDirection,
+  clearOtherSelections,
+  clearMainSelection,
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
@@ -112,32 +114,10 @@ export function buildKakouneBindings<T extends EditorHost>(
       // Multi-Selection Commands
       bind(["C"], (editor, _arg, count) => copySelectionsOnNextLines(editor, 1, count ?? 1), "Duplicate selections on following lines"),
       bind(["<A-C>"], (editor, _arg, count) => copySelectionsOnNextLines(editor, -1, count ?? 1), "Duplicate selections on preceding lines"),
-      bind(["<A-s>"], editor => {
-        if ("splitSelectionsOnNewlines" in editor && typeof (editor as any).splitSelectionsOnNewlines === "function") {
-          (editor as any).splitSelectionsOnNewlines();
-          return true;
-        }
-        return false;
-      }, "Split selection on newlines"),
-      bind(["<Space>"], editor => {
-        if ("keepPrimarySelection" in editor && typeof (editor as any).keepPrimarySelection === "function") {
-          (editor as any).keepPrimarySelection();
-          return true;
-        }
-        const sel = editor.getSelections();
-        if (sel.length > 0) {
-          editor.setSelections([sel[0]], 0);
-          return true;
-        }
-        return false;
-      }, "Keep only primary selection"),
-      bind(["<A-Space>"], editor => {
-        if ("removePrimarySelection" in editor && typeof (editor as any).removePrimarySelection === "function") {
-          (editor as any).removePrimarySelection();
-          return true;
-        }
-        return false;
-      }, "Remove primary selection"),
+      bind([","], editor => clearOtherSelections(editor), "Clear other selections"),
+      bind(["<A-,>"], editor => clearMainSelection(editor), "Clear main selection"),
+      bind(["<Space>"], editor => clearOtherSelections(editor), "Clear other selections"),
+      bind(["<A-Space>"], editor => clearMainSelection(editor), "Clear main selection"),
       bind([")"], editor => {
         if ("cycleMainSelection" in editor && typeof (editor as any).cycleMainSelection === "function") {
           (editor as any).cycleMainSelection(1);

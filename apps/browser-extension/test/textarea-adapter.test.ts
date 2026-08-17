@@ -251,4 +251,21 @@ describe("TextareaAdapter with kakoune-core-js", () => {
     trimSelections(adapter);
     expect(adapter.getSelections()).toEqual([{ anchor: 2, head: 13 }]);
   });
+
+  it("handles clearing other selections (,) and main selection (<A-,>)", () => {
+    const el = createTextarea("foo bar baz");
+    const adapter = new TextareaAdapter(el);
+
+    adapter.setSelections([
+      { anchor: 0, head: 3 },
+      { anchor: 4, head: 7 },
+      { anchor: 8, head: 11 }
+    ]);
+
+    adapter.removePrimarySelection();
+    expect(adapter.getSelections().length).toBe(2);
+
+    adapter.keepPrimarySelection();
+    expect(adapter.getSelections().length).toBe(1);
+  });
 });

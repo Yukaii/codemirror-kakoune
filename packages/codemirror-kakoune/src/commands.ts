@@ -1980,10 +1980,23 @@ function selectAllBuffer(view: EditorView): boolean {
 
 function clearSelections(view: EditorView): boolean {
   view.dispatch({
-    selection: EditorSelection.cursor(view.state.selection.main.head),
+    selection: EditorSelection.create([view.state.selection.main], 0),
     scrollIntoView: true
   });
   return true;
+}
+
+function clearMainSelection(view: EditorView): boolean {
+  const current = view.state.selection;
+  if (current.ranges.length > 1) {
+    const remaining = current.ranges.filter((_, idx) => idx !== current.mainIndex);
+    view.dispatch({
+      selection: EditorSelection.create(remaining, 0),
+      scrollIntoView: true
+    });
+    return true;
+  }
+  return false;
 }
 
 function selectLine(view: EditorView): boolean {
@@ -2244,6 +2257,9 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },
+    { keys: ["<A-,>"], run: view => clearMainSelection(view), description: "Clear main selection" },
+    { keys: ["<Space>"], run: view => clearSelections(view), description: "Clear other selections" },
+    { keys: ["<A-Space>"], run: view => clearMainSelection(view), description: "Clear main selection" },
     { keys: [";"], run: view => reduceSelectionsToCursor(view), description: "Reduce selections to cursor" },
     { keys: ["<A-;>"], run: view => flipSelections(view), description: "Flip selection direction" },
     { keys: [")"], run: view => rotateSelections(view, false), description: "Rotate selections forward" },
