@@ -96,3 +96,21 @@ Prepare the following image assets before submitting:
 
 - **Homepage / Repository**: `https://github.com/Yukaii/codemirror-kakoune`
 - **Support / Issue Tracker**: `https://github.com/Yukaii/codemirror-kakoune/issues`
+
+---
+
+## 6. Automated Store Publishing (CI/CD GitHub Secrets)
+
+Once the first version is manually reviewed and published on the developer consoles, configure the following **GitHub Actions Repository Secrets** to enable 100% automated store uploads on subsequent releases:
+
+### Chrome Web Store (Google Cloud API)
+- `CHROME_EXTENSION_ID`: The ID assigned to your extension on the Chrome Web Store dashboard.
+- `CHROME_CLIENT_ID`: OAuth 2.0 Client ID from Google Cloud Console.
+- `CHROME_CLIENT_SECRET`: OAuth 2.0 Client Secret from Google Cloud Console.
+- `CHROME_REFRESH_TOKEN`: Refresh token generated for Chrome Web Store API access.
+
+### Firefox Add-ons (Mozilla AMO)
+- `FIREFOX_JWT_ISSUER`: API Key Issuer from Mozilla Add-on Developer Hub.
+- `FIREFOX_JWT_SECRET`: API Key Secret from Mozilla Add-on Developer Hub.
+
+*(Note: If these secrets are not defined, the release workflow skips store uploading and still publishes the GitHub Release with attached `.zip` files.)*

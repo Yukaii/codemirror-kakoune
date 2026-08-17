@@ -107,3 +107,27 @@ jobs:
             apps/browser-extension/browser-kakoune-v*.zip
             apps/browser-extension/browser-kakoune.zip
           generate_release_notes: true
+
+      - name: Upload to Chrome Web Store
+        if: env.CHROME_CLIENT_ID != '' && env.CHROME_EXTENSION_ID != ''
+        uses: wxt-dev/publish-extension@v1
+        with:
+          zip: apps/browser-extension/browser-kakoune.zip
+          chrome-extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          chrome-client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          chrome-client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          chrome-refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        env:
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+
+      - name: Upload to Firefox Add-ons (AMO)
+        if: env.FIREFOX_JWT_ISSUER != '' && env.FIREFOX_JWT_SECRET != ''
+        uses: wxt-dev/publish-extension@v1
+        with:
+          zip: apps/browser-extension/browser-kakoune.zip
+          firefox-jwt-issuer: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          firefox-jwt-secret: ${{ secrets.FIREFOX_JWT_SECRET }}
+        env:
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
