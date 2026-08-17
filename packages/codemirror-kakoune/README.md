@@ -3,14 +3,16 @@
 [![npm version](https://img.shields.io/npm/v/codemirror-kakoune)](https://www.npmjs.com/package/codemirror-kakoune)
 [![JSR](https://jsr.io/badges/@ykmade/codemirror-kakoune)](https://jsr.io/@ykmade/codemirror-kakoune)
 
-A CodeMirror 6 extension that brings Kakoune-style modal editing into the browser.
+A CodeMirror 6 extension that brings Kakoune's selection-first modal editing paradigm into modern browsers.
+
+---
 
 ## Installation
 
-Install the package via `npm`, `pnpm`, or `yarn`:
-
 ```bash
-npm install codemirror-kakoune
+npm install codemirror-kakoune @codemirror/state @codemirror/view
+# or
+pnpm add codemirror-kakoune @codemirror/state @codemirror/view
 ```
 
 Or via [JSR](https://jsr.io/@ykmade/codemirror-kakoune):
@@ -19,9 +21,9 @@ Or via [JSR](https://jsr.io/@ykmade/codemirror-kakoune):
 npx jsr add @ykmade/codemirror-kakoune
 ```
 
-## Usage
+---
 
-Simply import and add the `kakoune` extension to your CodeMirror 6 configuration:
+## Usage
 
 ```typescript
 import { basicSetup, EditorView } from "codemirror";
@@ -33,48 +35,33 @@ const view = new EditorView({
     doc: "Hello, Kakoune!",
     extensions: [
       basicSetup,
-      kakoune() // Enables Kakoune modal editing!
+      kakoune({
+        initialMode: "select", // "select" (default) or "insert"
+        onWhichKey: (pending, items) => {
+          // Optional hook for which-key UI
+        }
+      })
     ]
   }),
   parent: document.querySelector("#editor")
 });
 ```
 
-### Configuration Options
+---
 
-You can customize the initial mode using the options object:
+## Features
 
-```typescript
-kakoune({
-  initialMode: "insert" // "select" (default) or "insert"
-})
-```
+- **Selection-First Motions**: `h`, `j`, `k`, `l`, `w`, `b`, `e`, `W`, `B`, `E`, `0`, `$`, `gh`, `gl`, `gk`, `gj`, `gg`, `G`.
+- **Multiple Cursors & Block Selection**: Real multiple cursors and visual block rendering.
+- **Search & Regex**: `/` (search forward), `?` (search backward), `s` (select matches), `S` (split matches), `*` (search current selection).
+- **Line & Buffer Manipulation**: `x` (select line), `%` (select all), `<A-j>` (join lines), `<A-J>` (join lines and select spaces), `_` (trim whitespace).
+- **Case Transformations**: `~` (uppercase), `` ` `` (lowercase), `<A-`>` (swap case).
+- **Yank & Registers**: `y`, `p`, `P`, `R`, `"`, `q`/`Q` (macros).
+- **Undo / Redo History**: `u`, `U`, `<A-u>`, `<A-U>` (selection history).
+- **Object Selections**: `<A-i>` / `<A-a>` for parentheses, braces, brackets, quotes, and words.
 
-CM5 key names can be converted when sharing bindings with a CodeMirror 5
-keymap:
+---
 
-```ts
-import { normalizeCm5Keys } from "codemirror-kakoune";
+## License
 
-const keys = normalizeCm5Keys("Ctrl-X Ctrl-S"); // ["<C-x>", "<C-s>"]
-```
-
-## Current status
-
-The first cut focuses on the core editing loop:
-
-- mode switching
-- motion keys
-- line selection
-- yank/delete/paste
-- a small key sequence processor with pending-prefix support
-
-The keymap will expand from there as the Kakoune behavior is filled in.
-
-## References
-
-This repo starts from three references:
-
-- [`replit/codemirror-vim`](https://github.com/replit/codemirror-vim)
-- [`71/dance`](https://github.com/71/dance)
-- [`mawww/kakoune`](https://github.com/mawww/kakoune)
+MIT

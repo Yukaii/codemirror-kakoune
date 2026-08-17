@@ -17,7 +17,16 @@ import {
   moveWordForwardRange as coreWordForward,
   selectWordBackward,
   selectWordEnd,
-  selectWordForward
+  selectWordForward,
+  joinLines,
+  copySelectionsOnNextLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
+  ensureForwardDirection
 } from "kakoune-core-js";
 import { withAdapter } from "./adapter";
 import { getSearchQuery, SearchQuery, findNext, findPrevious, setSearchQuery } from "@codemirror/search";
@@ -1971,10 +1980,23 @@ function selectAllBuffer(view: EditorView): boolean {
 
 function clearSelections(view: EditorView): boolean {
   view.dispatch({
-    selection: EditorSelection.cursor(view.state.selection.main.head),
+    selection: EditorSelection.create([view.state.selection.main], 0),
     scrollIntoView: true
   });
   return true;
+}
+
+function clearMainSelection(view: EditorView): boolean {
+  const current = view.state.selection;
+  if (current.ranges.length > 1) {
+    const remaining = current.ranges.filter((_, idx) => idx !== current.mainIndex);
+    view.dispatch({
+      selection: EditorSelection.create(remaining, 0),
+      scrollIntoView: true
+    });
+    return true;
+  }
+  return false;
 }
 
 function selectLine(view: EditorView): boolean {
@@ -2221,9 +2243,23 @@ function buildSelectBindings(): KakouneBinding[] {
     { keys: ["e"], run: (view, _arg, count) => withAdapter(view, editor => selectWordEnd(editor, count ?? 1)), description: "Move to word end" },
     { keys: ["E"], run: (view, _arg, count) => extendSelections(view, range => moveWordEndRange(view, range).head, count ?? 1), description: "Extend to word end" },
     { keys: ["x"], run: view => selectLine(view), description: "Select line" },
+    { keys: ["<A-j>"], run: view => withAdapter(view, editor => joinLines(editor, false)), description: "Join lines" },
+    { keys: ["<A-J>"], run: view => withAdapter(view, editor => joinLines(editor, true)), description: "Join lines and select spaces" },
+    { keys: ["~"], run: view => withAdapter(view, editor => toUpperCaseSelection(editor)), description: "Convert to uppercase" },
+    { keys: ["`"], run: view => withAdapter(view, editor => toLowerCaseSelection(editor)), description: "Convert to lowercase" },
+    { keys: ["<A-`>"], run: view => withAdapter(view, editor => swapCaseSelection(editor)), description: "Swap case" },
+    { keys: ["_"], run: view => withAdapter(view, editor => trimSelections(editor)), description: "Trim whitespace from selections" },
+    { keys: ["<A-o>"], run: view => withAdapter(view, editor => addEmptyLineBelow(editor)), description: "Add empty line below" },
+    { keys: ["<A-O>"], run: view => withAdapter(view, editor => addEmptyLineAbove(editor)), description: "Add empty line above" },
+    { keys: ["<A-:>"], run: view => withAdapter(view, editor => ensureForwardDirection(editor)), description: "Ensure selection forward" },
+    { keys: ["C"], run: (view, _arg, count) => withAdapter(view, editor => copySelectionsOnNextLines(editor, 1, count ?? 1)), description: "Duplicate selections on following lines" },
+    { keys: ["<A-C>"], run: (view, _arg, count) => withAdapter(view, editor => copySelectionsOnNextLines(editor, -1, count ?? 1)), description: "Duplicate selections on preceding lines" },
     { keys: ["S"], run: view => setSplitPrompt(view, ""), description: "Split selection" },
     { keys: ["%"], run: view => selectAllBuffer(view), description: "Select all" },
     { keys: [","], run: view => clearSelections(view), description: "Clear other selections" },
+    { keys: ["<A-,>"], run: view => clearMainSelection(view), description: "Clear main selection" },
+    { keys: ["<Space>"], run: view => clearSelections(view), description: "Clear other selections" },
+    { keys: ["<A-Space>"], run: view => clearMainSelection(view), description: "Clear main selection" },
     { keys: [";"], run: view => reduceSelectionsToCursor(view), description: "Reduce selections to cursor" },
     { keys: ["<A-;>"], run: view => flipSelections(view), description: "Flip selection direction" },
     { keys: [")"], run: view => rotateSelections(view, false), description: "Rotate selections forward" },

@@ -1,4 +1,3 @@
-import type CodeMirror from "codemirror";
 import {
   KakouneKeyProcessor,
   KakounePromptController,
@@ -27,7 +26,6 @@ import {
   moveLineStart,
   moveRight,
   moveUp,
-  normalizeKeyStroke,
   openLineAbove,
   openLineBelow,
   redoEdit,
@@ -41,6 +39,8 @@ import {
   trimSelections,
   addEmptyLineBelow,
   addEmptyLineAbove,
+  reduceToCursor,
+  flipSelectionDirection,
   ensureForwardDirection,
   clearOtherSelections,
   clearMainSelection,
@@ -50,34 +50,52 @@ import {
   setMode,
   undoEdit,
   yankSelection,
+  rangeTo,
+  rangeFrom,
   type KakouneBinding,
   type KakouneMode,
-  type KakounePromptState
+  type EditorHost
 } from "kakoune-core-js";
-import { Cm5Adapter } from "./adapter";
+import type { TextareaAdapter } from "./textarea";
 
-export type { KakouneMode as KakouneCm5Mode };
-
-export interface KakouneCm5Options {
-  initialMode?: KakouneMode;
-  customKakrc?: string;
-  passthroughKeys?: string[] | ((key: string, event: KeyboardEvent) => boolean);
-  onWhichKey?: (pending: string[], items: Array<{ keys: string[]; description?: string }>) => void;
-  onPrompt?: (prompt: KakounePromptState | null) => void;
-  onPromptError?: (message: string | null) => void;
-}
-
-type Cm = CodeMirror.Editor;
-
-const directEditOrigins = new Set(["+input", "+delete", "paste", "cut"]);
-
-function bind(keys: string[], run: KakouneBinding<Cm5Adapter>["run"], description: string): KakouneBinding<Cm5Adapter> {
+function bind<T extends EditorHost>(
+  keys: string[],
+  run: KakouneBinding<T>["run"],
+  description: string
+): KakouneBinding<T> {
   return { keys, run, description };
 }
 
-function buildBindings(prompts: KakounePromptController): Record<KakouneMode, KakouneBinding<Cm5Adapter>[]> {
+function pasteAfter(editor: EditorHost): boolean {
+  const text = editor.getRegister();
+  if (!text) return false;
+  const selections = editor.getSelections();
+  for (let i = selections.length - 1; i >= 0; i--) {
+    const range = selections[i];
+    const pos = rangeTo(range);
+    editor.replaceRange(pos, pos, text);
+  }
+  return true;
+}
+
+function pasteBefore(editor: EditorHost): boolean {
+  const text = editor.getRegister();
+  if (!text) return false;
+  const selections = editor.getSelections();
+  for (let i = selections.length - 1; i >= 0; i--) {
+    const range = selections[i];
+    const pos = rangeFrom(range);
+    editor.replaceRange(pos, pos, text);
+  }
+  return true;
+}
+
+export function buildKakouneBindings<T extends EditorHost>(
+  prompts: KakounePromptController
+): Record<KakouneMode, KakouneBinding<T>[]> {
   return {
     select: [
+      // Motions
       bind(["h"], (editor, _arg, count) => moveLeft(editor, count ?? 1), "Move left"),
       bind(["j"], (editor, _arg, count) => moveDown(editor, count ?? 1), "Move down"),
       bind(["k"], (editor, _arg, count) => moveUp(editor, count ?? 1), "Move up"),
@@ -92,6 +110,44 @@ function buildBindings(prompts: KakounePromptController): Record<KakouneMode, Ka
       bind(["W"], (editor, _arg, count) => extendWordForward(editor, count ?? 1), "Extend word forward"),
       bind(["B"], (editor, _arg, count) => extendWordBackward(editor, count ?? 1), "Extend word backward"),
       bind(["E"], (editor, _arg, count) => extendWordEnd(editor, count ?? 1), "Extend to word end"),
+
+      // Multi-Selection Commands
+      bind(["C"], (editor, _arg, count) => copySelectionsOnNextLines(editor, 1, count ?? 1), "Duplicate selections on following lines"),
+      bind(["<A-C>"], (editor, _arg, count) => copySelectionsOnNextLines(editor, -1, count ?? 1), "Duplicate selections on preceding lines"),
+      bind([","], editor => clearOtherSelections(editor), "Clear other selections"),
+      bind(["<A-,>"], editor => clearMainSelection(editor), "Clear main selection"),
+      bind(["<Space>"], editor => clearOtherSelections(editor), "Clear other selections"),
+      bind(["<A-Space>"], editor => clearMainSelection(editor), "Clear main selection"),
+      bind([")"], editor => {
+        if ("cycleMainSelection" in editor && typeof (editor as any).cycleMainSelection === "function") {
+          (editor as any).cycleMainSelection(1);
+          return true;
+        }
+        return false;
+      }, "Cycle main selection forward"),
+      bind(["("], editor => {
+        if ("cycleMainSelection" in editor && typeof (editor as any).cycleMainSelection === "function") {
+          (editor as any).cycleMainSelection(-1);
+          return true;
+        }
+        return false;
+      }, "Cycle main selection backward"),
+      bind(["<A-)>"], editor => {
+        if ("rotateSelectionsContent" in editor && typeof (editor as any).rotateSelectionsContent === "function") {
+          (editor as any).rotateSelectionsContent(1);
+          return true;
+        }
+        return false;
+      }, "Rotate selections content forward"),
+      bind(["<A-(>"], editor => {
+        if ("rotateSelectionsContent" in editor && typeof (editor as any).rotateSelectionsContent === "function") {
+          (editor as any).rotateSelectionsContent(-1);
+          return true;
+        }
+        return false;
+      }, "Rotate selections content backward"),
+
+      // Selections & Prompts
       bind(["x"], editor => selectLine(editor), "Select line"),
       bind(["%"], editor => selectAll(editor), "Select all"),
       bind(["<A-j>"], editor => joinLines(editor, false), "Join lines"),
@@ -102,26 +158,44 @@ function buildBindings(prompts: KakounePromptController): Record<KakouneMode, Ka
       bind(["_"], editor => trimSelections(editor), "Trim whitespace from selections"),
       bind(["<A-o>"], editor => addEmptyLineBelow(editor), "Add empty line below"),
       bind(["<A-O>"], editor => addEmptyLineAbove(editor), "Add empty line above"),
+      bind([";"], editor => reduceToCursor(editor), "Reduce to cursor"),
+      bind(["<A-;>"], editor => flipSelectionDirection(editor), "Flip selection direction"),
       bind(["<A-:>"], editor => ensureForwardDirection(editor), "Ensure selection forward"),
-      bind(["C"], (editor, _arg, count) => copySelectionsOnNextLines(editor, 1, count ?? 1), "Duplicate selections on following lines"),
-      bind(["<A-C>"], (editor, _arg, count) => copySelectionsOnNextLines(editor, -1, count ?? 1), "Duplicate selections on preceding lines"),
-      bind([","], editor => clearOtherSelections(editor), "Clear other selections"),
-      bind(["<A-,>"], editor => clearMainSelection(editor), "Clear main selection"),
-      bind(["<Space>"], editor => clearOtherSelections(editor), "Clear other selections"),
-      bind(["<A-Space>"], editor => clearMainSelection(editor), "Clear main selection"),
       bind(["s"], editor => prompts.open("select", editor), "Select regex matches"),
       bind(["S"], editor => prompts.open("split", editor), "Split selection on regex matches"),
+
+      // Edit Operations
       bind(["d"], editor => deleteSelection(editor), "Delete selection"),
       bind(["c"], editor => changeSelection(editor), "Change selection"),
       bind(["y"], editor => yankSelection(editor), "Yank selection"),
+      bind(["p"], editor => pasteAfter(editor), "Paste after"),
+      bind(["P"], editor => pasteBefore(editor), "Paste before"),
       bind(["i"], editor => enterInsert(editor), "Insert"),
       bind(["a"], editor => enterInsert(editor, true), "Append"),
       bind(["I"], editor => enterInsertLineStart(editor), "Insert at line start"),
       bind(["A"], editor => enterInsertLineEnd(editor), "Insert at line end"),
       bind(["o"], editor => openLineBelow(editor), "Open line below"),
       bind(["O"], editor => openLineAbove(editor), "Open line above"),
+
+      // History
       bind(["u"], editor => undoEdit(editor), "Undo"),
       bind(["U"], editor => redoEdit(editor), "Redo"),
+      bind(["<A-u>"], editor => {
+        if ("undoSelection" in editor && typeof (editor as any).undoSelection === "function") {
+          (editor as any).undoSelection();
+          return true;
+        }
+        return false;
+      }, "Undo selection"),
+      bind(["<A-U>"], editor => {
+        if ("redoSelection" in editor && typeof (editor as any).redoSelection === "function") {
+          (editor as any).redoSelection();
+          return true;
+        }
+        return false;
+      }, "Redo selection"),
+
+      // Line / Document Navigation
       bind(["0"], editor => moveLineStart(editor), "Line start"),
       bind(["$"], editor => moveLineEnd(editor), "Line end"),
       bind(["g", "h"], editor => moveLineStart(editor), "Go to line start"),
@@ -150,88 +224,4 @@ function buildBindings(prompts: KakounePromptController): Record<KakouneMode, Ka
   };
 }
 
-export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
-  const adapter = new Cm5Adapter(cm);
-  const prompts = new KakounePromptController();
-  const processor = new KakouneKeyProcessor(buildBindings(prompts));
-  if (options.customKakrc) {
-    processor.loadKakrc(options.customKakrc);
-  }
-
-  // Override conflicting keymaps (like Vim/Emacs) while Kakoune is active
-  try {
-    const currentKeyMap = cm.getOption("keyMap");
-    if (currentKeyMap && currentKeyMap !== "default") {
-      (cm as any).__kakoune_original_keymap = currentKeyMap;
-      cm.setOption("keyMap", "default");
-    }
-  } catch {
-    // Ignore if getOption/setOption is not available
-  }
-
-  adapter.setMode(options.initialMode ?? "select");
-
-  cm.on("beforeChange", (_instance, change) => {
-    if (
-      adapter.getMode() === "select" &&
-      change.origin !== undefined &&
-      directEditOrigins.has(change.origin)
-    ) {
-      change.cancel();
-    }
-  });
-
-  cm.on("keydown", (_instance, event) => {
-    const key = normalizeKeyStroke(event);
-    if (!key) return;
-
-    if (options.passthroughKeys) {
-      const shouldPass = typeof options.passthroughKeys === "function"
-        ? options.passthroughKeys(key, event)
-        : options.passthroughKeys.includes(key);
-      if (shouldPass) return;
-    }
-
-    if (prompts.isActive()) {
-      const handled = prompts.handleKey(adapter, key);
-      options.onPrompt?.(prompts.getState());
-      options.onPromptError?.(prompts.getError());
-      if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation?.();
-      }
-      return;
-    }
-
-    options.onPromptError?.(null);
-    const mode = adapter.getMode();
-    if (mode === "insert" && key !== "<Esc>") return;
-
-    const handled = processor.handle(mode, key, adapter);
-    options.onWhichKey?.(processor.getPending(), processor.getPendingItems(adapter.getMode()));
-    if (prompts.isActive()) {
-      options.onWhichKey?.([], []);
-      options.onPrompt?.(prompts.getState());
-      options.onPromptError?.(null);
-    }
-    if (handled) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-      return;
-    }
-
-    // An unhandled key must not fall through to CM5's default keymap while
-    // normal mode is active. That keymap includes text insertion, deletion,
-    // indentation, and platform-specific editing shortcuts.
-    if (mode === "select") {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-    }
-  });
-}
-
-export { Cm5Adapter };
-export { normalizeKeyStroke, normalizeCm5Key, normalizeCm5Keys, KakouneKeyProcessor } from "kakoune-core-js";
+export { KakouneKeyProcessor, KakounePromptController };

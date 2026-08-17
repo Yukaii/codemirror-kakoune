@@ -1,0 +1,36 @@
+{
+  "name": "browser-kakoune",
+  "version": "0.4.4",
+  "private": true,
+  "description": "browser-kakoune: Kakoune modal editing for textareas, CodeMirror 5, and CodeMirror 6 across the web",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.0",
+    "codemirror": "^5.65.20",
+    "codemirror-kakoune": "workspace:*",
+    "codemirror-kakoune-cm5": "workspace:*",
+    "kakoune-core-js": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.308",
+    "@types/codemirror": "^5.60.16",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}

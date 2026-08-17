@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>browser-kakoune - Demo & Testbed</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="demo-container">
+    <header class="demo-header">
+      <div class="brand">
+        <span class="logo">KAK</span>
+        <div>
+          <h1>browser-kakoune testbed</h1>
+          <p>Multi-engine verification: Textarea, CodeMirror 5, CodeMirror 6</p>
+        </div>
+      </div>
+      <div class="actions">
+        <a href="../options/index.html" class="link-btn">Settings</a>
+      </div>
+    </header>
+
+    <div class="editors-grid">
+      <!-- Section 1: Standard Textarea -->
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <div class="title-row">
+            <h2>Textarea (In-Place CM6 Swap)</h2>
+            <span class="engine-badge badge-textarea">TEXTAREA</span>
+          </div>
+          <span class="mode-pill" id="badge-textarea">SELECT</span>
+        </div>
+        <textarea id="demo-textarea" class="native-textarea" rows="10" spellcheck="false">function calculateTotal(items, discountRate = 0) {
+  let subtotal = 0;
+  for (const item of items) {
+    subtotal += item.price * item.quantity;
+  }
+  const discount = subtotal * discountRate;
+  return subtotal - discount;
+}</textarea>
+      </div>
+
+      <!-- Section 2: CodeMirror 6 -->
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <div class="title-row">
+            <h2>CodeMirror 6 Instance</h2>
+            <span class="engine-badge badge-cm6">CM6</span>
+          </div>
+          <span class="mode-pill" id="badge-cm6">SELECT</span>
+        </div>
+        <div id="demo-cm6" class="cm-host"></div>
+      </div>
+
+      <!-- Section 3: CodeMirror 5 -->
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <div class="title-row">
+            <h2>CodeMirror 5 Instance</h2>
+            <span class="engine-badge badge-cm5">CM5</span>
+          </div>
+          <span class="mode-pill" id="badge-cm5">SELECT</span>
+        </div>
+        <textarea id="demo-cm5-textarea" spellcheck="false">// CodeMirror 5 editor instance
+class EventEmitter {
+  constructor() {
+    this.events = new Map();
+  }
+
+  on(name, listener) {
+    const list = this.events.get(name) || [];
+    list.push(listener);
+    this.events.set(name, list);
+  }
+
+  emit(name, ...args) {
+    const listeners = this.events.get(name) || [];
+    for (const fn of listeners) {
+      fn(...args);
+    }
+  }
+}</textarea>
+      </div>
+
+      <!-- Section 4: Single-Line Input -->
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <div class="title-row">
+            <h2>Single-line Input</h2>
+            <span class="engine-badge badge-input">INPUT</span>
+          </div>
+          <span class="mode-pill" id="badge-input">SELECT</span>
+        </div>
+        <input type="text" id="demo-input" class="native-input" value="git checkout -b feature/browser-kakoune" spellcheck="false" />
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="log-card">
+      <div class="log-header">
+        <h3>Event & Keystroke Log</h3>
+        <button id="btn-clear-log" class="clear-btn">Clear</button>
+      </div>
+      <div id="event-log" class="event-log-content">
+        <div class="log-entry log-system">Ready. Focus any editor to test modal keybindings.</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

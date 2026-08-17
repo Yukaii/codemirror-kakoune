@@ -1,7 +1,18 @@
 import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default [
-  ...obsidianmd.configs.recommended,
+  ...obsidianmd.configs.recommended.map(config => {
+    if (!config.files) return config;
+    const flatFiles = Array.isArray(config.files) ? config.files.flat(Infinity) : [config.files];
+    return {
+      ...config,
+      files: flatFiles.map(pattern => {
+        if (typeof pattern !== "string") return pattern;
+        if (pattern.startsWith("packages/")) return pattern;
+        return `packages/obsidian-kakoune/**/${pattern.replace(/^\*\*\//, "")}`;
+      })
+    };
+  }),
   {
     languageOptions: {
       parserOptions: {

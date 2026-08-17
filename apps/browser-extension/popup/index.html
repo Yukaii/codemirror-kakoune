@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>browser-kakoune</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-tag">KAK</span>
+        <span class="brand-title">browser-kakoune</span>
+        <span class="brand-ver">v0.4.4</span>
+      </div>
+      <div class="status-pill" id="global-status">ON</div>
+    </header>
+
+    <main class="content">
+      <!-- Site Status Row -->
+      <div class="row-box" id="site-card">
+        <div class="row-text">
+          <span class="row-primary" id="site-name">Current Site</span>
+          <span class="row-secondary" id="site-status">Enabled</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-site" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Controls Grid -->
+      <div class="controls-grid">
+        <div class="control-item">
+          <label for="select-default-mode">Focus Mode</label>
+          <select id="select-default-mode" class="select-box">
+            <option value="select">Select (Normal)</option>
+            <option value="insert">Insert</option>
+          </select>
+        </div>
+        <div class="control-item">
+          <label for="select-theme">Theme</label>
+          <select id="select-theme" class="select-box">
+            <option value="kakoune">Kakoune</option>
+            <option value="dark">Dark</option>
+            <option value="nord">Nord</option>
+            <option value="gruvbox">Gruvbox</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Engine Toggles -->
+      <div class="toggles-panel">
+        <label class="toggle-check">
+          <input type="checkbox" id="toggle-textareas" checked />
+          <span>Textarea Overlay</span>
+        </label>
+        <label class="toggle-check">
+          <input type="checkbox" id="toggle-cm5" checked />
+          <span>CodeMirror 5</span>
+        </label>
+        <label class="toggle-check">
+          <input type="checkbox" id="toggle-cm6" checked />
+          <span>CodeMirror 6</span>
+        </label>
+        <label class="toggle-check">
+          <input type="checkbox" id="toggle-whichkey" checked />
+          <span>Which-Key</span>
+        </label>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <button class="action-btn" id="btn-open-options">Settings</button>
+      <button class="action-btn" id="btn-open-demo">Demo</button>
+    </footer>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

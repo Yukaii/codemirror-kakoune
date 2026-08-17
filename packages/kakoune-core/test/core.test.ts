@@ -21,9 +21,23 @@ import {
   selectAll,
   deleteSelection,
   selectLine,
+  joinLines,
+  copySelectionsOnNextLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
+  reduceToCursor,
+  flipSelectionDirection,
+  ensureForwardDirection,
+  clearOtherSelections,
+  clearMainSelection,
   selectWordBackward,
   selectWordEnd,
   selectWordForward,
+  parseKakrc,
   type EditorHost,
   type KakouneBinding,
   type KakouneMode,
@@ -367,5 +381,88 @@ describe("KakounePromptController", () => {
     prompts.handleKey(editor, "<Enter>");
     expect(prompts.getError()).toBe("'split': empty regex");
     expect(editor.getSelections()).toEqual(original);
+  });
+
+  it("joins lines (<a-j> and <a-J>)", () => {
+    const editor = new MemoryEditor("first line\n  second line\n    third line", [{ anchor: 0, head: 0 }]);
+    joinLines(editor, false);
+    expect(editor.getDoc()).toBe("first line second line\n    third line");
+
+    selectAll(editor);
+    joinLines(editor, false);
+    expect(editor.getDoc()).toBe("first line second line third line");
+  });
+
+  it("handles case conversions (~, `, <a-`>)", () => {
+    const editor = new MemoryEditor("Hello World", [{ anchor: 0, head: 5 }]);
+    toUpperCaseSelection(editor);
+    expect(editor.getDoc()).toBe("HELLO World");
+
+    toLowerCaseSelection(editor);
+    expect(editor.getDoc()).toBe("hello World");
+
+    swapCaseSelection(editor);
+    expect(editor.getDoc()).toBe("HELLO World");
+  });
+
+  it("handles whitespace trim (_)", () => {
+    const editor = new MemoryEditor("  hello world  ", [{ anchor: 0, head: 15 }]);
+    trimSelections(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 13 }]);
+  });
+
+  it("handles adding empty lines (<a-o> and <a-O>)", () => {
+    const editor = new MemoryEditor("first line\nsecond line", [{ anchor: 0, head: 0 }]);
+    addEmptyLineBelow(editor);
+    expect(editor.getDoc()).toBe("first line\n\nsecond line");
+
+    addEmptyLineAbove(editor);
+    expect(editor.getDoc()).toBe("\nfirst line\n\nsecond line");
+  });
+
+  it("handles selection direction adjustments (;, <a-;>, <a-:>)", () => {
+    const editor = new MemoryEditor("hello", [{ anchor: 0, head: 4 }]);
+    flipSelectionDirection(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 4, head: 0, linewise: undefined }]);
+
+    ensureForwardDirection(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 0, head: 4, linewise: undefined }]);
+
+    reduceToCursor(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 4, head: 4 }]);
+  });
+
+  it("parses and executes kakrc mappings and user modes", () => {
+    const rc = `
+      # Custom mappings
+      map global normal <space> ,
+      map global insert jk <esc>
+      declare-user-mode mymode
+      map global mymode d 'xyd'
+      set-register a 'custom macro'
+    `;
+
+    const config = parseKakrc(rc);
+    expect(config.normalMappings.get("<Space>")).toEqual([","]);
+    expect(config.insertMappings.get("jk")).toEqual(["<Esc>"]);
+    expect(config.userModes.has("mymode")).toBe(true);
+    expect(config.userModes.get("mymode")?.get("d")).toEqual(["x", "y", "d"]);
+    expect(config.namedRegisters.get("a")).toBe("custom macro");
+  });
+
+  it("clears secondary or main selections with comma (,) and <a-,>", () => {
+    const editor = new MemoryEditor("a b c", [
+      { anchor: 0, head: 1 },
+      { anchor: 2, head: 3 },
+      { anchor: 4, head: 5 }
+    ]);
+    clearMainSelection(editor);
+    expect(editor.getSelections()).toEqual([
+      { anchor: 2, head: 3 },
+      { anchor: 4, head: 5 }
+    ]);
+
+    clearOtherSelections(editor);
+    expect(editor.getSelections()).toEqual([{ anchor: 2, head: 3 }]);
   });
 });

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>browser-kakoune - Configuration</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-box">KAK</span>
+        <div class="brand-text">
+          <div class="brand-name">browser-kakoune</div>
+          <div class="brand-ver">v0.4.4</div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="general">General</button>
+        <button class="nav-item" data-tab="engines">Targets</button>
+        <button class="nav-item" data-tab="appearance">Appearance</button>
+        <button class="nav-item" data-tab="domains">Domains</button>
+        <button class="nav-item" data-tab="kakrc">kakrc</button>
+        <button class="nav-item" data-tab="keys">Keybindings</button>
+        <button class="nav-item" data-tab="playground">Playground</button>
+        <button class="nav-item" data-tab="about">About</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btn-save-all" class="btn-primary">Save Settings</button>
+        <button id="btn-reset-defaults" class="btn-secondary">Reset Defaults</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Section: General -->
+      <section id="tab-general" class="tab-panel active">
+        <header class="panel-header">
+          <h2>General Configuration</h2>
+          <p>Global behavior and default state for modal editing.</p>
+        </header>
+
+        <div class="panel-body">
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Global Enable</div>
+              <div class="setting-desc">Enable Kakoune key interception globally across all tabs.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enabled" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Default Focus Mode</div>
+              <div class="setting-desc">Initial mode when focusing an editable element or editor.</div>
+            </div>
+            <select id="opt-default-mode" class="select-box">
+              <option value="select">select (normal mode)</option>
+              <option value="insert">insert (direct typing)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Activation Shortcut</div>
+              <div class="setting-desc">Toggle browser-kakoune on/off for active element.</div>
+            </div>
+            <div class="kbd-pill"><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Editor Engines -->
+      <section id="tab-engines" class="tab-panel">
+        <header class="panel-header">
+          <h2>Target Engines</h2>
+          <p>Configure support for editor frameworks and text inputs.</p>
+        </header>
+
+        <div class="panel-body">
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">HTML &lt;textarea&gt; & Inputs</div>
+              <div class="setting-desc">In-place CodeMirror 6 swap with multi-cursor and block selection rendering.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enable-textareas" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">CodeMirror 5 (CM5)</div>
+              <div class="setting-desc">Attach to CodeMirror 5 instances on web pages.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enable-cm5" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">CodeMirror 6 (CM6)</div>
+              <div class="setting-desc">Attach to CodeMirror 6 instances on web pages.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-enable-cm6" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Appearance -->
+      <section id="tab-appearance" class="tab-panel">
+        <header class="panel-header">
+          <h2>Appearance & Overlays</h2>
+          <p>Visual overlays, mode indicators, and theme palettes.</p>
+        </header>
+
+        <div class="panel-body">
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Mode Indicator Badge</div>
+              <div class="setting-desc">Floating badge in editor corner displaying active mode and pending keys.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-show-badge" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Badge Position</div>
+              <div class="setting-desc">Screen anchor for overlay components.</div>
+            </div>
+            <select id="opt-badge-position" class="select-box">
+              <option value="bottom-right">bottom-right</option>
+              <option value="top-right">top-right</option>
+              <option value="bottom-left">bottom-left</option>
+              <option value="top-left">top-left</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Which-Key Suggestions</div>
+              <div class="setting-desc">Show key hint popup when prefix key (g, G) is entered.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="opt-show-whichkey" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Theme Palette</div>
+              <div class="setting-desc">Color palette for UI overlays.</div>
+            </div>
+            <select id="opt-theme" class="select-box">
+              <option value="kakoune">kakoune (rose pine)</option>
+              <option value="dark">dark (charcoal)</option>
+              <option value="nord">nord (arctic)</option>
+              <option value="gruvbox">gruvbox (warm)</option>
+              <option value="light">light</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Domain Rules -->
+      <section id="tab-domains" class="tab-panel">
+        <header class="panel-header">
+          <h2>Domain Rules</h2>
+          <p>Configure domain blacklist and whitelist rules. Supports <code>*.domain.com</code>.</p>
+        </header>
+
+        <div class="domains-container">
+          <div class="domain-box">
+            <label for="opt-blacklist" class="domain-label">Blacklist (never enable on these)</label>
+            <textarea id="opt-blacklist" class="code-area" rows="6" spellcheck="false" placeholder="docs.google.com&#10;*.banking.com"></textarea>
+          </div>
+
+          <div class="domain-box">
+            <label for="opt-whitelist" class="domain-label">Whitelist (if set, only enable on these)</label>
+            <textarea id="opt-whitelist" class="code-area" rows="6" spellcheck="false" placeholder="github.com&#10;gitlab.com&#10;leetcode.com"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Custom kakrc -->
+      <section id="tab-kakrc" class="tab-panel">
+        <header class="panel-header">
+          <h2>Custom kakrc Script</h2>
+          <p>Define custom key mappings, user modes, and registers.</p>
+        </header>
+
+        <div class="kakrc-container">
+          <textarea id="opt-kakrc" class="code-area kakrc-editor" rows="14" spellcheck="false" placeholder="# Custom kakrc script
+map global normal <space> ,
+map global insert jk <esc>
+declare-user-mode mytools
+map global normal <a-m> ':enter-user-mode mytools<ret>'
+set-register a 'custom snippet'"></textarea>
+        </div>
+      </section>
+
+      <!-- Section: Key Reference -->
+      <section id="tab-keys" class="tab-panel">
+        <header class="panel-header">
+          <h2>Key Reference</h2>
+          <p>Standard selection-first modal keybindings specification.</p>
+        </header>
+
+        <div class="filter-row">
+          <input type="text" id="key-filter" class="filter-input" placeholder="Filter keybindings (e.g. word, line, join, regex)..." />
+        </div>
+
+        <div class="table-container">
+          <table class="key-table" id="key-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Key</th>
+                <th>Action</th>
+                <th style="width: 120px;">Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd></td><td>Move cursor left / down / up / right</td><td>Motions</td></tr>
+              <tr><td><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></td><td>Extend selection left / down / up / right</td><td>Motions</td></tr>
+              <tr><td><kbd>w</kbd> <kbd>b</kbd> <kbd>e</kbd></td><td>Select word forward / backward / to word end</td><td>Motions</td></tr>
+              <tr><td><kbd>W</kbd> <kbd>B</kbd> <kbd>E</kbd></td><td>Extend word forward / backward / to word end</td><td>Motions</td></tr>
+              <tr><td><kbd>0</kbd> / <kbd>$</kbd></td><td>Move to line start / line end</td><td>Line</td></tr>
+              <tr><td><kbd>g</kbd> <kbd>h</kbd> / <kbd>g</kbd> <kbd>l</kbd></td><td>Move to line start / line end</td><td>Line</td></tr>
+              <tr><td><kbd>g</kbd> <kbd>k</kbd> / <kbd>g</kbd> <kbd>j</kbd> / <kbd>g</kbd> <kbd>g</kbd></td><td>Jump to document start / document end</td><td>Jumps</td></tr>
+              <tr><td><kbd>C</kbd> / <kbd>Alt</kbd>+<kbd>C</kbd></td><td>Duplicate selection on line below / above</td><td>Multi-Cursor</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>s</kbd></td><td>Split selections on newlines</td><td>Multi-Cursor</td></tr>
+              <tr><td><kbd>Space</kbd> / <kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Keep only primary / remove primary selection</td><td>Multi-Cursor</td></tr>
+              <tr><td><kbd>)</kbd> / <kbd>(</kbd></td><td>Cycle primary selection forward / backward</td><td>Multi-Cursor</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>)</kbd> / <kbd>Alt</kbd>+<kbd>(</kbd></td><td>Rotate selections text content forward / backward</td><td>Multi-Cursor</td></tr>
+              <tr><td><kbd>x</kbd></td><td>Select whole line</td><td>Selection</td></tr>
+              <tr><td><kbd>%</kbd></td><td>Select entire buffer</td><td>Selection</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>j</kbd> / <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd></td><td>Join selected lines / join and select spaces</td><td>Lines</td></tr>
+              <tr><td><kbd>_</kbd></td><td>Trim whitespace from selection boundaries</td><td>Selection</td></tr>
+              <tr><td><kbd>;</kbd> / <kbd>Alt</kbd>+<kbd>;</kbd></td><td>Reduce to cursor / flip selection direction</td><td>Selection</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>:</kbd></td><td>Ensure forward selection direction</td><td>Selection</td></tr>
+              <tr><td><kbd>s</kbd> / <kbd>S</kbd></td><td>Select regex matches / split on regex matches</td><td>Regex</td></tr>
+              <tr><td><kbd>i</kbd> / <kbd>a</kbd></td><td>Insert before / after selections</td><td>Editing</td></tr>
+              <tr><td><kbd>I</kbd> / <kbd>A</kbd></td><td>Insert at line start / line end</td><td>Editing</td></tr>
+              <tr><td><kbd>o</kbd> / <kbd>O</kbd></td><td>Open line below / above and enter insert mode</td><td>Editing</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>o</kbd> / <kbd>Alt</kbd>+<kbd>O</kbd></td><td>Insert empty line below / above</td><td>Editing</td></tr>
+              <tr><td><kbd>d</kbd> / <kbd>c</kbd></td><td>Delete selection / change selection</td><td>Editing</td></tr>
+              <tr><td><kbd>~</kbd> / <kbd>`</kbd> / <kbd>Alt</kbd>+<kbd>`</kbd></td><td>Uppercase / lowercase / swap case</td><td>Transform</td></tr>
+              <tr><td><kbd>y</kbd> / <kbd>p</kbd> / <kbd>P</kbd></td><td>Yank / paste after / paste before</td><td>Registers</td></tr>
+              <tr><td><kbd>u</kbd> / <kbd>U</kbd></td><td>Undo / redo change</td><td>History</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>u</kbd> / <kbd>Alt</kbd>+<kbd>U</kbd></td><td>Undo / redo selection history</td><td>History</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Return to normal (select) mode</td><td>Mode</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Playground -->
+      <section id="tab-playground" class="tab-panel">
+        <header class="panel-header">
+          <h2>Playground</h2>
+          <p>Live CodeMirror 6 editor powered by browser-kakoune.</p>
+        </header>
+
+        <div class="playground-wrapper">
+          <textarea id="play-textarea" class="code-area play-editor" rows="10" spellcheck="false"># browser-kakoune live test area
+# Try:
+# - % then s then regex to select matches
+# - C to duplicate cursor down
+# - ~ / ` / <Alt-`> for case conversion
+# - <Alt-j> to join lines
+def evaluate_expression(ast):
+    match ast:
+        case {"type": "binary", "op": "+", "left": l, "right": r}:
+            return evaluate_expression(l) + evaluate_expression(r)
+        case {"type": "number", "val": v}:
+            return v
+        case _:
+            raise ValueError(f"Unknown AST node: {ast}")</textarea>
+        </div>
+      </section>
+
+      <!-- Section: About -->
+      <section id="tab-about" class="tab-panel">
+        <header class="panel-header">
+          <h2>About browser-kakoune</h2>
+          <p>Selection-first Kakoune modal editing across the web.</p>
+        </header>
+
+        <div class="panel-body">
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Version</div>
+              <div class="setting-desc">browser-kakoune v0.4.4 (Manifest V3)</div>
+            </div>
+            <span class="kbd-pill">MIT License</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Architecture</div>
+              <div class="setting-desc">Built with <code>kakoune-core-js</code> and <code>codemirror-kakoune</code> for seamless in-place editing, true multi-cursor rendering, and custom <code>kakrc</code> scripting.</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">GitHub Repository</div>
+              <div class="setting-desc"><a href="https://github.com/Yukaii/codemirror-kakoune" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">https://github.com/Yukaii/codemirror-kakoune</a></div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Upstream References</div>
+              <div class="setting-desc">Inspired by <a href="https://github.com/mawww/kakoune" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">mawww/kakoune</a>, <a href="https://github.com/replit/codemirror-vim" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">replit/codemirror-vim</a>, and <a href="https://github.com/71/dance" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">71/dance</a>.</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">License</div>
+              <div class="setting-desc">Copyright &copy; 2026 Yukai Huang. Released under the MIT License.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="save-toast" class="toast">Saved.</div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

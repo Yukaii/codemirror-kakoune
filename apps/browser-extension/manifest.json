@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "browser-kakoune",
+  "version": "0.4.4",
+  "description": "Kakoune-style modal editing for textareas, CodeMirror 5, and CodeMirror 6 across the web.",
+  "author": "Yukai Huang",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "browser-kakoune@yukaii.github.io",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "browser-kakoune"
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "commands": {
+    "toggle-kakoune": {
+      "suggested_key": {
+        "default": "Alt+Shift+K",
+        "mac": "Alt+Shift+K"
+      },
+      "description": "Toggle Kakoune on active element"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "inpage.js",
+        "demo/*",
+        "options/*",
+        "popup/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

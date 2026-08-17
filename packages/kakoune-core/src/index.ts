@@ -48,6 +48,19 @@ export {
   jumpDocumentEnd,
   selectAll,
   selectLine,
+  joinLines,
+  copySelectionsOnNextLines,
+  toUpperCaseSelection,
+  toLowerCaseSelection,
+  swapCaseSelection,
+  trimSelections,
+  addEmptyLineBelow,
+  addEmptyLineAbove,
+  reduceToCursor,
+  flipSelectionDirection,
+  ensureForwardDirection,
+  clearOtherSelections,
+  clearMainSelection,
   deleteSelection,
   yankSelection,
   undoEdit,
@@ -66,3 +79,8 @@ export {
   type KakounePromptKind,
   type KakounePromptState
 } from "./prompt";
+export {
+  parseKakrc,
+  tokenizeKakrcKeys,
+  type KakrcConfig
+} from "./kakrc";
