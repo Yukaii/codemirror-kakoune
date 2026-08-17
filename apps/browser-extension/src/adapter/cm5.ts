@@ -54,6 +54,7 @@ export function attachCM5Kakoune(
   cm: Cm,
   options: {
     initialMode?: KakouneMode;
+    customKakrc?: string;
     onStateChange?: (state: {
       mode: KakouneMode;
       pendingKeys: string[];
@@ -86,6 +87,7 @@ export function attachCM5Kakoune(
 
   const cmOptions: KakouneCm5Options = {
     initialMode: currentMode,
+    customKakrc: options.customKakrc,
     onWhichKey: (pending, items) => {
       currentPending = pending;
       currentPendingItems = items;

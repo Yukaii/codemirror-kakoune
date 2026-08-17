@@ -10,6 +10,7 @@ import {
 
 export interface CM6OverlayOptions {
   initialMode?: KakouneMode;
+  customKakrc?: string;
   onWhichKey?: (pending: string[], items: WhichKeyItem[]) => void;
   onModeChange?: (mode: KakouneMode) => void;
   onPrompt?: (prompt: { kind: string; text: string } | null, error: string | null) => void;

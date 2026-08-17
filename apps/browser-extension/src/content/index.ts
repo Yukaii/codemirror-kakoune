@@ -196,6 +196,7 @@ class ContentScriptManager {
         if (cm5) {
           attachCM5Kakoune(cm5, {
             initialMode: this.settings.defaultMode,
+            customKakrc: this.settings.customKakrc,
             onStateChange: state => {
               this.overlay?.render({
                 mode: state.mode,
@@ -264,6 +265,7 @@ class ContentScriptManager {
 
         const overlay = new CM6OverlayEditor(textarea, {
           initialMode: this.settings.defaultMode,
+          customKakrc: this.settings.customKakrc,
           onWhichKey: (pending, items) => {
             lastPending = pending;
             lastItems = items;

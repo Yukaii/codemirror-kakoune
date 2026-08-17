@@ -58,6 +58,8 @@ export type { KakouneMode as KakouneCm5Mode };
 
 export interface KakouneCm5Options {
   initialMode?: KakouneMode;
+  customKakrc?: string;
+  passthroughKeys?: string[] | ((key: string, event: KeyboardEvent) => boolean);
   onWhichKey?: (pending: string[], items: Array<{ keys: string[]; description?: string }>) => void;
   onPrompt?: (prompt: KakounePromptState | null) => void;
   onPromptError?: (message: string | null) => void;
@@ -146,6 +148,9 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
   const adapter = new Cm5Adapter(cm);
   const prompts = new KakounePromptController();
   const processor = new KakouneKeyProcessor(buildBindings(prompts));
+  if (options.customKakrc) {
+    processor.loadKakrc(options.customKakrc);
+  }
   adapter.setMode(options.initialMode ?? "select");
 
   cm.on("beforeChange", (_instance, change) => {
@@ -161,6 +166,13 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
   cm.on("keydown", (_instance, event) => {
     const key = normalizeKeyStroke(event);
     if (!key) return;
+
+    if (options.passthroughKeys) {
+      const shouldPass = typeof options.passthroughKeys === "function"
+        ? options.passthroughKeys(key, event)
+        : options.passthroughKeys.includes(key);
+      if (shouldPass) return;
+    }
 
     if (prompts.isActive()) {
       const handled = prompts.handleKey(adapter, key);
