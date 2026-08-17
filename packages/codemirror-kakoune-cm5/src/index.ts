@@ -151,6 +151,18 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
   if (options.customKakrc) {
     processor.loadKakrc(options.customKakrc);
   }
+
+  // Override conflicting keymaps (like Vim/Emacs) while Kakoune is active
+  try {
+    const currentKeyMap = cm.getOption("keyMap");
+    if (currentKeyMap && currentKeyMap !== "default") {
+      (cm as any).__kakoune_original_keymap = currentKeyMap;
+      cm.setOption("keyMap", "default");
+    }
+  } catch {
+    // Ignore if getOption/setOption is not available
+  }
+
   adapter.setMode(options.initialMode ?? "select");
 
   cm.on("beforeChange", (_instance, change) => {
@@ -181,6 +193,7 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
       if (handled) {
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation?.();
       }
       return;
     }
@@ -199,6 +212,7 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
     if (handled) {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation?.();
       return;
     }
 
@@ -208,6 +222,7 @@ export function kakoune(cm: Cm, options: KakouneCm5Options = {}): void {
     if (mode === "select") {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation?.();
     }
   });
 }
