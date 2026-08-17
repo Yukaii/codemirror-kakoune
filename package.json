@@ -18,6 +18,8 @@
     "sync:version": "node scripts/sync-jsr-version.mjs",
     "sync:jsr": "node scripts/sync-jsr-version.mjs",
     "sync:obsidian": "node scripts/sync-obsidian-version.mjs",
+    "sync:extension": "node scripts/sync-extension-version.mjs",
+    "pack:extension": "pnpm build:extension && node scripts/pack-extension.mjs",
     "version": "node scripts/sync-jsr-version.mjs && git add packages/codemirror-kakoune/jsr.json packages/kakoune-core/jsr.json packages/codemirror-kakoune-cm5/jsr.json packages/kakoune-core/package.json packages/codemirror-kakoune-cm5/package.json",
     "probe:parity": "pnpm --filter codemirror-kakoune probe:parity",
     "typecheck": "pnpm -r typecheck",
