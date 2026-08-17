@@ -9,6 +9,26 @@ export interface CM5InstanceInfo {
   adapter: Cm5Adapter;
 }
 
+export function isCM5Element(element: HTMLElement): boolean {
+  return Boolean(
+    element.closest(".CodeMirror") ||
+    element.classList.contains("CodeMirror") ||
+    (element.nextElementSibling && element.nextElementSibling.classList.contains("CodeMirror"))
+  );
+}
+
+export function getCM5Wrapper(element: HTMLElement): HTMLElement | null {
+  if (element.classList.contains("CodeMirror")) return element;
+  const closest = element.closest(".CodeMirror");
+  if (closest) return closest as HTMLElement;
+
+  if (element.nextElementSibling && element.nextElementSibling.classList.contains("CodeMirror")) {
+    return element.nextElementSibling as HTMLElement;
+  }
+
+  return null;
+}
+
 export function detectCM5(element: HTMLElement): Cm | null {
   // 1. Direct .CodeMirror property on element
   if ((element as any).CodeMirror) {

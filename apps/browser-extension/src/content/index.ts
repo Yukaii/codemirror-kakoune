@@ -6,7 +6,7 @@ import {
 } from "kakoune-core-js";
 import { TextareaAdapter, type TextInputElement } from "../adapter/textarea";
 import { buildKakouneBindings } from "../adapter/bindings";
-import { detectCM5, attachCM5Kakoune } from "../adapter/cm5";
+import { detectCM5, getCM5Wrapper, attachCM5Kakoune } from "../adapter/cm5";
 import { detectCM6 } from "../adapter/cm6";
 import { CM6OverlayEditor } from "../adapter/cm6-overlay";
 import { OverlayController } from "../ui/overlay";
@@ -188,23 +188,35 @@ class ContentScriptManager {
 
     // 1. Check CodeMirror 5
     if (this.settings.enableCodeMirror5) {
-      const cm5 = detectCM5(element);
-      if (cm5) {
+      const cm5Wrapper = getCM5Wrapper(element);
+      if (cm5Wrapper) {
         this.activeEngine = "cm5";
-        this.activeElement = element;
-        attachCM5Kakoune(cm5, {
-          initialMode: this.settings.defaultMode,
-          onStateChange: state => {
-            this.overlay?.render({
-              mode: state.mode,
-              pendingKeys: state.pendingKeys,
-              pendingItems: state.pendingItems,
-              prompt: state.prompt,
-              promptError: state.promptError,
-              engine: "cm5"
-            });
-          }
-        });
+        this.activeElement = cm5Wrapper;
+        const cm5 = detectCM5(cm5Wrapper);
+        if (cm5) {
+          attachCM5Kakoune(cm5, {
+            initialMode: this.settings.defaultMode,
+            onStateChange: state => {
+              this.overlay?.render({
+                mode: state.mode,
+                pendingKeys: state.pendingKeys,
+                pendingItems: state.pendingItems,
+                prompt: state.prompt,
+                promptError: state.promptError,
+                engine: "cm5"
+              });
+            }
+          });
+        } else {
+          this.overlay?.render({
+            mode: this.settings.defaultMode,
+            pendingKeys: [],
+            pendingItems: [],
+            prompt: null,
+            promptError: null,
+            engine: "cm5"
+          });
+        }
         return;
       }
     }
@@ -228,7 +240,7 @@ class ContentScriptManager {
     }
 
     // 3. Check Textarea -> In-place CodeMirror 6 swap!
-    if (this.settings.enableTextareas && element.tagName === "TEXTAREA") {
+    if (this.settings.enableTextareas && !this.isCodeEditorElement(element) && element.tagName === "TEXTAREA") {
       const textarea = element as HTMLTextAreaElement;
       this.activeEngine = "textarea";
       this.activeElement = element;
@@ -296,7 +308,21 @@ class ContentScriptManager {
     this.overlay?.hide();
   }
 
+  private isCodeEditorElement(el: HTMLElement): boolean {
+    return Boolean(
+      el.closest(".CodeMirror") ||
+      el.classList.contains("CodeMirror") ||
+      (el.nextElementSibling && el.nextElementSibling.classList.contains("CodeMirror")) ||
+      el.closest(".cm-editor") ||
+      el.classList.contains("cm-editor") ||
+      el.closest(".cm-content") ||
+      el.closest(".monaco-editor") ||
+      el.closest(".ace_editor")
+    );
+  }
+
   private isTextInput(el: HTMLElement): boolean {
+    if (this.isCodeEditorElement(el)) return false;
     if (el.tagName === "TEXTAREA") return true;
     if (el.tagName === "INPUT") {
       const type = (el as HTMLInputElement).type.toLowerCase();
