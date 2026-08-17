@@ -26,6 +26,7 @@
         <button class="nav-item" data-tab="kakrc">kakrc</button>
         <button class="nav-item" data-tab="keys">Keybindings</button>
         <button class="nav-item" data-tab="playground">Playground</button>
+        <button class="nav-item" data-tab="about">About</button>
       </nav>
 
       <div class="sidebar-footer">
@@ -292,6 +293,52 @@ def evaluate_expression(ast):
             return v
         case _:
             raise ValueError(f"Unknown AST node: {ast}")</textarea>
+        </div>
+      </section>
+
+      <!-- Section: About -->
+      <section id="tab-about" class="tab-panel">
+        <header class="panel-header">
+          <h2>About browser-kakoune</h2>
+          <p>Selection-first Kakoune modal editing across the web.</p>
+        </header>
+
+        <div class="panel-body">
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Version</div>
+              <div class="setting-desc">browser-kakoune v0.4.4 (Manifest V3)</div>
+            </div>
+            <span class="kbd-pill">MIT License</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Architecture</div>
+              <div class="setting-desc">Built with <code>kakoune-core-js</code> and <code>codemirror-kakoune</code> for seamless in-place editing, true multi-cursor rendering, and custom <code>kakrc</code> scripting.</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">GitHub Repository</div>
+              <div class="setting-desc"><a href="https://github.com/Yukaii/codemirror-kakoune" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">https://github.com/Yukaii/codemirror-kakoune</a></div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">Upstream References</div>
+              <div class="setting-desc">Inspired by <a href="https://github.com/mawww/kakoune" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">mawww/kakoune</a>, <a href="https://github.com/replit/codemirror-vim" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">replit/codemirror-vim</a>, and <a href="https://github.com/71/dance" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">71/dance</a>.</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-title">License</div>
+              <div class="setting-desc">Copyright &copy; 2026 Yukai Huang. Released under the MIT License.</div>
+            </div>
+          </div>
         </div>
       </section>
     </main>

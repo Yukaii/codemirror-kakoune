@@ -1,58 +1,100 @@
 import { DEFAULT_SETTINGS, type ExtensionSettings } from "./types";
 import { browserAPI } from "./browser-api";
 
-export async function loadSettings(): Promise<ExtensionSettings> {
-  try {
-    if (browserAPI?.storage) {
-      const storageArea = browserAPI.storage.sync || browserAPI.storage.local;
-      const res = await storageArea.get("kakoune_settings");
-      if (res && res.kakoune_settings) {
-        return { ...DEFAULT_SETTINGS, ...res.kakoune_settings };
+export function loadSettings(): Promise<ExtensionSettings> {
+  return new Promise(resolve => {
+    try {
+      const storage = browserAPI?.storage?.sync || browserAPI?.storage?.local;
+      if (storage) {
+        storage.get(["kakoune_settings"], (res: any) => {
+          if (browserAPI?.runtime?.lastError) {
+            console.warn("[browser-kakoune] Storage get error:", browserAPI.runtime.lastError);
+            resolve({ ...DEFAULT_SETTINGS });
+          } else if (res && res.kakoune_settings) {
+            resolve({ ...DEFAULT_SETTINGS, ...res.kakoune_settings });
+          } else {
+            resolve({ ...DEFAULT_SETTINGS });
+          }
+        });
+        return;
       }
-    } else if (typeof localStorage !== "undefined") {
-      const item = localStorage.getItem("kakoune_settings");
-      if (item) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(item) };
+    } catch (err) {
+      console.warn("[browser-kakoune] Error loading storage:", err);
+    }
+
+    if (typeof localStorage !== "undefined") {
+      try {
+        const item = localStorage.getItem("kakoune_settings");
+        if (item) {
+          resolve({ ...DEFAULT_SETTINGS, ...JSON.parse(item) });
+          return;
+        }
+      } catch (err) {
+        console.warn("[browser-kakoune] Error loading localStorage:", err);
       }
     }
-  } catch (err) {
-    console.warn("[Kakoune Extension] Error loading settings:", err);
-  }
-  return { ...DEFAULT_SETTINGS };
+
+    resolve({ ...DEFAULT_SETTINGS });
+  });
 }
 
 export async function saveSettings(settings: Partial<ExtensionSettings>): Promise<ExtensionSettings> {
   const current = await loadSettings();
-  const updated: ExtensionSettings = { ...current, ...settings };
-  try {
-    if (browserAPI?.storage) {
-      const storageArea = browserAPI.storage.sync || browserAPI.storage.local;
-      await storageArea.set({ kakoune_settings: updated });
-    } else if (typeof localStorage !== "undefined") {
-      localStorage.setItem("kakoune_settings", JSON.stringify(updated));
+  const updated: ExtensionSettings = {
+    ...current,
+    ...settings,
+    siteOverrides: {
+      ...(current.siteOverrides || {}),
+      ...(settings.siteOverrides || {})
     }
-  } catch (err) {
-    console.warn("[Kakoune Extension] Error saving settings:", err);
-  }
-  return updated;
+  };
+
+  return new Promise(resolve => {
+    try {
+      const storage = browserAPI?.storage?.sync || browserAPI?.storage?.local;
+      if (storage) {
+        storage.set({ kakoune_settings: updated }, () => {
+          if (browserAPI?.runtime?.lastError) {
+            console.warn("[browser-kakoune] Storage set error:", browserAPI.runtime.lastError);
+          }
+          resolve(updated);
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn("[browser-kakoune] Error saving storage:", err);
+    }
+
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem("kakoune_settings", JSON.stringify(updated));
+      } catch (err) {
+        console.warn("[browser-kakoune] Error saving localStorage:", err);
+      }
+    }
+
+    resolve(updated);
+  });
 }
 
 export function isDomainEnabled(hostname: string, settings: ExtensionSettings): boolean {
-  if (!settings.enabled) return false;
+  if (!settings || !settings.enabled) return false;
   const cleanHost = hostname.toLowerCase().replace(/:\d+$/, "");
 
   // Check specific override first
-  if (typeof settings.siteOverrides[cleanHost] === "boolean") {
+  if (settings.siteOverrides && typeof settings.siteOverrides[cleanHost] === "boolean") {
     return settings.siteOverrides[cleanHost];
   }
 
   // Check blacklist
-  for (const pattern of settings.blacklistedDomains) {
-    if (matchDomainPattern(cleanHost, pattern)) return false;
+  if (Array.isArray(settings.blacklistedDomains)) {
+    for (const pattern of settings.blacklistedDomains) {
+      if (matchDomainPattern(cleanHost, pattern)) return false;
+    }
   }
 
   // Check whitelist if configured
-  if (settings.whitelistedDomains.length > 0) {
+  if (Array.isArray(settings.whitelistedDomains) && settings.whitelistedDomains.length > 0) {
     return settings.whitelistedDomains.some(pattern => matchDomainPattern(cleanHost, pattern));
   }
 

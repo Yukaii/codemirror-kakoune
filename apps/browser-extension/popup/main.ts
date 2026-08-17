@@ -51,9 +51,18 @@ function setupUI(): void {
     updateStatusBadge(currentSettings.enabled);
   }
 
+  const updateSiteStatusText = (enabled: boolean) => {
+    const statusEl = document.getElementById("site-status");
+    if (statusEl) {
+      statusEl.textContent = enabled ? "Enabled" : "Disabled";
+    }
+  };
+
   if (currentDomain && !currentDomain.startsWith("chrome") && !currentDomain.startsWith("extension") && !currentDomain.startsWith("about")) {
     if (siteName) siteName.textContent = currentDomain;
-    if (siteToggle) siteToggle.checked = isDomainEnabled(currentDomain, currentSettings);
+    const isEnabled = isDomainEnabled(currentDomain, currentSettings);
+    if (siteToggle) siteToggle.checked = isEnabled;
+    updateSiteStatusText(isEnabled);
   } else if (siteCard) {
     siteCard.style.display = "none";
   }
@@ -74,9 +83,26 @@ function setupUI(): void {
 
   siteToggle?.addEventListener("change", async () => {
     if (!currentDomain) return;
-    const overrides = { ...currentSettings.siteOverrides, [currentDomain]: siteToggle.checked };
+    const isEnabled = siteToggle.checked;
+    updateSiteStatusText(isEnabled);
+
+    const overrides = { ...(currentSettings.siteOverrides || {}), [currentDomain]: isEnabled };
     currentSettings.siteOverrides = overrides;
     await saveSettings({ siteOverrides: overrides });
+
+    try {
+      if (browserAPI?.tabs?.query) {
+        const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id) {
+          browserAPI.tabs.sendMessage(tab.id, {
+            type: "SAVE_SETTINGS",
+            payload: { siteOverrides: overrides }
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      // Ignore
+    }
   });
 
   defaultModeSelect?.addEventListener("change", async () => {

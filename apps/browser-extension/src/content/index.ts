@@ -32,6 +32,7 @@ class ContentScriptManager {
     this.overlay = new OverlayController(this.settings, () => this.toggleOnActiveElement());
     this.setupEventListeners();
     this.setupMessageListener();
+    this.setupStorageListener();
 
     // Check if domain is enabled
     if (!isDomainEnabled(window.location.hostname, this.settings)) {
@@ -42,6 +43,39 @@ class ContentScriptManager {
     // Auto-detect existing active element if any
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       this.handleFocus(document.activeElement);
+    }
+  }
+
+  private setupStorageListener(): void {
+    if (browserAPI?.storage?.onChanged) {
+      browserAPI.storage.onChanged.addListener((changes, area) => {
+        if (area === "sync" || area === "local") {
+          if (changes.kakoune_settings && changes.kakoune_settings.newValue) {
+            this.applySettingsUpdate(changes.kakoune_settings.newValue);
+          }
+        }
+      });
+    }
+  }
+
+  private applySettingsUpdate(newSettings: ExtensionSettings): void {
+    this.settings = newSettings;
+    this.overlay?.updateSettings(this.settings);
+
+    const isEnabled = isDomainEnabled(window.location.hostname, this.settings);
+    if (!isEnabled) {
+      if (this.activeOverlayEditor) {
+        this.activeOverlayEditor.destroy(false);
+        this.activeOverlayEditor = null;
+      }
+      this.activeAdapter = null;
+      this.activeEngine = "none";
+      this.activeElement = null;
+      this.overlay?.hide();
+    } else {
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        this.handleFocus(document.activeElement);
+      }
     }
   }
 
@@ -97,8 +131,7 @@ class ContentScriptManager {
 
         if (message.type === "SAVE_SETTINGS") {
           this.settings = { ...this.settings!, ...message.payload };
-          this.overlay?.updateSettings(this.settings);
-          this.updateUI();
+          this.applySettingsUpdate(this.settings);
           sendResponse({ success: true });
           return true;
         }
