@@ -49,6 +49,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "inpage.js",
         "demo/*",
         "options/*",
         "popup/*"

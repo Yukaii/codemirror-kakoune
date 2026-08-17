@@ -33,6 +33,7 @@ class ContentScriptManager {
     this.setupEventListeners();
     this.setupMessageListener();
     this.setupStorageListener();
+    this.injectInPageScript();
 
     // Check if domain is enabled
     if (!isDomainEnabled(window.location.hostname, this.settings)) {
@@ -44,6 +45,55 @@ class ContentScriptManager {
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       this.handleFocus(document.activeElement);
     }
+  }
+
+  private injectInPageScript(): void {
+    if (typeof document === "undefined") return;
+
+    try {
+      const scriptUrl = browserAPI?.runtime?.getURL
+        ? browserAPI.runtime.getURL("inpage.js")
+        : null;
+
+      if (scriptUrl) {
+        const script = document.createElement("script");
+        script.src = scriptUrl;
+        script.onload = () => {
+          script.remove();
+          this.syncInPageConfig();
+        };
+        (document.head || document.documentElement).appendChild(script);
+      }
+    } catch {
+      // Ignore in restricted environments
+    }
+
+    // Listen to status events from inpage script
+    window.addEventListener("kakoune-status-event", (e: any) => {
+      const detail = e.detail;
+      if (detail && this.settings && isDomainEnabled(window.location.hostname, this.settings)) {
+        this.activeEngine = detail.engine || "cm5";
+        this.overlay?.render({
+          mode: detail.mode || "select",
+          pendingKeys: detail.pendingKeys || [],
+          pendingItems: detail.pendingItems || [],
+          prompt: detail.prompt || null,
+          promptError: detail.promptError || null,
+          engine: this.activeEngine
+        });
+      }
+    });
+  }
+
+  private syncInPageConfig(): void {
+    if (!this.settings) return;
+    window.dispatchEvent(new CustomEvent("kakoune-inpage-config", {
+      detail: {
+        enabled: isDomainEnabled(window.location.hostname, this.settings),
+        defaultMode: this.settings.defaultMode,
+        customKakrc: this.settings.customKakrc
+      }
+    }));
   }
 
   private setupStorageListener(): void {
@@ -61,6 +111,7 @@ class ContentScriptManager {
   private applySettingsUpdate(newSettings: ExtensionSettings): void {
     this.settings = newSettings;
     this.overlay?.updateSettings(this.settings);
+    this.syncInPageConfig();
 
     const isEnabled = isDomainEnabled(window.location.hostname, this.settings);
     if (!isEnabled) {

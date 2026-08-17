@@ -69,7 +69,7 @@ async function buildAll() {
     }
   });
 
-  console.log("[build] 3/3 Building background service worker (IIFE format)...");
+  console.log("[build] 3/4 Building background service worker (IIFE format)...");
   await build({
     root,
     configFile: false,
@@ -92,6 +92,29 @@ async function buildAll() {
     }
   });
 
+  console.log("[build] 4/4 Building inpage bridge script (IIFE format)...");
+  await build({
+    root,
+    configFile: false,
+    resolve: { alias: aliases },
+    esbuild: {
+      charset: "ascii"
+    },
+    build: {
+      outDir,
+      emptyOutDir: false,
+      lib: {
+        entry: resolve(root, "src/inpage/index.ts"),
+        name: "KakouneInPageScript",
+        formats: ["iife"],
+        fileName: () => "inpage.js"
+      }
+    },
+    define: {
+      "process.env.NODE_ENV": JSON.stringify("production")
+    }
+  });
+
   // Copy manifest.json
   const manifestSrc = resolve(root, "manifest.json");
   const manifestDest = resolve(outDir, "manifest.json");
@@ -103,6 +126,7 @@ async function buildAll() {
   // Ensure all output files are clean UTF-8
   ensureUtf8(resolve(outDir, "content.js"));
   ensureUtf8(resolve(outDir, "background.js"));
+  ensureUtf8(resolve(outDir, "inpage.js"));
   ensureUtf8(resolve(outDir, "manifest.json"));
 
   console.log("[build] Browser extension build complete!");
