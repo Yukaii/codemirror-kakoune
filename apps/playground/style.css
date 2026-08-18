@@ -85,6 +85,7 @@ html,
 body {
   min-height: 100%;
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
 }
@@ -101,6 +102,7 @@ body {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 48px);
+  min-width: 0;
 }
 
 .bar {
@@ -113,6 +115,7 @@ body {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: lowercase;
+  min-width: 0;
 }
 
 .brand-container {
@@ -120,11 +123,14 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .brand {
   color: var(--text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .playground-nav {
