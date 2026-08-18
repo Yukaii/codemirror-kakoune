@@ -112,5 +112,9 @@ html, body { overflow-x: hidden; }
 .CodeMirror .cm-error { color: #ff6b6b; }
 
 @media (max-width: 768px) {
-  .CodeMirror { font-size: 16px; }
+  #editor .CodeMirror,
+  .shell .CodeMirror,
+  .CodeMirror {
+    font-size: 16px;
+  }
 }
