@@ -680,4 +680,10 @@ body[data-theme="sepia"] .register-popover {
     bottom: auto;
     top: 0;
   }
+
+  #editor .cm-editor .cm-scroller,
+  .shell .cm-editor .cm-scroller,
+  .cm-scroller {
+    font-size: 16px;
+  }
 }
