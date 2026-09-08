@@ -1,10 +1,10 @@
 {
   "name": "@ykmade/codemirror-kakoune-cm5",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "license": "MIT",
   "exports": "./src/index.ts",
   "imports": {
-    "kakoune-core-js": "jsr:@ykmade/kakoune-core-js@^0.4.4"
+    "kakoune-core-js": "jsr:@ykmade/kakoune-core-js@^0.5.0"
   },
   "publish": {
     "include": [
