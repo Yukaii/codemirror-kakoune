@@ -1,4 +1,5 @@
 import type { EditorHost, KakouneMode, LineInfo, SelectionRange } from "kakoune-core-js";
+import { lineColumnPos } from "kakoune-core-js";
 import type CodeMirror from "codemirror";
 
 type Cm = CodeMirror.Editor;
@@ -117,6 +118,105 @@ export class Cm5Adapter implements EditorHost {
 
   setRegister(text: string): void {
     this.register = text;
+  }
+
+  // --- View commands (`v` one-shot / `V` lock) ---
+  // Kakoune `v` modifies the current view without moving selections.
+  // These helpers mirror the CM6 view commands using CodeMirror 5's
+  // scrollTo/getScrollInfo/charCoords viewport API.
+
+  private mainHeadOffset(): number {
+    return posToOffset(this.cm, this.cm.getCursor("head"));
+  }
+
+  private viewLineHeight(): number {
+    try {
+      const height = this.cm.defaultTextHeight();
+      if (height && height > 0) return height;
+    } catch { /* ignore */ }
+    return 14;
+  }
+
+  private viewCharWidth(): number {
+    try {
+      const width = this.cm.defaultCharWidth();
+      if (width && width > 0) return width;
+    } catch { /* ignore */ }
+    return 8;
+  }
+
+  centerMainVertically(): boolean {
+    const coords = this.cm.charCoords(offsetToPos(this.cm, this.mainHeadOffset()), "local");
+    const info = this.cm.getScrollInfo();
+    this.cm.scrollTo(null, coords.top - (info.clientHeight - this.viewLineHeight()) / 2);
+    return true;
+  }
+
+  centerMainHorizontally(): boolean {
+    const coords = this.cm.charCoords(offsetToPos(this.cm, this.mainHeadOffset()), "local");
+    const info = this.cm.getScrollInfo();
+    this.cm.scrollTo(coords.left - (info.clientWidth - this.viewCharWidth()) / 2, null);
+    return true;
+  }
+
+  scrollMainToTop(): boolean {
+    const coords = this.cm.charCoords(offsetToPos(this.cm, this.mainHeadOffset()), "local");
+    this.cm.scrollTo(null, coords.top);
+    return true;
+  }
+
+  scrollMainToBottom(): boolean {
+    const coords = this.cm.charCoords(offsetToPos(this.cm, this.mainHeadOffset()), "local");
+    const info = this.cm.getScrollInfo();
+    this.cm.scrollTo(null, coords.bottom - info.clientHeight);
+    return true;
+  }
+
+  scrollMainToLeft(): boolean {
+    const coords = this.cm.charCoords(offsetToPos(this.cm, this.mainHeadOffset()), "local");
+    this.cm.scrollTo(coords.left, null);
+    return true;
+  }
+
+  scrollMainToRight(): boolean {
+    const coords = this.cm.charCoords(offsetToPos(this.cm, this.mainHeadOffset()), "local");
+    const info = this.cm.getScrollInfo();
+    this.cm.scrollTo(coords.right - info.clientWidth, null);
+    return true;
+  }
+
+  scrollByLines(delta: number, count = 1): boolean {
+    const info = this.cm.getScrollInfo();
+    this.cm.scrollTo(null, info.top + this.viewLineHeight() * delta * Math.max(1, count));
+    return true;
+  }
+
+  scrollByColumns(delta: number, count = 1): boolean {
+    const info = this.cm.getScrollInfo();
+    this.cm.scrollTo(info.left + this.viewCharWidth() * delta * Math.max(1, count), null);
+    return true;
+  }
+
+  scrollPage(direction: 1 | -1, half: boolean, count = 1): boolean {
+    const lineHeight = this.viewLineHeight();
+    const info = this.cm.getScrollInfo();
+    let visibleLines = info.clientHeight > 0 && lineHeight > 0
+      ? Math.floor(info.clientHeight / lineHeight)
+      : 20;
+    visibleLines = Math.max(1, visibleLines - 2);
+    if (half) {
+      visibleLines = Math.max(1, Math.floor(visibleLines / 2));
+    }
+    const delta = direction * visibleLines * Math.max(1, count);
+    const doc = this.getDoc();
+    const next = this.getSelections().map(range => ({
+      anchor: lineColumnPos(doc, range.anchor, delta),
+      head: lineColumnPos(doc, range.head, delta),
+      linewise: range.linewise
+    }));
+    this.setSelections(next);
+    this.cm.scrollIntoView(null);
+    return true;
   }
 
   private selectionSignature(ranges: Array<Pick<SelectionRange, "anchor" | "head">>): string {

@@ -23,6 +23,7 @@ export class KakouneKeyProcessor<T> {
   private insertMappings = new Map<string, string[]>();
   private userModes = new Map<string, Map<string, string[]>>();
   private activeUserMode: { name: string; lock: boolean } | null = null;
+  private viewLock = false;
 
   constructor(private readonly bindings: Record<KakouneMode, KakouneBinding<T>[]>) {}
 
@@ -59,9 +60,18 @@ export class KakouneKeyProcessor<T> {
     this.pendingCharBinding = null;
     this.count = null;
     this.activeUserMode = null;
+    this.viewLock = false;
+  }
+
+  /** Returns `true` when lock view mode (`V`) is active. */
+  isViewLocked(): boolean {
+    return this.viewLock;
   }
 
   getPending(): string[] {
+    if (this.viewLock && this.pending.length === 0) {
+      return ["V"];
+    }
     return this.pending;
   }
 
@@ -70,7 +80,13 @@ export class KakouneKeyProcessor<T> {
   }
 
   getPendingItems(mode: KakouneMode): WhichKeyItem[] {
-    if (this.pendingCharBinding || this.pending.length === 0) return [];
+    if (this.pendingCharBinding) return [];
+    if (this.viewLock && this.pending.length === 0) {
+      return this.bindings[mode]
+        .filter(binding => binding.keys.length === 2 && binding.keys[0] === "v")
+        .map(binding => ({ keys: [binding.keys[1]], description: binding.description }));
+    }
+    if (this.pending.length === 0) return [];
     return this.bindings[mode]
       .filter(binding => isPrefix(this.pending, binding.keys) && binding.keys.length > this.pending.length)
       .map(binding => ({ keys: binding.keys, description: binding.description }));
@@ -81,6 +97,37 @@ export class KakouneKeyProcessor<T> {
       this.reset();
       const escapeBinding = this.bindings[mode].find(binding => binding.keys.length === 1 && binding.keys[0] === "<Esc>");
       return escapeBinding ? escapeBinding.run(editor) : true;
+    }
+
+    // Lock view mode (`V`): repeat the trailing view key without the `v` prefix.
+    if (this.viewLock && mode === "select" && !this.pendingCharBinding) {
+      if (/^[0-9]$/.test(key) && (key !== "0" || this.count !== null)) {
+        this.count = (this.count ?? 0) * 10 + Number.parseInt(key, 10);
+        return true;
+      }
+      if (key === "v" || key === "V") {
+        return true;
+      }
+      const viewMatch = this.bindings[mode].find(
+        binding => binding.keys.length === 2 && binding.keys[0] === "v" && binding.keys[1] === key
+      );
+      if (viewMatch) {
+        const currentCount = this.count;
+        this.count = null;
+        this.pending = [];
+        return viewMatch.run(editor, undefined, currentCount ?? undefined);
+      }
+      // Non-view key leaves lock mode and falls through to normal handling.
+      this.viewLock = false;
+    }
+
+    if (mode === "select" && (key === "V" || key === "<A-V>" || key === "<a-V>") && this.pending.length === 0 && !this.pendingCharBinding) {
+      const hasViewBindings = this.bindings[mode].some(binding => binding.keys.length === 2 && binding.keys[0] === "v");
+      if (hasViewBindings) {
+        this.viewLock = true;
+        this.pending = [];
+        return true;
+      }
     }
 
     // User mode active

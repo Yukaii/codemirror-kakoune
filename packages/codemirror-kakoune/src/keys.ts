@@ -123,6 +123,7 @@ export class KakouneKeyProcessor {
   private userModes = new Map<string, Map<string, string[]>>();
   private activeUserMode: { name: string; lock: boolean } | null = null;
   private pendingRegister: string | null = null;
+  private viewLock = false;
 
   private normalMappings = new Map<string, string[]>();
 
@@ -308,10 +309,19 @@ export class KakouneKeyProcessor {
     this.pending = [];
     this.pendingCharBinding = null;
     this.count = null;
+    this.viewLock = false;
+  }
+
+  /** Returns `true` when lock view mode (`V`) is active. */
+  isViewLocked(): boolean {
+    return this.viewLock;
   }
 
   /** Returns the currently pending key sequence. */
   getPending(): string[] {
+    if (this.viewLock && this.pending.length === 0) {
+      return ["V"];
+    }
     return this.pending;
   }
 
@@ -330,6 +340,14 @@ export class KakouneKeyProcessor {
     }
 
     const bindings = this.bindings[mode];
+    if (this.viewLock && this.pending.length === 0) {
+      return bindings
+        .filter(binding => binding.keys.length === 2 && binding.keys[0] === "v")
+        .map(binding => ({
+          keys: [binding.keys[1]],
+          description: binding.description
+        }));
+    }
     if (this.pending.length === 0) {
       return [];
     }
@@ -413,6 +431,36 @@ export class KakouneKeyProcessor {
     }
 
     const effectiveMode = this.temporaryNormal && mode === "insert" ? "select" : mode;
+
+    if (this.viewLock && effectiveMode === "select" && !this.pendingCharBinding) {
+      if (/^[0-9]$/.test(key) && (key !== "0" || this.count !== null)) {
+        this.count = (this.count ?? 0) * 10 + Number.parseInt(key, 10);
+        return true;
+      }
+      if (key === "v" || key === "V") {
+        return true;
+      }
+      const viewBindings = this.bindings[effectiveMode];
+      const match = viewBindings.find(
+        binding => binding.keys.length === 2 && binding.keys[0] === "v" && binding.keys[1] === key
+      );
+      if (match) {
+        const currentCount = this.count;
+        this.count = null;
+        this.pending = [];
+        match.run(view, undefined, currentCount ?? undefined);
+        this.clearTemporaryNormalIfDone();
+        return true;
+      }
+      // Non-view key leaves lock mode and falls through to normal handling.
+      this.viewLock = false;
+    }
+
+    if (effectiveMode === "select" && (key === "V" || key === "<A-V>" || key === "<a-V>") && this.pending.length === 0 && !this.pendingCharBinding) {
+      this.viewLock = true;
+      this.pending = [];
+      return true;
+    }
 
     if (this.activeUserMode) {
       const modeConfig = this.userModes.get(this.activeUserMode.name);
