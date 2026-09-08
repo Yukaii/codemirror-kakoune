@@ -95,6 +95,15 @@ export {
   extendGotoLastBuffer,
   gotoBufferEnd,
   extendGotoBufferEnd,
+  centerMainSelectionVertically,
+  centerMainSelectionHorizontally,
+  scrollMainSelectionToTop,
+  scrollMainSelectionToBottom,
+  scrollMainSelectionToLeft,
+  scrollMainSelectionToRight,
+  scrollViewportLines,
+  scrollViewportColumns,
+  scrollPageMoveSelections,
   kakouneCommands
 } from "./commands";
 

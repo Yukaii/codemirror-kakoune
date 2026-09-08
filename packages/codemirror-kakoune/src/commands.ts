@@ -1,6 +1,6 @@
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import { redo, undo, isolateHistory } from "@codemirror/commands";
-import type { EditorView } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import type { KakouneBinding } from "./keys";
 import {
   enterInsert,
@@ -2376,6 +2376,105 @@ function openLine(view: EditorView, direction: "above" | "below", count: number 
   return true;
 }
 
+// --- View commands (`v` one-shot / `V` lock) ---
+// Kakoune `v` modifies the current view without moving selections; `V`
+// enters a lock view mode (left with `<Esc>`) where the trailing view key
+// can be repeated without the `v` prefix.
+
+function scrollMainIntoView(view: EditorView, options: { x?: "center" | "start" | "end" | "nearest"; y?: "center" | "start" | "end" | "nearest" }): boolean {
+  const pos = view.state.selection.main.head;
+  view.dispatch({ effects: EditorView.scrollIntoView(pos, options) });
+  return true;
+}
+
+export function centerMainSelectionVertically(view: EditorView): boolean {
+  return scrollMainIntoView(view, { y: "center" });
+}
+
+export function centerMainSelectionHorizontally(view: EditorView): boolean {
+  return scrollMainIntoView(view, { x: "center" });
+}
+
+export function scrollMainSelectionToTop(view: EditorView): boolean {
+  return scrollMainIntoView(view, { y: "start" });
+}
+
+export function scrollMainSelectionToBottom(view: EditorView): boolean {
+  return scrollMainIntoView(view, { y: "end" });
+}
+
+export function scrollMainSelectionToLeft(view: EditorView): boolean {
+  return scrollMainIntoView(view, { x: "start" });
+}
+
+export function scrollMainSelectionToRight(view: EditorView): boolean {
+  return scrollMainIntoView(view, { x: "end" });
+}
+
+function viewLineHeight(view: EditorView): number {
+  try {
+    const h = view.defaultLineHeight;
+    if (h && h > 0) return h;
+  } catch { /* ignore */ }
+  try {
+    const block = view.lineBlockAt(view.state.selection.main.head);
+    if (block && block.height > 0) return block.height;
+  } catch { /* ignore */ }
+  return 14;
+}
+
+function viewCharWidth(view: EditorView): number {
+  try {
+    const w = view.defaultCharacterWidth;
+    if (w && w > 0) return w;
+  } catch { /* ignore */ }
+  return 8;
+}
+
+export function scrollViewportLines(view: EditorView, delta: number, count = 1): boolean {
+  const lines = Math.max(1, count ?? 1) * delta;
+  view.scrollDOM.scrollTop += viewLineHeight(view) * lines;
+  return true;
+}
+
+export function scrollViewportColumns(view: EditorView, delta: number, count = 1): boolean {
+  const cols = Math.max(1, count ?? 1) * delta;
+  view.scrollDOM.scrollLeft += viewCharWidth(view) * cols;
+  return true;
+}
+
+function movePosByLines(view: EditorView, pos: number, delta: number): number {
+  const doc = view.state.doc;
+  const line = doc.lineAt(pos);
+  const column = pos - line.from;
+  const nextLineNumber = clamp(line.number + delta, 1, doc.lines);
+  const nextLine = doc.line(nextLineNumber);
+  return clamp(nextLine.from + column, nextLine.from, nextLine.to);
+}
+
+export function scrollPageMoveSelections(view: EditorView, direction: 1 | -1, half: boolean, count = 1): boolean {
+  const lineHeight = viewLineHeight(view);
+  const clientHeight = view.scrollDOM?.clientHeight || 0;
+  let visibleLines = clientHeight > 0 && lineHeight > 0
+    ? Math.floor(clientHeight / lineHeight)
+    : 20;
+  visibleLines = Math.max(1, visibleLines - 2);
+  if (half) {
+    visibleLines = Math.max(1, Math.floor(visibleLines / 2));
+  }
+  const delta = direction * visibleLines * Math.max(1, count ?? 1);
+  const ranges = view.state.selection.ranges.map(range => {
+    const anchor = movePosByLines(view, range.anchor, delta);
+    const head = movePosByLines(view, range.head, delta);
+    return EditorSelection.range(anchor, head);
+  });
+  view.dispatch({
+    selection: EditorSelection.create(ranges, view.state.selection.mainIndex),
+    scrollIntoView: true
+  });
+  return true;
+}
+
 function buildSelectBindings(): KakouneBinding[] {
   return [
     { keys: ["<Esc>"], run: view => {
@@ -2552,7 +2651,24 @@ function buildSelectBindings(): KakouneBinding[] {
       view.dispatch({ effects: setKakounePipePromptEffect.of({ text: "", mode: "pipe-to" }) });
       return true;
     }, description: "Pipe selections through command and ignore output" },
-    { keys: ["g", "g"], run: view => jumpToLine(view, 1), description: "Jump to document start" }
+    { keys: ["g", "g"], run: view => jumpToLine(view, 1), description: "Jump to document start" },
+    { keys: ["v", "v"], run: view => centerMainSelectionVertically(view), description: "Center main selection vertically" },
+    { keys: ["v", "c"], run: view => centerMainSelectionVertically(view), description: "Center main selection vertically" },
+    { keys: ["v", "m"], run: view => centerMainSelectionHorizontally(view), description: "Center main selection horizontally" },
+    { keys: ["v", "t"], run: view => scrollMainSelectionToTop(view), description: "Scroll to put main selection on top" },
+    { keys: ["v", "b"], run: view => scrollMainSelectionToBottom(view), description: "Scroll to put main selection on bottom" },
+    { keys: ["v", "<"], run: view => scrollMainSelectionToLeft(view), description: "Scroll to put main cursor on left" },
+    { keys: ["v", ">"], run: view => scrollMainSelectionToRight(view), description: "Scroll to put main cursor on right" },
+    { keys: ["v", "h"], run: (view, _arg, count) => scrollViewportColumns(view, -1, count ?? 1), description: "Scroll window left" },
+    { keys: ["v", "j"], run: (view, _arg, count) => scrollViewportLines(view, 1, count ?? 1), description: "Scroll window down" },
+    { keys: ["v", "k"], run: (view, _arg, count) => scrollViewportLines(view, -1, count ?? 1), description: "Scroll window up" },
+    { keys: ["v", "l"], run: (view, _arg, count) => scrollViewportColumns(view, 1, count ?? 1), description: "Scroll window right" },
+    { keys: ["<C-b>"], run: (view, _arg, count) => scrollPageMoveSelections(view, -1, false, count ?? 1), description: "Scroll one page up" },
+    { keys: ["<PageUp>"], run: (view, _arg, count) => scrollPageMoveSelections(view, -1, false, count ?? 1), description: "Scroll one page up" },
+    { keys: ["<C-f>"], run: (view, _arg, count) => scrollPageMoveSelections(view, 1, false, count ?? 1), description: "Scroll one page down" },
+    { keys: ["<PageDown>"], run: (view, _arg, count) => scrollPageMoveSelections(view, 1, false, count ?? 1), description: "Scroll one page down" },
+    { keys: ["<C-u>"], run: (view, _arg, count) => scrollPageMoveSelections(view, -1, true, count ?? 1), description: "Scroll half a page up" },
+    { keys: ["<C-d>"], run: (view, _arg, count) => scrollPageMoveSelections(view, 1, true, count ?? 1), description: "Scroll half a page down" }
   ];
 }
 
@@ -2668,5 +2784,14 @@ export const kakouneCommands = {
   gotoLastBuffer,
   extendGotoLastBuffer,
   gotoBufferEnd,
-  extendGotoBufferEnd
+  extendGotoBufferEnd,
+  centerMainSelectionVertically,
+  centerMainSelectionHorizontally,
+  scrollMainSelectionToTop,
+  scrollMainSelectionToBottom,
+  scrollMainSelectionToLeft,
+  scrollMainSelectionToRight,
+  scrollViewportLines,
+  scrollViewportColumns,
+  scrollPageMoveSelections
 };
